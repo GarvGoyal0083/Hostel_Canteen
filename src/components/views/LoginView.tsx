@@ -107,7 +107,7 @@ export function LoginView({
 
           {/* Quick Metrics Showcase Preview */}
           <div className="grid grid-cols-2 gap-3 sm:gap-4 pt-2">
-            <div className="rounded-xl bg-white/[0.04] border border-white/10 p-4 backdrop-blur-xs">
+            <div className="rounded-xl bg-white/[0.04] border border-white/10 p-4 backdrop-blur-sm">
               <div className="flex items-center justify-between text-gray-400 text-xs mb-2">
                 <span className="flex items-center gap-1.5">
                   <Receipt className="h-4 w-4 text-[#2563EB]" />
@@ -123,7 +123,7 @@ export function LoginView({
               </p>
             </div>
 
-            <div className="rounded-xl bg-white/[0.04] border border-white/10 p-4 backdrop-blur-xs">
+            <div className="rounded-xl bg-white/[0.04] border border-white/10 p-4 backdrop-blur-sm">
               <div className="flex items-center justify-between text-gray-400 text-xs mb-2">
                 <span className="flex items-center gap-1.5">
                   <Users className="h-4 w-4 text-amber-400" />
@@ -139,7 +139,7 @@ export function LoginView({
               </p>
             </div>
 
-            <div className="rounded-xl bg-white/[0.04] border border-white/10 p-4 backdrop-blur-xs">
+            <div className="rounded-xl bg-white/[0.04] border border-white/10 p-4 backdrop-blur-sm">
               <div className="flex items-center justify-between text-gray-400 text-xs mb-2">
                 <span className="flex items-center gap-1.5">
                   <Boxes className="h-4 w-4 text-blue-400" />
@@ -155,7 +155,7 @@ export function LoginView({
               </p>
             </div>
 
-            <div className="rounded-xl bg-white/[0.04] border border-white/10 p-4 backdrop-blur-xs">
+            <div className="rounded-xl bg-white/[0.04] border border-white/10 p-4 backdrop-blur-sm">
               <div className="flex items-center justify-between text-gray-400 text-xs mb-2">
                 <span className="flex items-center gap-1.5">
                   <TrendingUp className="h-4 w-4 text-emerald-400" />
@@ -238,7 +238,7 @@ export function LoginView({
                     >
                       <span>{u.full_name}</span>
                       <span
-                        className={`rounded px-1.5 py-0.2 text-[10px] uppercase font-bold ${
+                        className={`rounded px-1.5 py-0.5 text-[10px] uppercase font-bold ${
                           isSelected
                             ? "bg-white/20 text-white"
                             : "bg-gray-100 text-gray-600"

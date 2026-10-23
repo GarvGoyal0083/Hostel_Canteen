@@ -227,7 +227,7 @@ export default function HostelCanteenPosApp() {
 
   if (!authChecked) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-[#F3F4F6] text-xs font-semibold text-gray-600">
+      <div className="min-h-screen flex items-center justify-center bg-[#0B0F17] text-xs font-semibold text-gray-400">
         Loading Hostel Canteen POS...
       </div>
     );
