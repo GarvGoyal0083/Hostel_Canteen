@@ -1,0 +1,49 @@
+@import "tailwindcss";
+
+:root {
+  --bg-white: #FFFFFF;
+  --text-black: #111827;
+  --brand-blue: #2563EB;
+  --brand-dark-blue: #1D4ED8;
+  --brand-light-blue: #EFF6FF;
+  --surface-grey: #F3F4F6;
+}
+
+body {
+  background-color: #F3F4F6;
+  color: #111827;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* URL and Hyperlink Styling per specification */
+a.pos-link {
+  color: #2563EB;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+  font-weight: 500;
+  transition: color 0.15s ease;
+}
+
+a.pos-link:hover {
+  color: #1D4ED8;
+}
+
+/* Print styling for POS receipts */
+@media print {
+  body * {
+    visibility: hidden;
+  }
+  #printable-receipt,
+  #printable-receipt * {
+    visibility: visible;
+  }
+  #printable-receipt {
+    position: absolute;
+    left: 0;
+    top: 0;
+    width: 100%;
+    box-shadow: none !important;
+    border: none !important;
+  }
+}
