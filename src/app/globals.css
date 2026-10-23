@@ -6,14 +6,113 @@
   --brand-blue: #2563EB;
   --brand-dark-blue: #1D4ED8;
   --brand-light-blue: #EFF6FF;
-  --surface-grey: #F3F4F6;
+  --surface-grey: #F8FAFC;
 }
 
 body {
-  background-color: #F3F4F6;
+  background-color: #F8FAFC;
+  background-image: 
+    radial-gradient(at 10% 10%, rgba(37, 99, 235, 0.04) 0px, transparent 50%),
+    radial-gradient(at 90% 10%, rgba(59, 130, 246, 0.04) 0px, transparent 50%),
+    radial-gradient(at 50% 90%, rgba(16, 185, 129, 0.03) 0px, transparent 50%);
+  background-attachment: fixed;
   color: #111827;
   font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
   -webkit-font-smoothing: antialiased;
+}
+
+/* Modern 3D Card Utility */
+.card-3d {
+  background: rgba(255, 255, 255, 0.95);
+  backdrop-filter: blur(8px);
+  border: 1px solid rgba(226, 232, 240, 0.85);
+  border-top: 1px solid rgba(255, 255, 255, 0.95);
+  box-shadow: 
+    0 1px 3px 0 rgba(0, 0, 0, 0.02),
+    0 8px 24px -4px rgba(15, 23, 42, 0.06),
+    0 2px 6px -1px rgba(15, 23, 42, 0.03);
+  transition: all 0.28s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.card-3d:hover {
+  transform: translateY(-3px);
+  box-shadow: 
+    0 20px 32px -8px rgba(37, 99, 235, 0.12),
+    0 8px 16px -4px rgba(15, 23, 42, 0.06);
+  border-color: rgba(191, 219, 254, 0.8);
+}
+
+/* Modern 3D Tactile Button */
+.btn-3d-primary {
+  background: linear-gradient(180deg, #3B82F6 0%, #2563EB 50%, #1D4ED8 100%);
+  color: #FFFFFF;
+  box-shadow: 
+    0 1px 0 0 rgba(255, 255, 255, 0.35) inset,
+    0 4px 12px 0 rgba(37, 99, 235, 0.35),
+    0 2px 4px 0 rgba(15, 23, 42, 0.1);
+  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.btn-3d-primary:hover {
+  background: linear-gradient(180deg, #60A5FA 0%, #2563EB 50%, #1E40AF 100%);
+  transform: translateY(-1.5px);
+  box-shadow: 
+    0 1px 0 0 rgba(255, 255, 255, 0.45) inset,
+    0 8px 20px 0 rgba(37, 99, 235, 0.45),
+    0 2px 6px 0 rgba(15, 23, 42, 0.12);
+}
+
+.btn-3d-primary:active {
+  transform: translateY(1px);
+  box-shadow: 
+    0 2px 6px 0 rgba(37, 99, 235, 0.3),
+    0 1px 2px 0 rgba(15, 23, 42, 0.1);
+}
+
+/* Modern 3D Secondary Button */
+.btn-3d-secondary {
+  background: linear-gradient(180deg, #FFFFFF 0%, #F8FAFC 100%);
+  border: 1px solid rgba(203, 213, 225, 0.85);
+  box-shadow: 
+    0 1px 0 0 rgba(255, 255, 255, 0.9) inset,
+    0 2px 5px 0 rgba(15, 23, 42, 0.04);
+  transition: all 0.2s ease;
+}
+
+.btn-3d-secondary:hover {
+  background: linear-gradient(180deg, #FFFFFF 0%, #F1F5F9 100%);
+  border-color: rgba(148, 163, 184, 0.9);
+  transform: translateY(-1px);
+  box-shadow: 
+    0 1px 0 0 rgba(255, 255, 255, 1) inset,
+    0 6px 14px 0 rgba(15, 23, 42, 0.08);
+}
+
+.btn-3d-secondary:active {
+  transform: translateY(1px);
+  box-shadow: 0 1px 2px 0 rgba(15, 23, 42, 0.05);
+}
+
+/* 3D Pillar Chart Columns */
+.chart-pillar-blue {
+  background: linear-gradient(90deg, #1D4ED8 0%, #3B82F6 40%, #60A5FA 60%, #1D4ED8 100%);
+  box-shadow: 
+    0 4px 12px rgba(37, 99, 235, 0.3),
+    inset 0 1px 0 rgba(255, 255, 255, 0.5);
+}
+
+.chart-pillar-dark {
+  background: linear-gradient(90deg, #0F172A 0%, #1E293B 40%, #334155 60%, #0F172A 100%);
+  box-shadow: 
+    0 4px 12px rgba(15, 23, 42, 0.25),
+    inset 0 1px 0 rgba(255, 255, 255, 0.3);
+}
+
+.chart-pillar-emerald {
+  background: linear-gradient(90deg, #047857 0%, #10B981 40%, #34D399 60%, #047857 100%);
+  box-shadow: 
+    0 4px 12px rgba(16, 185, 129, 0.3),
+    inset 0 1px 0 rgba(255, 255, 255, 0.5);
 }
 
 /* URL and Hyperlink Styling per specification */
