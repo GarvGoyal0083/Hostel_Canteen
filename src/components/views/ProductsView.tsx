@@ -240,27 +240,27 @@ export function ProductsView({
   return (
     <div className="space-y-5">
       {/* Header */}
-      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between bg-white p-5 rounded-xl border border-gray-200 shadow-xs">
+      <div className="card-3d-static flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between p-5 rounded-2xl">
         <div>
-          <h1 className="text-xl font-bold text-[#111827]">
+          <h1 className="text-xl font-black text-[#111827]">
             Product Management
           </h1>
-          <p className="text-xs text-gray-600 mt-0.5">
+          <p className="text-xs text-slate-600 mt-0.5">
             Manage snacks, chips, biscuits, cold drinks, SKUs, purchase costs, selling prices, and unit profit margins.
           </p>
         </div>
 
-        <div className="flex flex-wrap items-center gap-2">
+        <div className="flex flex-wrap items-center gap-2.5">
           <button
             onClick={handleExportCSV}
-            className="inline-flex items-center gap-1.5 rounded-lg border border-gray-300 bg-white px-3 py-2 text-xs font-semibold text-[#111827] hover:bg-[#F3F4F6] transition cursor-pointer"
+            className="btn-3d-secondary inline-flex items-center gap-1.5 rounded-xl px-3.5 py-2 text-xs font-extrabold text-[#111827] cursor-pointer"
           >
             <Download className="h-3.5 w-3.5" />
             Export Report
           </button>
           <button
             onClick={openAddModal}
-            className="inline-flex items-center gap-1.5 rounded-lg bg-[#2563EB] px-4 py-2 text-xs font-semibold text-white hover:bg-[#1D4ED8] transition shadow-xs cursor-pointer"
+            className="btn-3d-primary inline-flex items-center gap-1.5 rounded-xl px-4 py-2 text-xs font-extrabold text-white cursor-pointer"
           >
             <Plus className="h-4 w-4" />
             Add Product
@@ -269,23 +269,23 @@ export function ProductsView({
       </div>
 
       {/* Filters */}
-      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between bg-white p-4 rounded-xl border border-gray-200 shadow-xs">
+      <div className="card-3d-static flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between p-4 rounded-2xl">
         <div className="flex flex-1 flex-wrap items-center gap-3">
           <div className="relative flex-1 min-w-[220px]">
-            <Search className="absolute left-3 top-2.5 h-4 w-4 text-gray-400" />
+            <Search className="absolute left-3 top-2.5 h-4 w-4 text-slate-400" />
             <input
               type="text"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               placeholder="Search by product name, SKU, category, supplier..."
-              className="w-full rounded-lg border border-gray-300 bg-white pl-9 pr-3 py-2 text-xs text-[#111827] focus:border-[#2563EB] focus:outline-none"
+              className="input-3d w-full rounded-xl pl-9 pr-3 py-2 text-xs text-[#111827]"
             />
           </div>
 
           <select
             value={categoryFilter}
             onChange={(e) => setCategoryFilter(e.target.value)}
-            className="rounded-lg border border-gray-300 bg-white px-3 py-2 text-xs font-medium text-[#111827]"
+            className="input-3d rounded-xl px-3 py-2 text-xs font-bold text-[#111827]"
           >
             {categories.map((cat) => (
               <option key={cat} value={cat}>
@@ -295,7 +295,7 @@ export function ProductsView({
           </select>
         </div>
 
-        <label className="inline-flex items-center gap-2 text-xs font-medium text-gray-700 cursor-pointer">
+        <label className="inline-flex items-center gap-2 text-xs font-bold text-slate-700 cursor-pointer">
           <input
             type="checkbox"
             checked={showInactive}
@@ -307,7 +307,7 @@ export function ProductsView({
       </div>
 
       {/* Products Table */}
-      <div className="rounded-xl bg-white border border-gray-200 shadow-xs overflow-hidden">
+      <div className="card-3d-static rounded-2xl overflow-hidden">
         <div className="overflow-x-auto">
           <table className="w-full text-xs">
             <thead>

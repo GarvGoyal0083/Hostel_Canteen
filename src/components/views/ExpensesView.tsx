@@ -167,20 +167,20 @@ export function ExpensesView({
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between bg-white p-5 rounded-xl border border-gray-200 shadow-xs">
+      <div className="card-3d-static flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between p-5 rounded-2xl">
         <div>
-          <h1 className="text-xl font-bold text-[#111827]">
-            Expenses & Profit Tracking (P&amp;L)
+          <h1 className="text-xl font-black text-[#111827]">
+            Expenses &amp; Profit Tracking (P&amp;L)
           </h1>
-          <p className="text-xs text-gray-600 mt-0.5">
+          <p className="text-xs text-slate-600 mt-0.5">
             Track canteen operating expenses and reconcile Gross Sales, COGS, Gross Profit, Net Profit, Collections, and Udhaar.
           </p>
         </div>
 
-        <div className="flex flex-wrap items-center gap-2">
+        <div className="flex flex-wrap items-center gap-2.5">
           <button
             onClick={handleExportExpensesCSV}
-            className="inline-flex items-center gap-1.5 rounded-lg border border-gray-300 bg-white px-3 py-2 text-xs font-semibold text-[#111827] hover:bg-[#F3F4F6] transition cursor-pointer"
+            className="btn-3d-secondary inline-flex items-center gap-1.5 rounded-xl px-3.5 py-2 text-xs font-extrabold text-[#111827] cursor-pointer"
           >
             <Download className="h-3.5 w-3.5" />
             Export Report
@@ -190,7 +190,7 @@ export function ExpensesView({
               setErrorMsg(null);
               setModalOpen(true);
             }}
-            className="inline-flex items-center gap-1.5 rounded-lg bg-[#2563EB] px-4 py-2 text-xs font-semibold text-white hover:bg-[#1D4ED8] transition shadow-xs cursor-pointer"
+            className="btn-3d-primary inline-flex items-center gap-1.5 rounded-xl px-4 py-2 text-xs font-extrabold text-white cursor-pointer"
           >
             <Plus className="h-4 w-4" />
             Record Expense
@@ -201,10 +201,10 @@ export function ExpensesView({
       {/* Accounting Statement: Revenue vs Profit vs Actual Collections */}
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
         {/* Left Card: Income & Profit Statement */}
-        <div className="rounded-xl bg-white p-5 border border-gray-200 shadow-xs space-y-3">
+        <div className="card-3d rounded-2xl p-6 space-y-3">
           <div className="flex items-center gap-2 border-b border-gray-100 pb-3">
             <Calculator className="h-4 w-4 text-[#2563EB]" />
-            <h2 className="text-base font-bold text-[#111827]">
+            <h2 className="text-base font-black text-[#111827]">
               Profit &amp; Loss Statement (Accrual Revenue vs COGS)
             </h2>
           </div>

@@ -221,20 +221,20 @@ export function CustomersView({
   return (
     <div className="space-y-5">
       {/* Header */}
-      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between bg-white p-5 rounded-xl border border-gray-200 shadow-xs">
+      <div className="card-3d-static flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between p-5 rounded-2xl">
         <div>
-          <h1 className="text-xl font-bold text-[#111827]">
-            Hostel Customer & Udhaar Management
+          <h1 className="text-xl font-black text-[#111827]">
+            Hostel Customer &amp; Udhaar Management
           </h1>
-          <p className="text-xs text-gray-600 mt-0.5">
+          <p className="text-xs text-slate-600 mt-0.5">
             Track hostel student purchases, room numbers, credit sales (udhaar), repayments, and full customer ledgers.
           </p>
         </div>
 
-        <div className="flex flex-wrap items-center gap-2">
+        <div className="flex flex-wrap items-center gap-2.5">
           <button
             onClick={handleExportCustomersCSV}
-            className="inline-flex items-center gap-1.5 rounded-lg border border-gray-300 bg-white px-3 py-2 text-xs font-semibold text-[#111827] hover:bg-[#F3F4F6] transition cursor-pointer"
+            className="btn-3d-secondary inline-flex items-center gap-1.5 rounded-xl px-3.5 py-2 text-xs font-extrabold text-[#111827] cursor-pointer"
           >
             <Download className="h-3.5 w-3.5" />
             Export Report
@@ -244,7 +244,7 @@ export function CustomersView({
               setErrorMsg(null);
               setAddModalOpen(true);
             }}
-            className="inline-flex items-center gap-1.5 rounded-lg bg-[#2563EB] px-4 py-2 text-xs font-semibold text-white hover:bg-[#1D4ED8] transition shadow-xs cursor-pointer"
+            className="btn-3d-primary inline-flex items-center gap-1.5 rounded-xl px-4 py-2 text-xs font-extrabold text-white cursor-pointer"
           >
             <UserPlus className="h-4 w-4" />
             Add Customer
@@ -254,48 +254,48 @@ export function CustomersView({
 
       {/* Summary Banner */}
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
-        <div className="rounded-xl bg-white p-4 border border-gray-200 shadow-xs">
-          <span className="text-xs text-gray-500 font-medium block">
+        <div className="card-3d rounded-2xl p-5">
+          <span className="text-xs text-slate-500 font-bold uppercase tracking-wider block">
             Registered Hostel Students
           </span>
-          <span className="text-xl font-extrabold text-[#111827] mt-1 block">
+          <span className="text-2xl font-black text-[#111827] mt-1 block">
             {customers.length} Students
           </span>
         </div>
-        <div className="rounded-xl bg-white p-4 border border-gray-200 shadow-xs">
-          <span className="text-xs text-gray-500 font-medium block">
-            Total Purchases by Registered Students
+        <div className="card-3d rounded-2xl p-5">
+          <span className="text-xs text-slate-500 font-bold uppercase tracking-wider block">
+            Total Purchases by Students
           </span>
-          <span className="text-xl font-extrabold text-[#2563EB] mt-1 block">
+          <span className="text-2xl font-black text-[#2563EB] mt-1 block">
             {formatINR(
               customers.reduce((acc, c) => acc + c.total_purchases, 0)
             )}
           </span>
         </div>
-        <div className="rounded-xl bg-white p-4 border border-gray-200 shadow-xs">
-          <span className="text-xs text-gray-500 font-medium block">
+        <div className="card-3d rounded-2xl p-5">
+          <span className="text-xs text-slate-500 font-bold uppercase tracking-wider block">
             Total Outstanding Customer Udhaar
           </span>
-          <span className="text-xl font-extrabold text-amber-700 mt-1 block">
+          <span className="text-2xl font-black text-amber-700 mt-1 block">
             {formatINR(totalUdhaar)}
           </span>
         </div>
       </div>
 
       {/* Search & Filter */}
-      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between bg-white p-4 rounded-xl border border-gray-200 shadow-xs">
+      <div className="card-3d-static flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between p-4 rounded-2xl">
         <div className="relative flex-1 max-w-md">
-          <Search className="absolute left-3 top-2.5 h-4 w-4 text-gray-400" />
+          <Search className="absolute left-3 top-2.5 h-4 w-4 text-slate-400" />
           <input
             type="text"
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             placeholder="Search by student name, room number (e.g. B-204), or phone..."
-            className="w-full rounded-lg border border-gray-300 bg-white pl-9 pr-3 py-2 text-xs text-[#111827]"
+            className="input-3d w-full rounded-xl pl-9 pr-3 py-2 text-xs text-[#111827]"
           />
         </div>
 
-        <label className="inline-flex items-center gap-2 text-xs font-semibold text-amber-900 cursor-pointer">
+        <label className="inline-flex items-center gap-2 text-xs font-extrabold text-amber-900 cursor-pointer">
           <input
             type="checkbox"
             checked={onlyWithDues}
@@ -307,7 +307,7 @@ export function CustomersView({
       </div>
 
       {/* Customer Directory Table */}
-      <div className="rounded-xl bg-white border border-gray-200 shadow-xs overflow-hidden">
+      <div className="card-3d-static rounded-2xl overflow-hidden">
         <div className="overflow-x-auto">
           <table className="w-full text-xs">
             <thead>

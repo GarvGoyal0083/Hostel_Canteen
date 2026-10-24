@@ -18,6 +18,8 @@ import {
   Store,
   Clock,
   PlusCircle,
+  GraduationCap,
+  Sparkles,
 } from "lucide-react";
 import {
   AdminUser,
@@ -30,7 +32,7 @@ import {
   ProductStockSummary,
   SaleRecord,
 } from "@/types/pos";
-import { formatIST } from "@/lib/format";
+import { formatINR, formatIST } from "@/lib/format";
 import { LoginView } from "@/components/views/LoginView";
 import { DashboardView } from "@/components/views/DashboardView";
 import { PosBillingView } from "@/components/views/PosBillingView";
@@ -42,6 +44,7 @@ import { PaymentsView } from "@/components/views/PaymentsView";
 import { ExpensesView } from "@/components/views/ExpensesView";
 import { ReportsView } from "@/components/views/ReportsView";
 import { SettingsView } from "@/components/views/SettingsView";
+import { CustomerPortalView } from "@/components/views/CustomerPortalView";
 import { ReceiptModal } from "@/components/ReceiptModal";
 
 type NavTab =
@@ -54,7 +57,8 @@ type NavTab =
   | "payments"
   | "expenses"
   | "reports"
-  | "settings";
+  | "settings"
+  | "customer_portal";
 
 const SIDEBAR_ITEMS: Array<{
   id: NavTab;
@@ -76,8 +80,21 @@ const SIDEBAR_ITEMS: Array<{
 export default function HostelCanteenPosApp() {
   const [authChecked, setAuthChecked] = useState(false);
   const [admin, setAdmin] = useState<AdminUser | null>(null);
+  const [customerModeActive, setCustomerModeActive] = useState(false);
+  const [loggedInCustomer, setLoggedInCustomer] = useState<Customer | null>(
+    null
+  );
+
   const [availableAdmins, setAvailableAdmins] = useState<
     Array<{ email: string; full_name: string; role: string }>
+  >([]);
+  const [availableCustomers, setAvailableCustomers] = useState<
+    Array<{
+      id: string;
+      name: string;
+      room_number?: string | null;
+      outstanding_dues: number;
+    }>
   >([]);
 
   const [activeTab, setActiveTab] = useState<NavTab>("dashboard");
@@ -202,6 +219,7 @@ export default function HostelCanteenPosApp() {
         if (res.ok) {
           const data = await res.json();
           setAvailableAdmins(data.available_admins || []);
+          setAvailableCustomers(data.available_customers || []);
           if (data.authenticated && data.admin) {
             setAdmin(data.admin);
           }
@@ -223,13 +241,40 @@ export default function HostelCanteenPosApp() {
     await fetch("/api/auth", { method: "DELETE" });
     setAdmin(null);
     setAppData(null);
+    setCustomerModeActive(false);
+    setLoggedInCustomer(null);
   };
 
   if (!authChecked) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-[#0B0F17] text-xs font-semibold text-gray-400">
-        Loading Hostel Canteen POS...
+      <div className="min-h-screen flex items-center justify-center bg-[#090D16] text-xs font-bold text-slate-400">
+        Loading Hostel Canteen 3D Terminal...
       </div>
+    );
+  }
+
+  // If Customer / Student Portal mode is active (either via student login or admin preview)
+  if (customerModeActive || activeTab === "customer_portal") {
+    return (
+      <CustomerPortalView
+        initialCustomer={
+          loggedInCustomer || (appData?.customers?.[0] ?? null)
+        }
+        isAdminPreview={Boolean(admin)}
+        onBackToAdmin={
+          admin
+            ? () => {
+                setCustomerModeActive(false);
+                setActiveTab("dashboard");
+              }
+            : undefined
+        }
+        onExitToLogin={() => {
+          setCustomerModeActive(false);
+          setLoggedInCustomer(null);
+          setActiveTab("dashboard");
+        }}
+      />
     );
   }
 
@@ -237,25 +282,38 @@ export default function HostelCanteenPosApp() {
     return (
       <LoginView
         availableAdmins={availableAdmins}
+        availableCustomers={availableCustomers}
         onLoginSuccess={(loggedInAdmin) => setAdmin(loggedInAdmin)}
+        onCustomerLoginSuccess={(customer) => {
+          setLoggedInCustomer(customer);
+          setCustomerModeActive(true);
+        }}
       />
     );
   }
 
   return (
-    <div className="min-h-screen flex flex-col lg:flex-row bg-[#F3F4F6] text-[#111827]">
-      {/* Mobile Header */}
-      <div className="flex items-center justify-between bg-[#111827] px-4 py-3 text-white lg:hidden">
-        <div className="flex items-center gap-2">
-          <div className="rounded-lg bg-[#2563EB] p-1.5">
+    <div className="min-h-screen flex flex-col lg:flex-row bg-[#F1F5F9] text-[#111827]">
+      {/* Mobile 3D Header */}
+      <div className="flex items-center justify-between bg-[#090D16] px-4 py-3 text-white lg:hidden border-b border-slate-800 shadow-lg">
+        <div className="flex items-center gap-2.5">
+          <div className="rounded-xl orb-3d-blue p-1.5">
             <Store className="h-4 w-4 text-white" />
           </div>
-          <span className="font-extrabold text-sm">Hostel Canteen POS</span>
+          <span className="font-black text-sm tracking-tight">
+            Hostel Canteen POS
+          </span>
         </div>
         <div className="flex items-center gap-2">
           <button
+            onClick={() => setActiveTab("customer_portal")}
+            className="rounded-lg bg-emerald-600 px-2.5 py-1 text-[11px] font-bold text-white"
+          >
+            Student View
+          </button>
+          <button
             onClick={() => setActiveTab("pos")}
-            className="rounded-lg bg-[#2563EB] px-2.5 py-1 text-xs font-bold text-white"
+            className="btn-3d-primary rounded-lg px-2.5 py-1 text-xs font-bold text-white"
           >
             + POS
           </button>
@@ -272,43 +330,59 @@ export default function HostelCanteenPosApp() {
         </div>
       </div>
 
-      {/* Sidebar Navigation (10 Modules) */}
+      {/* 3D Floating Sidebar Navigation (10 Admin Modules + Student Portal Switcher) */}
       <aside
         className={`${
           mobileMenuOpen ? "block" : "hidden"
-        } lg:flex lg:w-64 lg:flex-col lg:fixed lg:inset-y-0 bg-white border-r border-gray-200 z-40`}
+        } lg:flex lg:w-68 lg:flex-col lg:fixed lg:inset-y-0 bg-white/95 backdrop-blur-md border-r-2 border-slate-200 shadow-xl z-40`}
       >
-        {/* Brand Header */}
-        <div className="hidden lg:flex items-center gap-3 px-5 py-4 border-b border-gray-200">
-          <div className="rounded-xl bg-[#2563EB] p-2 text-white shadow-xs">
+        {/* 3D Brand Header */}
+        <div className="hidden lg:flex items-center gap-3.5 px-5 py-4 border-b border-slate-200 bg-gradient-to-b from-white to-slate-50/80">
+          <div className="h-11 w-11 rounded-2xl orb-3d-blue flex items-center justify-center text-white shrink-0">
             <Store className="h-5 w-5" />
           </div>
           <div>
-            <div className="text-sm font-extrabold text-[#111827] leading-tight">
-              Hostel Canteen POS
+            <div className="flex items-center gap-1.5">
+              <span className="text-sm font-black text-[#111827] leading-tight">
+                Hostel Canteen
+              </span>
+              <span className="rounded-md bg-[#EFF6FF] border border-blue-200 px-1.5 py-0.2 text-[9px] font-black text-[#2563EB]">
+                3D POS
+              </span>
             </div>
-            <div className="text-[11px] text-gray-500">
-              Room Snacks &amp; Cold Drinks
+            <div className="text-[11px] text-slate-500 font-medium">
+              Admin Command Center
             </div>
           </div>
         </div>
 
-        {/* Quick New Sale CTA */}
-        <div className="p-3 border-b border-gray-100">
+        {/* Quick 3D Action Buttons (New Sale + Student Portal View) */}
+        <div className="p-3.5 border-b border-slate-200 space-y-2 bg-slate-50/50">
           <button
             onClick={() => {
               setActiveTab("pos");
               setMobileMenuOpen(false);
             }}
-            className="w-full inline-flex items-center justify-center gap-2 rounded-xl bg-[#2563EB] px-4 py-2.5 text-xs font-bold text-white hover:bg-[#1D4ED8] transition shadow-xs cursor-pointer"
+            className="btn-3d-primary w-full inline-flex items-center justify-center gap-2 rounded-xl px-4 py-2.5 text-xs font-extrabold cursor-pointer"
           >
             <PlusCircle className="h-4 w-4" />
-            New Sale / Fast POS
+            <span>New Sale / Fast POS</span>
+          </button>
+
+          <button
+            onClick={() => {
+              setActiveTab("customer_portal");
+              setMobileMenuOpen(false);
+            }}
+            className="btn-3d-secondary w-full inline-flex items-center justify-center gap-2 rounded-xl px-3.5 py-2 text-xs font-extrabold text-slate-800 cursor-pointer"
+          >
+            <GraduationCap className="h-4 w-4 text-[#2563EB]" />
+            <span>Open Student Portal</span>
           </button>
         </div>
 
-        {/* Navigation Links */}
-        <nav className="flex-1 px-3 py-3 space-y-1 overflow-y-auto">
+        {/* 3D Navigation Links */}
+        <nav className="flex-1 px-3 py-3 space-y-1.5 overflow-y-auto">
           {SIDEBAR_ITEMS.map((item) => {
             const Icon = item.icon;
             const isActive = activeTab === item.id;
@@ -322,26 +396,26 @@ export default function HostelCanteenPosApp() {
                   setActiveTab(item.id);
                   setMobileMenuOpen(false);
                 }}
-                className={`w-full flex items-center justify-between rounded-lg px-3 py-2.5 text-xs font-semibold transition cursor-pointer ${
+                className={`w-full flex items-center justify-between rounded-xl px-3.5 py-2.5 text-xs font-bold cursor-pointer ${
                   isActive
-                    ? "bg-[#EFF6FF] text-[#2563EB] border border-blue-200"
-                    : "text-[#111827] hover:bg-[#F3F4F6]"
+                    ? "nav-item-3d-active"
+                    : "nav-item-3d text-[#111827]"
                 }`}
               >
                 <span className="flex items-center gap-2.5">
                   <Icon
                     className={`h-4 w-4 ${
-                      isActive ? "text-[#2563EB]" : "text-gray-500"
+                      isActive ? "text-[#2563EB]" : "text-slate-500"
                     }`}
                   />
-                  {item.label}
+                  <span>{item.label}</span>
                 </span>
                 {item.id === "inventory" &&
                   appData &&
                   appData.kpis.out_of_stock_count +
                     appData.kpis.low_stock_count >
                     0 && (
-                    <span className="rounded-full bg-amber-100 px-1.5 py-0.5 text-[10px] font-bold text-amber-900">
+                    <span className="rounded-full bg-amber-100 border border-amber-300 px-2 py-0.5 text-[10px] font-black text-amber-900 shadow-2xs">
                       {appData.kpis.out_of_stock_count +
                         appData.kpis.low_stock_count}
                     </span>
@@ -349,7 +423,7 @@ export default function HostelCanteenPosApp() {
                 {item.id === "customers" &&
                   appData &&
                   appData.kpis.pending_bills_count > 0 && (
-                    <span className="rounded-full bg-[#EFF6FF] px-1.5 py-0.5 text-[10px] font-bold text-[#1D4ED8]">
+                    <span className="rounded-full bg-blue-100 border border-blue-300 px-2 py-0.5 text-[10px] font-black text-[#1D4ED8] shadow-2xs">
                       {appData.kpis.pending_bills_count}
                     </span>
                   )}
@@ -358,38 +432,85 @@ export default function HostelCanteenPosApp() {
           })}
         </nav>
 
-        {/* Admin Footer */}
-        <div className="border-t border-gray-200 p-4 bg-[#F3F4F6]/60 space-y-2 text-xs">
+        {/* 3D Admin Footer */}
+        <div className="border-t border-slate-200 p-4 bg-gradient-to-b from-slate-50 to-slate-100 space-y-2.5 text-xs">
           <div className="flex items-center justify-between">
             <div className="truncate pr-2">
-              <div className="font-bold text-[#111827] truncate">
+              <div className="font-extrabold text-[#111827] truncate">
                 {admin.full_name}
               </div>
-              <div className="text-[10px] text-gray-500 truncate">
+              <div className="text-[10px] text-slate-500 truncate">
                 {admin.email}
               </div>
             </div>
             <button
               onClick={handleLogout}
-              className="rounded-lg border border-gray-300 bg-white p-1.5 text-gray-700 hover:text-red-600 hover:border-red-200 transition cursor-pointer"
+              className="btn-3d-secondary rounded-xl p-2 text-slate-700 hover:text-red-600 cursor-pointer"
               title="Sign Out"
             >
               <LogOut className="h-3.5 w-3.5" />
             </button>
           </div>
-          <div className="flex items-center gap-1 text-[10px] text-gray-600">
-            <Clock className="h-3 w-3 text-[#2563EB]" />
-            <span>{currentTimeIST}</span>
+          <div className="flex items-center gap-1.5 text-[10px] font-semibold text-slate-600 bg-white/80 rounded-lg px-2.5 py-1.5 border border-slate-200">
+            <Clock className="h-3 w-3 text-[#2563EB] shrink-0" />
+            <span className="truncate">{currentTimeIST}</span>
           </div>
         </div>
       </aside>
 
       {/* Main Content Area */}
-      <main className="flex-1 lg:pl-64">
+      <main className="flex-1 lg:pl-68">
+        {/* Top 3D Context & Quick Stats Bar */}
+        <div className="hidden lg:block sticky top-0 z-20 bg-white/85 backdrop-blur-md border-b border-slate-200 px-6 py-3">
+          <div className="max-w-7xl mx-auto flex items-center justify-between gap-4">
+            <div className="flex items-center gap-2.5">
+              <span className="inline-flex items-center gap-1.5 rounded-xl bg-[#EFF6FF] border border-blue-200 px-3 py-1 text-xs font-extrabold text-[#1D4ED8]">
+                <Sparkles className="h-3.5 w-3.5 text-[#2563EB]" />
+                {SIDEBAR_ITEMS.find((i) => i.id === activeTab)?.label ||
+                  "Dashboard"}
+              </span>
+              {appData && (
+                <div className="flex items-center gap-2 text-xs text-slate-500 pl-2">
+                  <span>
+                    Today:{" "}
+                    <strong className="text-[#111827]">
+                      {formatINR(appData.kpis.today_sales)}
+                    </strong>
+                  </span>
+                  <span className="text-slate-300">•</span>
+                  <span>
+                    Active Udhaar:{" "}
+                    <strong className="text-[#2563EB]">
+                      {formatINR(appData.kpis.customer_udhaar_total)}
+                    </strong>
+                  </span>
+                </div>
+              )}
+            </div>
+
+            <div className="flex items-center gap-2.5">
+              <button
+                onClick={() => setActiveTab("customer_portal")}
+                className="btn-3d-secondary rounded-xl px-3.5 py-1.5 text-xs font-extrabold flex items-center gap-1.5 cursor-pointer"
+              >
+                <GraduationCap className="h-4 w-4 text-[#2563EB]" />
+                <span>Customer / Student View</span>
+              </button>
+              <button
+                onClick={() => setActiveTab("pos")}
+                className="btn-3d-primary rounded-xl px-3.5 py-1.5 text-xs font-extrabold flex items-center gap-1.5 cursor-pointer"
+              >
+                <ShoppingCart className="h-3.5 w-3.5" />
+                <span>Fast Billing</span>
+              </button>
+            </div>
+          </div>
+        </div>
+
         <div className="max-w-7xl mx-auto p-4 sm:p-6">
           {!appData ? (
-            <div className="rounded-xl bg-white p-12 text-center border border-gray-200 text-xs text-gray-500">
-              Loading canteen database records...
+            <div className="card-3d-static rounded-2xl p-12 text-center text-xs font-bold text-slate-500">
+              Loading canteen 3D database records...
             </div>
           ) : (
             <>

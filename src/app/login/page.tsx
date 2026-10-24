@@ -3,12 +3,20 @@
 import React, { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { LoginView } from "@/components/views/LoginView";
-import { AdminUser } from "@/types/pos";
+import { AdminUser, Customer } from "@/types/pos";
 
 export default function LoginPage() {
   const router = useRouter();
   const [availableAdmins, setAvailableAdmins] = useState<
     Array<{ email: string; full_name: string; role: string }>
+  >([]);
+  const [availableCustomers, setAvailableCustomers] = useState<
+    Array<{
+      id: string;
+      name: string;
+      room_number?: string | null;
+      outstanding_dues: number;
+    }>
   >([]);
   const [loading, setLoading] = useState(true);
 
@@ -19,6 +27,7 @@ export default function LoginPage() {
         if (res.ok) {
           const data = await res.json();
           setAvailableAdmins(data.available_admins || []);
+          setAvailableCustomers(data.available_customers || []);
           if (data.authenticated && data.admin) {
             router.push("/");
             return;
@@ -33,7 +42,7 @@ export default function LoginPage() {
 
   if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-[#0B0F17] text-xs font-semibold text-gray-400">
+      <div className="min-h-screen flex items-center justify-center bg-[#090D16] text-xs font-semibold text-slate-400">
         Loading Login Terminal...
       </div>
     );
@@ -42,8 +51,16 @@ export default function LoginPage() {
   return (
     <LoginView
       availableAdmins={availableAdmins}
+      availableCustomers={availableCustomers}
       onLoginSuccess={(_admin: AdminUser) => {
         router.push("/");
+      }}
+      onCustomerLoginSuccess={(customer: Customer | null) => {
+        if (customer) {
+          router.push(`/customer?customerId=${encodeURIComponent(customer.id)}`);
+        } else {
+          router.push("/customer");
+        }
       }}
     />
   );

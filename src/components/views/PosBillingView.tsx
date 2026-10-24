@@ -496,38 +496,38 @@ export function PosBillingView({
     <div className="grid grid-cols-1 gap-6 lg:grid-cols-12 items-start">
       {/* Left Column: Searchable Product Grid (7 cols on desktop) */}
       <div className="lg:col-span-7 space-y-4">
-        <div className="rounded-xl bg-white p-4 border border-gray-200 shadow-xs space-y-3">
+        <div className="card-3d-static rounded-2xl p-4 space-y-3">
           <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
             <div>
-              <h1 className="text-lg font-bold text-[#111827]">
-                Fast Billing / POS Terminal
+              <h1 className="text-lg font-black text-[#111827]">
+                Fast Billing / 3D POS Terminal
               </h1>
-              <p className="text-xs text-gray-500">
+              <p className="text-xs text-slate-500">
                 Click any snack or cold drink to add to cart immediately
               </p>
             </div>
             <div className="relative w-full sm:w-72">
-              <Search className="absolute left-3 top-2.5 h-4 w-4 text-gray-400" />
+              <Search className="absolute left-3 top-2.5 h-4 w-4 text-slate-400" />
               <input
                 type="text"
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 placeholder="Search Kurkure, Maggi, SKU..."
-                className="w-full rounded-lg border border-gray-300 bg-white pl-9 pr-3 py-2 text-xs text-[#111827] focus:border-[#2563EB] focus:outline-none"
+                className="input-3d w-full rounded-xl pl-9 pr-3 py-2 text-xs text-[#111827]"
               />
             </div>
           </div>
 
           {/* Category Filter Pills */}
-          <div className="flex items-center gap-1.5 overflow-x-auto pb-1">
+          <div className="flex items-center gap-2 overflow-x-auto pb-1">
             {categories.map((cat) => (
               <button
                 key={cat}
                 onClick={() => setSelectedCategory(cat)}
-                className={`whitespace-nowrap rounded-lg px-3 py-1.5 text-xs font-semibold transition cursor-pointer ${
+                className={`whitespace-nowrap rounded-xl px-3.5 py-1.5 text-xs font-extrabold transition cursor-pointer ${
                   selectedCategory === cat
-                    ? "bg-[#2563EB] text-white"
-                    : "bg-[#F3F4F6] text-[#111827] hover:bg-gray-200"
+                    ? "btn-3d-primary"
+                    : "btn-3d-secondary text-[#111827]"
                 }`}
               >
                 {cat === "ALL" ? "All Snacks & Drinks" : cat}
@@ -537,9 +537,9 @@ export function PosBillingView({
         </div>
 
         {/* Product Grid */}
-        <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
+        <div className="grid grid-cols-2 gap-3.5 sm:grid-cols-3">
           {filteredProducts.length === 0 ? (
-            <div className="col-span-full rounded-xl bg-white p-8 text-center border border-gray-200 text-xs text-gray-500">
+            <div className="col-span-full card-3d-static rounded-2xl p-8 text-center text-xs text-slate-500">
               No matching active products found.
             </div>
           ) : (
@@ -554,35 +554,35 @@ export function PosBillingView({
                   type="button"
                   disabled={isOutOfStock}
                   onClick={() => handleAddToCart(product)}
-                  className={`group text-left rounded-xl p-3.5 border transition flex flex-col justify-between min-h-[132px] ${
+                  className={`group text-left rounded-2xl p-4 transition flex flex-col justify-between min-h-[138px] ${
                     isOutOfStock
-                      ? "bg-gray-50 border-gray-200 opacity-60 cursor-not-allowed"
+                      ? "bg-slate-100 border border-slate-200 opacity-60 cursor-not-allowed"
                       : isSelected
-                        ? "bg-[#EFF6FF] border-[#2563EB] ring-1 ring-[#2563EB] cursor-pointer"
-                        : "bg-white border-gray-200 hover:border-[#2563EB] hover:shadow-xs cursor-pointer"
+                        ? "nav-item-3d-active cursor-pointer"
+                        : "card-3d cursor-pointer"
                   }`}
                 >
                   <div>
                     <div className="flex items-start justify-between gap-1.5">
-                      <span className="rounded bg-[#F3F4F6] px-1.5 py-0.5 text-[10px] font-mono font-semibold text-gray-700">
+                      <span className="rounded-md bg-slate-100 border border-slate-200 px-1.5 py-0.5 text-[10px] font-mono font-bold text-slate-700">
                         {product.sku}
                       </span>
                       {inCartItem && (
-                        <span className="rounded-full bg-[#2563EB] px-2 py-0.5 text-[11px] font-bold text-white">
+                        <span className="rounded-full bg-[#2563EB] px-2.5 py-0.5 text-[11px] font-extrabold text-white shadow-xs">
                           {inCartItem.quantity} in cart
                         </span>
                       )}
                     </div>
-                    <div className="mt-2 text-sm font-bold text-[#111827] line-clamp-2 group-hover:text-[#2563EB]">
+                    <div className="mt-2 text-sm font-extrabold text-[#111827] line-clamp-2 group-hover:text-[#2563EB]">
                       {product.name}
                     </div>
-                    <div className="text-[11px] text-gray-500 mt-0.5">
+                    <div className="text-[11px] text-slate-500 mt-0.5">
                       {product.category}
                     </div>
                   </div>
 
-                  <div className="mt-3 pt-2 border-t border-gray-100 flex items-center justify-between">
-                    <span className="text-base font-extrabold text-[#111827]">
+                  <div className="mt-3 pt-2 border-t border-slate-100 flex items-center justify-between">
+                    <span className="text-base font-black text-[#111827]">
                       {formatINR(product.selling_price)}
                     </span>
                     <StockStatusBadge
@@ -598,15 +598,17 @@ export function PosBillingView({
       </div>
 
       {/* Right Column: Cart, Discounts, Customer & Manual Payment Entry (5 cols on desktop) */}
-      <div className="lg:col-span-5 rounded-xl bg-white border border-gray-200 shadow-xs overflow-hidden sticky top-4">
+      <div className="lg:col-span-5 card-3d-static rounded-2xl overflow-hidden sticky top-16">
         {/* Cart Header */}
-        <div className="flex items-center justify-between bg-[#111827] px-5 py-3.5 text-white">
-          <div className="flex items-center gap-2">
-            <ShoppingCart className="h-4 w-4 text-[#2563EB]" />
-            <h2 className="text-sm font-bold">Current Bill Cart</h2>
+        <div className="flex items-center justify-between bg-[#090D16] px-5 py-4 text-white border-b-2 border-slate-800">
+          <div className="flex items-center gap-2.5">
+            <div className="h-8 w-8 rounded-xl orb-3d-blue flex items-center justify-center text-white">
+              <ShoppingCart className="h-4 w-4" />
+            </div>
+            <h2 className="text-sm font-black">Current Bill Cart</h2>
           </div>
           <div className="flex items-center gap-2">
-            <span className="rounded-full bg-[#2563EB] px-2.5 py-0.5 text-xs font-bold text-white">
+            <span className="rounded-full bg-[#2563EB] px-2.5 py-0.5 text-xs font-extrabold text-white">
               {cart.reduce((a, b) => a + b.quantity, 0)} Units
             </span>
             {cart.length > 0 && (
@@ -1161,7 +1163,7 @@ export function PosBillingView({
             type="button"
             disabled={submitting || cart.length === 0}
             onClick={handleCheckout}
-            className="w-full rounded-xl bg-[#2563EB] py-3 px-4 text-sm font-bold text-white hover:bg-[#1D4ED8] disabled:opacity-50 transition flex items-center justify-center gap-2 shadow-sm cursor-pointer"
+            className="btn-3d-primary w-full rounded-xl py-3.5 px-4 text-sm font-extrabold text-white disabled:opacity-50 flex items-center justify-center gap-2 cursor-pointer"
           >
             <CheckCircle2 className="h-4 w-4" />
             {submitting

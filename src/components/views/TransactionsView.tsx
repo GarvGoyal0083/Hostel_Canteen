@@ -365,12 +365,12 @@ export function TransactionsView({
   return (
     <div className="space-y-5">
       {/* Header */}
-      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between bg-white p-5 rounded-xl border border-gray-200 shadow-xs">
+      <div className="card-3d-static flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between p-5 rounded-2xl">
         <div>
-          <h1 className="text-xl font-bold text-[#111827]">
+          <h1 className="text-xl font-black text-[#111827]">
             Complete Transaction History
           </h1>
-          <p className="text-xs text-gray-600 mt-0.5">
+          <p className="text-xs text-slate-600 mt-0.5">
             Permanent financial ledger of every sale, item cost, discount, manual UPI reference, udhaar balance, and controlled refund.
           </p>
         </div>
@@ -378,7 +378,7 @@ export function TransactionsView({
         <div className="flex flex-wrap items-center gap-2">
           <button
             onClick={handleExportTransactionsCSV}
-            className="inline-flex items-center gap-1.5 rounded-lg bg-[#2563EB] px-4 py-2 text-xs font-semibold text-white hover:bg-[#1D4ED8] transition shadow-xs cursor-pointer"
+            className="btn-3d-primary inline-flex items-center gap-1.5 rounded-xl px-4 py-2 text-xs font-extrabold text-white cursor-pointer"
           >
             <Download className="h-4 w-4" />
             Export Report (CSV)
@@ -387,16 +387,16 @@ export function TransactionsView({
       </div>
 
       {/* 8-Way Search & Filter Panel */}
-      <div className="rounded-xl bg-white p-4 border border-gray-200 shadow-xs space-y-3">
+      <div className="card-3d-static rounded-2xl p-4 space-y-3">
         <div className="flex items-center justify-between">
-          <span className="text-xs font-bold text-[#111827] flex items-center gap-1.5">
+          <span className="text-xs font-extrabold text-[#111827] flex items-center gap-1.5">
             <Filter className="h-3.5 w-3.5 text-[#2563EB]" />
-            Filter & Sort Transactions ({filteredSales.length} of {sales.length}{" "}
+            Filter &amp; Sort Transactions ({filteredSales.length} of {sales.length}{" "}
             Bills)
           </span>
           <button
             onClick={clearFilters}
-            className="text-xs font-semibold text-[#2563EB] hover:text-[#1D4ED8] cursor-pointer"
+            className="text-xs font-extrabold text-[#2563EB] hover:text-[#1D4ED8] cursor-pointer"
           >
             Reset All Filters
           </button>
@@ -408,35 +408,35 @@ export function TransactionsView({
             value={billIdFilter}
             onChange={(e) => setBillIdFilter(e.target.value)}
             placeholder="1. Bill ID (e.g. HC-2026...)"
-            className="rounded-lg border border-gray-300 px-2.5 py-1.5 text-[#111827]"
+            className="input-3d rounded-xl px-3 py-2 text-[#111827]"
           />
           <input
             type="text"
             value={customerNameFilter}
             onChange={(e) => setCustomerNameFilter(e.target.value)}
             placeholder="2. Customer Name..."
-            className="rounded-lg border border-gray-300 px-2.5 py-1.5 text-[#111827]"
+            className="input-3d rounded-xl px-3 py-2 text-[#111827]"
           />
           <input
             type="text"
             value={roomFilter}
             onChange={(e) => setRoomFilter(e.target.value)}
             placeholder="3. Room Number (e.g. B-204)..."
-            className="rounded-lg border border-gray-300 px-2.5 py-1.5 text-[#111827]"
+            className="input-3d rounded-xl px-3 py-2 text-[#111827]"
           />
           <input
             type="text"
             value={productNameFilter}
             onChange={(e) => setProductNameFilter(e.target.value)}
             placeholder="4. Product Name or SKU..."
-            className="rounded-lg border border-gray-300 px-2.5 py-1.5 text-[#111827]"
+            className="input-3d rounded-xl px-3 py-2 text-[#111827]"
           />
           <input
             type="text"
             value={upiRefFilter}
             onChange={(e) => setUpiRefFilter(e.target.value)}
             placeholder="5. Manual UPI Ref / UTR..."
-            className="rounded-lg border border-gray-300 px-2.5 py-1.5 font-mono text-[#111827]"
+            className="input-3d rounded-xl px-3 py-2 font-mono text-[#111827]"
           />
 
           <div className="flex items-center gap-1">

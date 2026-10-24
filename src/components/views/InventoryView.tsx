@@ -250,33 +250,33 @@ export function InventoryView({
   return (
     <div className="space-y-5">
       {/* Header */}
-      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between bg-white p-5 rounded-xl border border-gray-200 shadow-xs">
+      <div className="card-3d-static flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between p-5 rounded-2xl">
         <div>
-          <h1 className="text-xl font-bold text-[#111827]">
-            Inventory & Stock Management
+          <h1 className="text-xl font-black text-[#111827]">
+            Inventory &amp; Stock Management
           </h1>
-          <p className="text-xs text-gray-600 mt-0.5">
+          <p className="text-xs text-slate-600 mt-0.5">
             Track opening stock, incoming purchases, automatic sale deductions, damaged/expired items, and closing stock value.
           </p>
         </div>
 
-        <div className="flex flex-wrap items-center gap-2">
+        <div className="flex flex-wrap items-center gap-2.5">
           <button
             onClick={handleExportCSV}
-            className="inline-flex items-center gap-1.5 rounded-lg border border-gray-300 bg-white px-3 py-2 text-xs font-semibold text-[#111827] hover:bg-[#F3F4F6] transition cursor-pointer"
+            className="btn-3d-secondary inline-flex items-center gap-1.5 rounded-xl px-3.5 py-2 text-xs font-extrabold text-[#111827] cursor-pointer"
           >
             <Download className="h-3.5 w-3.5" />
             Export Report
           </button>
           <button
             onClick={() => openUpdateStockModal(undefined, "DAMAGED")}
-            className="inline-flex items-center gap-1.5 rounded-lg border border-gray-300 bg-white px-3 py-2 text-xs font-semibold text-[#111827] hover:bg-gray-100 transition cursor-pointer"
+            className="btn-3d-secondary inline-flex items-center gap-1.5 rounded-xl px-3.5 py-2 text-xs font-extrabold text-[#111827] cursor-pointer"
           >
             Record Damage / Adjustment
           </button>
           <button
             onClick={() => openUpdateStockModal(undefined, "PURCHASE")}
-            className="inline-flex items-center gap-1.5 rounded-lg bg-[#2563EB] px-4 py-2 text-xs font-semibold text-white hover:bg-[#1D4ED8] transition shadow-xs cursor-pointer"
+            className="btn-3d-primary inline-flex items-center gap-1.5 rounded-xl px-4 py-2 text-xs font-extrabold text-white cursor-pointer"
           >
             <PackagePlus className="h-4 w-4" />
             Update Stock / Purchase
@@ -286,50 +286,50 @@ export function InventoryView({
 
       {/* Inventory Summary Cards */}
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-4">
-        <div className="rounded-xl bg-white p-4 border border-gray-200 shadow-xs">
-          <span className="text-xs text-gray-500 font-medium block">
+        <div className="card-3d rounded-2xl p-5">
+          <span className="text-xs text-slate-500 font-bold uppercase tracking-wider block">
             Current Inventory Value (Cost)
           </span>
-          <span className="text-xl font-extrabold text-[#111827] mt-1 block">
+          <span className="text-2xl font-black text-[#111827] mt-1 block">
             {formatINR(totalInventoryCostValue)}
           </span>
-          <span className="text-[11px] text-gray-500">
+          <span className="text-[11px] text-slate-500">
             Based on recorded unit purchase prices
           </span>
         </div>
 
-        <div className="rounded-xl bg-white p-4 border border-gray-200 shadow-xs">
-          <span className="text-xs text-gray-500 font-medium block">
+        <div className="card-3d rounded-2xl p-5">
+          <span className="text-xs text-slate-500 font-bold uppercase tracking-wider block">
             Total Closing Stock Units
           </span>
-          <span className="text-xl font-extrabold text-[#2563EB] mt-1 block">
+          <span className="text-2xl font-black text-[#2563EB] mt-1 block">
             {totalClosingUnits} Units
           </span>
-          <span className="text-[11px] text-gray-500">
+          <span className="text-[11px] text-slate-500">
             Across {summaries.length} products
           </span>
         </div>
 
-        <div className="rounded-xl bg-white p-4 border border-gray-200 shadow-xs">
-          <span className="text-xs text-gray-500 font-medium block">
+        <div className="card-3d rounded-2xl p-5">
+          <span className="text-xs text-slate-500 font-bold uppercase tracking-wider block">
             Low Stock Products
           </span>
-          <span className="text-xl font-extrabold text-amber-600 mt-1 block">
+          <span className="text-2xl font-black text-amber-600 mt-1 block">
             {summaries.filter((s) => s.stock_status === "LOW_STOCK").length}
           </span>
-          <span className="text-[11px] text-gray-500">
+          <span className="text-[11px] text-slate-500">
             At or below minimum alert level
           </span>
         </div>
 
-        <div className="rounded-xl bg-white p-4 border border-gray-200 shadow-xs">
-          <span className="text-xs text-gray-500 font-medium block">
+        <div className="card-3d rounded-2xl p-5">
+          <span className="text-xs text-slate-500 font-bold uppercase tracking-wider block">
             Out-of-Stock Products
           </span>
-          <span className="text-xl font-extrabold text-red-600 mt-1 block">
+          <span className="text-2xl font-black text-red-600 mt-1 block">
             {summaries.filter((s) => s.stock_status === "OUT_OF_STOCK").length}
           </span>
-          <span className="text-[11px] text-gray-500">
+          <span className="text-[11px] text-slate-500">
             Blocked from POS sales until restocked
           </span>
         </div>
