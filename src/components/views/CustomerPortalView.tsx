@@ -637,6 +637,25 @@ export function CustomerPortalView({
                           </div>
                         </div>
 
+                        {/* 3D Product Image Display */}
+                        <div className="relative h-44 w-full rounded-2xl bg-white border border-slate-200 shadow-inner flex items-center justify-center overflow-hidden p-3 group">
+                          {product.image_url ? (
+                            <img
+                              src={product.image_url}
+                              alt={product.name}
+                              className="h-full w-full object-contain transition-transform duration-300 group-hover:scale-108 select-none"
+                              loading="lazy"
+                            />
+                          ) : (
+                            <div className="flex flex-col items-center justify-center text-slate-300 py-6">
+                              <Package className="h-12 w-12 text-slate-300 stroke-[1.5]" />
+                              <span className="text-[11px] font-semibold text-slate-400 mt-1">
+                                Hostel Snack
+                              </span>
+                            </div>
+                          )}
+                        </div>
+
                         {/* Product Name & SKU */}
                         <div>
                           <h3 className="text-base font-extrabold text-[#111827] leading-snug">

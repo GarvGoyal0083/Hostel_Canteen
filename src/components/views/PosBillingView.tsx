@@ -15,6 +15,7 @@ import {
   CheckCircle2,
   CreditCard,
   PlusCircle,
+  Package,
 } from "lucide-react";
 import {
   Customer,
@@ -563,20 +564,35 @@ export function PosBillingView({
                   }`}
                 >
                   <div>
-                    <div className="flex items-start justify-between gap-1.5">
+                    <div className="flex items-start justify-between gap-1.5 mb-2">
                       <span className="rounded-md bg-slate-100 border border-slate-200 px-1.5 py-0.5 text-[10px] font-mono font-bold text-slate-700">
                         {product.sku}
                       </span>
                       {inCartItem && (
-                        <span className="rounded-full bg-[#2563EB] px-2.5 py-0.5 text-[11px] font-extrabold text-white shadow-xs">
+                        <span className="rounded-full bg-[#2563EB] px-2 py-0.5 text-[10px] font-extrabold text-white shadow-xs">
                           {inCartItem.quantity} in cart
                         </span>
                       )}
                     </div>
-                    <div className="mt-2 text-sm font-extrabold text-[#111827] line-clamp-2 group-hover:text-[#2563EB]">
+
+                    {/* Product Image Thumbnail */}
+                    <div className="relative h-24 w-full rounded-xl bg-white border border-slate-200/80 shadow-inner flex items-center justify-center overflow-hidden p-1.5 mb-2">
+                      {product.image_url ? (
+                        <img
+                          src={product.image_url}
+                          alt={product.name}
+                          className="h-full w-full object-contain group-hover:scale-105 transition-transform select-none"
+                          loading="lazy"
+                        />
+                      ) : (
+                        <Package className="h-8 w-8 text-slate-300 stroke-[1.5]" />
+                      )}
+                    </div>
+
+                    <div className="text-xs sm:text-sm font-extrabold text-[#111827] line-clamp-2 leading-snug group-hover:text-[#2563EB]">
                       {product.name}
                     </div>
-                    <div className="text-[11px] text-slate-500 mt-0.5">
+                    <div className="text-[10px] text-slate-500 mt-0.5">
                       {product.category}
                     </div>
                   </div>
@@ -640,9 +656,20 @@ export function PosBillingView({
             <div className="divide-y divide-gray-200 border border-gray-200 rounded-lg overflow-hidden">
               {calculations.computedItems.map((item) => (
                 <div key={item.product.id} className="p-3 bg-white space-y-2">
-                  <div className="flex items-start justify-between gap-2">
-                    <div className="flex-1">
-                      <div className="text-xs font-bold text-[#111827]">
+                  <div className="flex items-start justify-between gap-2.5">
+                    <div className="h-10 w-10 shrink-0 rounded-lg bg-slate-50 border border-slate-200 flex items-center justify-center overflow-hidden p-0.5">
+                      {item.product.image_url ? (
+                        <img
+                          src={item.product.image_url}
+                          alt={item.product.name}
+                          className="h-full w-full object-contain"
+                        />
+                      ) : (
+                        <Package className="h-5 w-5 text-slate-400 stroke-[1.5]" />
+                      )}
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <div className="text-xs font-bold text-[#111827] truncate">
                         {item.product.name}
                       </div>
                       <div className="text-[11px] text-gray-500">
