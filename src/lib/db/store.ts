@@ -3,6 +3,7 @@ import path from "path";
 import crypto from "crypto";
 import {
   AuditLogRecord,
+  CanteenStatus,
   CreateSaleInput,
   Customer,
   CustomerLedgerEntry,
@@ -2428,7 +2429,59 @@ export function computeFinancialMetrics(filters?: {
     best_selling_products: bestSellingProducts,
     daily_series: dailyChartSeries,
     recent_transactions: listSales({ sortBy: "newest" }).slice(0, 8),
+    canteen_status: getCanteenStatus(),
   };
+}
+
+export function getCanteenStatus(): CanteenStatus {
+  const db = readDatabase();
+  if (db.meta && db.meta.canteen_status) {
+    return db.meta.canteen_status;
+  }
+  return {
+    is_open: true,
+    closure_type: "open",
+    closure_reason: "",
+    reopen_at: null,
+    updated_at: new Date().toISOString(),
+    updated_by: "System",
+  };
+}
+
+export async function updateCanteenStatus(
+  input: {
+    is_open: boolean;
+    closure_type?: CanteenStatus["closure_type"];
+    closure_reason?: string;
+    reopen_at?: string | null;
+  },
+  adminName: string
+): Promise<CanteenStatus> {
+  return withTransactionLock(() => {
+    const db = readDatabase();
+    const newStatus: CanteenStatus = {
+      is_open: input.is_open,
+      closure_type: input.is_open ? "open" : (input.closure_type || "today"),
+      closure_reason: input.is_open
+        ? ""
+        : (input.closure_reason?.trim() || "Canteen is currently closed."),
+      reopen_at: input.is_open ? null : (input.reopen_at || null),
+      updated_at: new Date().toISOString(),
+      updated_by: adminName,
+    };
+    db.meta.canteen_status = newStatus;
+    appendAudit(db, {
+      entity_type: "SYSTEM",
+      entity_id: "canteen_status",
+      action: input.is_open ? "REOPEN_CANTEEN" : "CLOSE_CANTEEN",
+      summary: input.is_open
+        ? `Canteen reopened by ${adminName}.`
+        : `Canteen marked closed (${newStatus.closure_type}: ${newStatus.closure_reason}${newStatus.reopen_at ? ` - Reopening ${newStatus.reopen_at}` : ""}) by ${adminName}.`,
+      performed_by: adminName,
+    });
+    writeDatabase(db);
+    return newStatus;
+  });
 }
 
 export async function switchDatabaseEnvironmentMode(

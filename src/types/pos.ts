@@ -1,5 +1,14 @@
 export type UserRole = "admin" | "manager" | "staff";
 
+export interface CanteenStatus {
+  is_open: boolean;
+  closure_type: "open" | "today" | "custom_time" | "break";
+  closure_reason: string;
+  reopen_at?: string | null;
+  updated_at: string;
+  updated_by: string;
+}
+
 export interface AdminUser {
   id: string;
   email: string;

@@ -22,11 +22,12 @@ import {
 } from "lucide-react";
 import { formatDateIST, formatINR, formatIST } from "@/lib/format";
 import { PaymentStatusBadge } from "@/components/StatusBadge";
-import { Product, SaleRecord } from "@/types/pos";
+import { CanteenStatus, Product, SaleRecord } from "@/types/pos";
 
 interface DashboardProps {
   data: {
     environment_mode: "development_sample" | "production_clean";
+    canteen_status?: CanteenStatus;
     kpis: {
       today_sales: number;
       weekly_sales: number;
@@ -90,6 +91,7 @@ interface DashboardProps {
   onNavigate: (tab: string) => void;
   onSelectReceipt: (sale: SaleRecord) => void;
   onRefresh: () => void;
+  onOpenStatusModal?: () => void;
 }
 
 export function DashboardView({
@@ -99,9 +101,17 @@ export function DashboardView({
   onNavigate,
   onSelectReceipt,
   onRefresh,
+  onOpenStatusModal,
 }: DashboardProps) {
-  const { kpis, alerts, best_selling_products, daily_series, recent_transactions, environment_mode } =
-    data;
+  const {
+    kpis,
+    alerts,
+    best_selling_products,
+    daily_series,
+    recent_transactions,
+    environment_mode,
+    canteen_status,
+  } = data;
   const [chartMetric, setChartMetric] = useState<"sales_profit" | "collections">(
     "sales_profit"
   );
@@ -189,6 +199,29 @@ export function DashboardView({
               </button>
             )}
           </div>
+
+          {onOpenStatusModal && (
+            <button
+              type="button"
+              onClick={onOpenStatusModal}
+              className={`inline-flex items-center gap-1.5 px-3 py-2 text-xs font-bold rounded-xl border transition cursor-pointer shadow-xs ${
+                canteen_status?.is_open === false
+                  ? "bg-red-50 border-red-300 text-red-800 hover:bg-red-100"
+                  : "bg-emerald-50 border-emerald-300 text-emerald-800 hover:bg-emerald-100"
+              }`}
+            >
+              <span
+                className={`h-2 w-2 rounded-full ${
+                  canteen_status?.is_open === false
+                    ? "bg-red-500"
+                    : "bg-emerald-500 animate-pulse"
+                }`}
+              />
+              <span>
+                {canteen_status?.is_open === false ? "Shop Closed" : "Shop Open"}
+              </span>
+            </button>
+          )}
 
           <button
             onClick={onRefresh}

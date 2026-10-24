@@ -24,12 +24,14 @@ import {
 import {
   Customer,
   CustomerLedgerEntry,
+  CanteenStatus,
   PaymentEntry,
   SaleRecord,
 } from "@/types/pos";
 import { formatINR, formatIST } from "@/lib/format";
 import { PaymentStatusBadge } from "@/components/StatusBadge";
 import { ReceiptModal } from "@/components/ReceiptModal";
+import { SunMedium } from "lucide-react";
 
 interface PublicProduct {
   id: string;
@@ -74,6 +76,14 @@ export function CustomerPortalView({
   const [currentCustomer, setCurrentCustomer] = useState<Customer | null>(
     initialCustomer || null
   );
+  const [canteenStatus, setCanteenStatus] = useState<CanteenStatus>({
+    is_open: true,
+    closure_type: "open",
+    closure_reason: "",
+    reopen_at: null,
+    updated_at: "",
+    updated_by: "Admin",
+  });
   const [sales, setSales] = useState<SaleRecord[]>([]);
   const [payments, setPayments] = useState<PaymentEntry[]>([]);
   const [ledger, setLedger] = useState<CustomerLedgerEntry[]>([]);
@@ -103,6 +113,9 @@ export function CustomerPortalView({
         const data = await res.json();
         setProducts(data.products || []);
         setAllCustomers(data.customers || []);
+        if (data.canteen_status) {
+          setCanteenStatus(data.canteen_status);
+        }
         if (data.customer_profile) {
           setCurrentCustomer(data.customer_profile);
           setSales(data.sales || []);
@@ -198,10 +211,17 @@ export function CustomerPortalView({
                 <span className="text-base sm:text-lg font-extrabold tracking-tight text-[#111827]">
                   Hostel Canteen
                 </span>
-                <span className="inline-flex items-center gap-1 rounded-full bg-emerald-50 border border-emerald-200 px-2.5 py-0.5 text-[10px] font-bold text-emerald-700 shadow-2xs">
-                  <span className="h-1.5 w-1.5 rounded-full bg-emerald-500 animate-pulse" />
-                  Student Portal
-                </span>
+                {canteenStatus.is_open ? (
+                  <span className="inline-flex items-center gap-1 rounded-full bg-emerald-50 border border-emerald-200 px-2.5 py-0.5 text-[10px] font-bold text-emerald-700 shadow-2xs">
+                    <span className="h-1.5 w-1.5 rounded-full bg-emerald-500 animate-pulse" />
+                    Open for Orders
+                  </span>
+                ) : (
+                  <span className="inline-flex items-center gap-1 rounded-full bg-red-50 border border-red-200 px-2.5 py-0.5 text-[10px] font-bold text-red-700 shadow-2xs">
+                    <span className="h-1.5 w-1.5 rounded-full bg-red-500" />
+                    Closed • {canteenStatus.reopen_at || "Reopening Soon"}
+                  </span>
+                )}
               </div>
               <p className="text-[11px] text-slate-500">
                 Live Snack Stock, Bills &amp; Room Udhaar Passbook
@@ -398,6 +418,39 @@ export function CustomerPortalView({
           </div>
         )}
 
+        {/* 3D Canteen Closed Notification Banner */}
+        {!canteenStatus.is_open && (
+          <div className="card-3d-dark rounded-2xl p-5 border-l-4 border-l-amber-500 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 text-white shadow-xl">
+            <div className="flex items-start gap-3.5">
+              <div className="h-11 w-11 rounded-2xl orb-3d-amber flex items-center justify-center text-white shrink-0 mt-0.5">
+                <SunMedium className="h-6 w-6" />
+              </div>
+              <div className="space-y-1">
+                <div className="flex items-center gap-2 flex-wrap">
+                  <span className="text-xs font-black uppercase tracking-wider text-amber-300 bg-amber-400/20 border border-amber-400/40 px-2.5 py-0.5 rounded-full">
+                    Canteen Counter Closed
+                  </span>
+                  {canteenStatus.reopen_at && (
+                    <span className="text-xs text-slate-300 flex items-center gap-1.5 font-bold">
+                      <Clock className="h-3.5 w-3.5 text-amber-400" />
+                      Reopening: <span className="text-white">{canteenStatus.reopen_at}</span>
+                    </span>
+                  )}
+                </div>
+                <p className="text-sm font-black text-white">
+                  {canteenStatus.closure_reason || "The canteen is closed for today."}
+                </p>
+                <p className="text-xs text-slate-300">
+                  You can still browse the snack menu, check live stock, view past purchases, and check your room udhaar balance.
+                </p>
+              </div>
+            </div>
+            <div className="shrink-0 rounded-xl bg-white/10 px-3.5 py-2 text-[11px] font-bold text-slate-300 border border-white/10">
+              Notice by: {canteenStatus.updated_by}
+            </div>
+          </div>
+        )}
+
         {/* 3 Clean 3D Navigation Tabs */}
         <div className="flex flex-wrap items-center justify-between gap-3">
           <div className="inline-flex rounded-2xl bg-white p-1.5 border border-slate-200 shadow-xs gap-1.5">
@@ -481,6 +534,20 @@ export function CustomerPortalView({
             ==================================================================== */}
         {activeTab === "stock" && (
           <div className="space-y-5">
+            {!canteenStatus.is_open && (
+              <div className="card-3d-static rounded-2xl bg-amber-50 border-amber-200 p-4 flex items-center justify-between gap-3 text-xs text-amber-900">
+                <div className="flex items-center gap-2">
+                  <SunMedium className="h-4 w-4 text-amber-600 shrink-0" />
+                  <span>
+                    <strong>Menu Preview Only:</strong> Canteen counter is currently closed. New billing will resume {canteenStatus.reopen_at || "shortly"}.
+                  </span>
+                </div>
+                <span className="text-[11px] font-extrabold uppercase text-amber-700 bg-amber-100 px-2 py-0.5 rounded-md shrink-0">
+                  Closed
+                </span>
+              </div>
+            )}
+
             {/* Search & Category Filter Bar */}
             <div className="card-3d-static rounded-2xl p-4 space-y-3">
               <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3">

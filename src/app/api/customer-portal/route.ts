@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import {
   createCustomer,
+  getCanteenStatus,
   getCustomerDetailsWithLedger,
   listCustomers,
   listProducts,
@@ -56,12 +57,14 @@ export async function GET(req: NextRequest) {
         sales: safeSales,
         payments: details.payments,
         ledger: details.ledger,
+        canteen_status: getCanteenStatus(),
       });
     }
 
     return NextResponse.json({
       products: activeProducts,
       customers: allCustomers,
+      canteen_status: getCanteenStatus(),
     });
   } catch (err) {
     return NextResponse.json(

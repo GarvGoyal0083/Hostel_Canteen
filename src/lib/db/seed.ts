@@ -1,6 +1,7 @@
 import {
   AdminUser,
   AuditLogRecord,
+  CanteenStatus,
   Customer,
   ExpenseRecord,
   InventoryMovement,
@@ -15,6 +16,7 @@ export interface DatabaseSchema {
   meta: {
     version: number;
     environment_mode: "development_sample" | "production_clean";
+    canteen_status?: CanteenStatus;
     created_at: string;
     updated_at: string;
   };

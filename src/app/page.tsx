@@ -24,6 +24,7 @@ import {
 import {
   AdminUser,
   AuditLogRecord,
+  CanteenStatus,
   Customer,
   ExpenseRecord,
   InventoryMovement,
@@ -45,6 +46,7 @@ import { ExpensesView } from "@/components/views/ExpensesView";
 import { ReportsView } from "@/components/views/ReportsView";
 import { SettingsView } from "@/components/views/SettingsView";
 import { CustomerPortalView } from "@/components/views/CustomerPortalView";
+import { CanteenStatusModal } from "@/components/CanteenStatusModal";
 import { ReceiptModal } from "@/components/ReceiptModal";
 
 type NavTab =
@@ -104,6 +106,15 @@ export default function HostelCanteenPosApp() {
   >(null);
   const [receiptSale, setReceiptSale] = useState<SaleRecord | null>(null);
   const [currentTimeIST, setCurrentTimeIST] = useState<string>("");
+  const [statusModalOpen, setStatusModalOpen] = useState(false);
+  const [canteenStatus, setCanteenStatus] = useState<CanteenStatus>({
+    is_open: true,
+    closure_type: "open",
+    closure_reason: "",
+    reopen_at: null,
+    updated_at: "",
+    updated_by: "System",
+  });
 
   const [dateFilter, setDateFilter] = useState<{
     startDate: string;
@@ -206,6 +217,9 @@ export default function HostelCanteenPosApp() {
       if (res.ok) {
         const json = await res.json();
         setAppData(json);
+        if (json.canteen_status) {
+          setCanteenStatus(json.canteen_status);
+        }
       }
     } catch {
       // ignore network error
@@ -306,6 +320,21 @@ export default function HostelCanteenPosApp() {
         </div>
         <div className="flex items-center gap-2">
           <button
+            onClick={() => setStatusModalOpen(true)}
+            className={`rounded-lg px-2 py-1 text-[10px] font-extrabold flex items-center gap-1.5 ${
+              canteenStatus.is_open
+                ? "bg-emerald-500/20 text-emerald-300 border border-emerald-500/30"
+                : "bg-red-500/20 text-red-300 border border-red-500/30"
+            }`}
+          >
+            <span
+              className={`h-1.5 w-1.5 rounded-full ${
+                canteenStatus.is_open ? "bg-emerald-400 animate-pulse" : "bg-red-400"
+              }`}
+            />
+            <span>{canteenStatus.is_open ? "Open" : "Closed"}</span>
+          </button>
+          <button
             onClick={() => setActiveTab("customer_portal")}
             className="rounded-lg bg-emerald-600 px-2.5 py-1 text-[11px] font-bold text-white"
           >
@@ -356,8 +385,42 @@ export default function HostelCanteenPosApp() {
           </div>
         </div>
 
-        {/* Quick 3D Action Buttons (New Sale + Student Portal View) */}
+        {/* Quick 3D Action Buttons (Shop Status + New Sale + Student Portal View) */}
         <div className="p-3.5 border-b border-slate-200 space-y-2 bg-slate-50/50">
+          {/* Shop Operating Status Widget */}
+          <button
+            type="button"
+            onClick={() => setStatusModalOpen(true)}
+            className={`w-full rounded-xl p-2.5 text-xs font-extrabold flex items-center justify-between transition cursor-pointer border shadow-2xs ${
+              canteenStatus.is_open
+                ? "bg-emerald-50 border-emerald-300 text-emerald-800 hover:bg-emerald-100"
+                : "bg-red-50 border-red-300 text-red-800 hover:bg-red-100"
+            }`}
+          >
+            <div className="flex items-center gap-2 text-left">
+              <span
+                className={`h-2.5 w-2.5 rounded-full shrink-0 ${
+                  canteenStatus.is_open
+                    ? "bg-emerald-500 animate-pulse"
+                    : "bg-red-500"
+                }`}
+              />
+              <div className="truncate">
+                <div className="text-[11px] font-black uppercase tracking-wider leading-none">
+                  {canteenStatus.is_open ? "Shop Open" : "Shop Closed"}
+                </div>
+                <div className="text-[9px] text-slate-500 font-medium mt-0.5 truncate max-w-[140px]">
+                  {canteenStatus.is_open
+                    ? "Taking orders"
+                    : canteenStatus.reopen_at || "Closed"}
+                </div>
+              </div>
+            </div>
+            <span className="rounded bg-white px-2 py-0.5 text-[9px] font-extrabold border border-slate-200 shadow-2xs">
+              Change
+            </span>
+          </button>
+
           <button
             onClick={() => {
               setActiveTab("pos");
@@ -490,6 +553,32 @@ export default function HostelCanteenPosApp() {
 
             <div className="flex items-center gap-2.5">
               <button
+                type="button"
+                onClick={() => setStatusModalOpen(true)}
+                className={`rounded-xl px-3 py-1.5 text-xs font-extrabold flex items-center gap-2 cursor-pointer border transition shadow-xs ${
+                  canteenStatus.is_open
+                    ? "bg-emerald-50 border-emerald-300 text-emerald-800 hover:bg-emerald-100"
+                    : "bg-red-50 border-red-300 text-red-800 hover:bg-red-100"
+                }`}
+                title="Click to change shop status (closed for today, custom time, or open)"
+              >
+                <span
+                  className={`h-2 w-2 rounded-full shrink-0 ${
+                    canteenStatus.is_open ? "bg-emerald-500 animate-pulse" : "bg-red-500"
+                  }`}
+                />
+                <span>{canteenStatus.is_open ? "Shop: Open" : "Shop: Closed"}</span>
+                {!canteenStatus.is_open && canteenStatus.reopen_at && (
+                  <span className="text-[10px] text-red-700 font-semibold hidden xl:inline">
+                    ({canteenStatus.reopen_at})
+                  </span>
+                )}
+                <span className="rounded bg-white/90 px-1.5 py-0.2 text-[9px] font-extrabold border border-slate-200">
+                  Manage
+                </span>
+              </button>
+
+              <button
                 onClick={() => setActiveTab("customer_portal")}
                 className="btn-3d-secondary rounded-xl px-3.5 py-1.5 text-xs font-extrabold flex items-center gap-1.5 cursor-pointer"
               >
@@ -524,6 +613,7 @@ export default function HostelCanteenPosApp() {
                   onNavigate={(tab) => setActiveTab(tab as NavTab)}
                   onSelectReceipt={(sale) => setReceiptSale(sale)}
                   onRefresh={fetchAllData}
+                  onOpenStatusModal={() => setStatusModalOpen(true)}
                 />
               )}
 
@@ -623,6 +713,17 @@ export default function HostelCanteenPosApp() {
           )}
         </div>
       </main>
+
+      {/* Shop Operating Status Modal (Closed for Today, Custom Time, Reopen) */}
+      <CanteenStatusModal
+        isOpen={statusModalOpen}
+        currentStatus={canteenStatus}
+        onClose={() => setStatusModalOpen(false)}
+        onStatusUpdated={(updated) => {
+          setCanteenStatus(updated);
+          fetchAllData();
+        }}
+      />
 
       {/* Printable & Downloadable Receipt Modal */}
       <ReceiptModal
