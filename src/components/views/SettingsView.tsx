@@ -10,8 +10,11 @@ import {
   ExternalLink,
   AlertTriangle,
   History,
+  Store,
+  Clock,
+  SunMedium,
 } from "lucide-react";
-import { AdminUser, AuditLogRecord } from "@/types/pos";
+import { AdminUser, AuditLogRecord, CanteenStatus } from "@/types/pos";
 import { downloadCSV, formatIST } from "@/lib/format";
 
 interface SettingsViewProps {
@@ -19,6 +22,8 @@ interface SettingsViewProps {
   supabaseConfigured: boolean;
   environmentMode: "development_sample" | "production_clean";
   auditLogs: AuditLogRecord[];
+  canteenStatus?: CanteenStatus;
+  onOpenStatusModal?: () => void;
   onRefresh: () => void;
 }
 
@@ -27,6 +32,8 @@ export function SettingsView({
   supabaseConfigured,
   environmentMode,
   auditLogs,
+  canteenStatus,
+  onOpenStatusModal,
   onRefresh,
 }: SettingsViewProps) {
   const [switching, setSwitching] = useState(false);
@@ -109,6 +116,81 @@ export function SettingsView({
 
       {/* Cards Row */}
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
+        {/* Card 0: Shop Operating Status & Customer Sync */}
+        <div className="card-3d p-5 rounded-2xl space-y-3 text-xs flex flex-col justify-between">
+          <div className="space-y-3">
+            <div className="flex items-center justify-between border-b border-slate-100 pb-2.5">
+              <div className="flex items-center gap-2">
+                <Store className="h-4 w-4 text-[#2563EB]" />
+                <h2 className="text-sm font-black text-[#111827]">
+                  Shop Operating Status
+                </h2>
+              </div>
+              <span
+                className={`rounded-full px-2 py-0.5 text-[10px] font-black ${
+                  canteenStatus?.is_open === false
+                    ? "bg-red-100 text-red-800 border border-red-300"
+                    : "bg-emerald-100 text-emerald-800 border border-emerald-300"
+                }`}
+              >
+                {canteenStatus?.is_open === false ? "CLOSED" : "OPEN"}
+              </span>
+            </div>
+
+            <div className="space-y-2">
+              <div className="flex justify-between">
+                <span className="text-slate-500">Live Status:</span>
+                <span className="font-extrabold text-[#111827]">
+                  {canteenStatus?.is_open === false ? "Closed for Orders" : "Open for Orders"}
+                </span>
+              </div>
+              {canteenStatus?.is_open === false && (
+                <>
+                  <div className="flex justify-between">
+                    <span className="text-slate-500">Closure Type:</span>
+                    <span className="font-bold text-amber-700 uppercase">
+                      {canteenStatus.closure_type}
+                    </span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-slate-500">Reopen Time:</span>
+                    <span className="font-bold text-slate-900">
+                      {canteenStatus.reopen_at || "Not Specified"}
+                    </span>
+                  </div>
+                  <div className="rounded-lg bg-red-50 border border-red-200 p-2 text-[11px] text-red-800">
+                    <strong>Customer Notice:</strong> {canteenStatus.closure_reason}
+                  </div>
+                </>
+              )}
+              {canteenStatus?.is_open !== false && (
+                <p className="text-[11px] text-slate-500">
+                  Customers can currently browse all snacks, check stock levels, and place counter orders.
+                </p>
+              )}
+            </div>
+          </div>
+
+          {onOpenStatusModal && (
+            <button
+              type="button"
+              onClick={onOpenStatusModal}
+              className={`w-full rounded-xl py-2.5 text-xs font-extrabold flex items-center justify-center gap-2 cursor-pointer transition ${
+                canteenStatus?.is_open === false ? "btn-3d-primary" : "btn-3d-secondary"
+              }`}
+            >
+              {canteenStatus?.is_open === false ? (
+                <span>Re-Open Canteen Counter</span>
+              ) : (
+                <>
+                  <SunMedium className="h-4 w-4 text-amber-500" />
+                  <span>Set Shop Closed (Today / Custom Time)</span>
+                </>
+              )}
+            </button>
+          )}
+        </div>
+
         {/* Card 1: Admin & Security Status */}
         <div className="rounded-xl bg-white p-5 border border-gray-200 shadow-xs space-y-3 text-xs">
           <div className="flex items-center gap-2 border-b border-gray-100 pb-2.5">

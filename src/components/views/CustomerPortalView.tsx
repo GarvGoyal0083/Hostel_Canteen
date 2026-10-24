@@ -199,7 +199,7 @@ export function CustomerPortalView({
   return (
     <div className="min-h-screen bg-[#F1F5F9] text-[#111827] pb-16">
       {/* Top 3D Floating Navigation Bar */}
-      <header className="sticky top-0 z-30 bg-white/90 backdrop-blur-md border-b-2 border-slate-200 shadow-sm">
+      <header className="sticky top-0 z-30 bg-white border-b-2 border-slate-200 shadow-xs">
         <div className="max-w-6xl mx-auto px-4 sm:px-6 py-3.5 flex flex-wrap items-center justify-between gap-3">
           {/* Brand Logo */}
           <div className="flex items-center gap-3">

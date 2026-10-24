@@ -9,80 +9,91 @@
   --surface-grey: #F1F5F9;
 }
 
+html {
+  scroll-behavior: smooth;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
 body {
   background-color: #F1F5F9;
-  background-image: 
-    radial-gradient(at 8% 8%, rgba(37, 99, 235, 0.07) 0px, transparent 45%),
-    radial-gradient(at 92% 12%, rgba(59, 130, 246, 0.06) 0px, transparent 45%),
-    radial-gradient(at 50% 92%, rgba(16, 185, 129, 0.05) 0px, transparent 50%);
-  background-attachment: fixed;
   color: #111827;
   font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
-  -webkit-font-smoothing: antialiased;
+  overflow-x: hidden;
+}
+
+/* Hardware-accelerated fixed ambient background layer (prevents software repainting during scroll) */
+body::before {
+  content: "";
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: -1;
+  background-image: 
+    radial-gradient(at 8% 8%, rgba(37, 99, 235, 0.05) 0px, transparent 40%),
+    radial-gradient(at 92% 12%, rgba(59, 130, 246, 0.04) 0px, transparent 40%),
+    radial-gradient(at 50% 92%, rgba(16, 185, 129, 0.04) 0px, transparent 45%);
+  transform: translateZ(0);
 }
 
 /* ============================================================================
-   HIGH-3D MODERN SURFACE & DEPTH SYSTEM
+   ULTRA-SMOOTH HIGH-3D MODERN SURFACE & DEPTH SYSTEM
    ============================================================================ */
 
-/* Elevated 3D Card with Tactile Bottom Bevel & Specular Top Edge */
+/* Elevated 3D Card: Fast GPU-composited shadows with tactile bottom bevel */
 .card-3d {
-  background: linear-gradient(180deg, rgba(255, 255, 255, 0.98) 0%, rgba(248, 250, 252, 0.96) 100%);
-  backdrop-filter: blur(12px);
-  border: 1px solid rgba(203, 213, 225, 0.85);
-  border-top: 1px solid rgba(255, 255, 255, 1);
-  border-bottom: 4px solid #CBD5E1;
+  background: linear-gradient(180deg, #FFFFFF 0%, #F8FAFC 100%);
+  border: 1px solid rgba(203, 213, 225, 0.9);
+  border-top: 1px solid #FFFFFF;
+  border-bottom: 3px solid #CBD5E1;
   box-shadow: 
     0 1px 0 0 rgba(255, 255, 255, 0.9) inset,
-    0 14px 28px -6px rgba(15, 23, 42, 0.08),
-    0 4px 10px -2px rgba(15, 23, 42, 0.04);
-  transition: transform 0.25s cubic-bezier(0.16, 1, 0.3, 1),
-              box-shadow 0.25s cubic-bezier(0.16, 1, 0.3, 1),
-              border-color 0.25s ease;
+    0 4px 12px -2px rgba(15, 23, 42, 0.05);
+  transition: transform 0.16s ease, border-color 0.16s ease, box-shadow 0.16s ease;
+  transform: translateZ(0);
+  will-change: transform;
 }
 
 .card-3d:hover {
-  transform: translateY(-4px);
+  transform: translateY(-3px) translateZ(0);
   border-color: rgba(147, 197, 253, 0.95);
   border-bottom-color: #93C5FD;
   box-shadow: 
     0 1px 0 0 rgba(255, 255, 255, 1) inset,
-    0 22px 38px -8px rgba(37, 99, 235, 0.14),
-    0 8px 16px -4px rgba(15, 23, 42, 0.06);
+    0 10px 20px -4px rgba(37, 99, 235, 0.12);
 }
 
-/* Static 3D Card (for large tables/containers where hover lift shouldn't shift layout) */
+/* Static 3D Card (zero hover displacement for tables, charts & containers) */
 .card-3d-static {
   background: linear-gradient(180deg, #FFFFFF 0%, #F8FAFC 100%);
   border: 1px solid rgba(203, 213, 225, 0.9);
   border-top: 1px solid #FFFFFF;
-  border-bottom: 4px solid #CBD5E1;
+  border-bottom: 3px solid #CBD5E1;
   box-shadow: 
     0 1px 0 0 rgba(255, 255, 255, 0.95) inset,
-    0 14px 30px -6px rgba(15, 23, 42, 0.07),
-    0 4px 10px -2px rgba(15, 23, 42, 0.04);
+    0 4px 12px -2px rgba(15, 23, 42, 0.05);
+  transform: translateZ(0);
 }
 
 /* High-3D Dark Obsidian Card */
 .card-3d-dark {
-  background: linear-gradient(145deg, #1E293B 0%, #0F172A 55%, #090D16 100%);
+  background: linear-gradient(145deg, #1E293B 0%, #0F172A 100%);
   border: 1px solid rgba(255, 255, 255, 0.12);
-  border-top: 1px solid rgba(255, 255, 255, 0.22);
-  border-bottom: 4px solid #020617;
+  border-top: 1px solid rgba(255, 255, 255, 0.2);
+  border-bottom: 3px solid #020617;
   box-shadow: 
-    0 1px 0 0 rgba(255, 255, 255, 0.12) inset,
-    0 18px 36px -6px rgba(9, 13, 22, 0.45),
-    0 6px 14px -2px rgba(37, 99, 235, 0.15);
-  transition: transform 0.25s cubic-bezier(0.16, 1, 0.3, 1),
-              box-shadow 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+    0 1px 0 0 rgba(255, 255, 255, 0.1) inset,
+    0 8px 18px -4px rgba(9, 13, 22, 0.35);
+  transition: transform 0.16s ease, box-shadow 0.16s ease;
+  transform: translateZ(0);
+  will-change: transform;
 }
 
 .card-3d-dark:hover {
-  transform: translateY(-4px);
+  transform: translateY(-3px) translateZ(0);
   box-shadow: 
     0 1px 0 0 rgba(255, 255, 255, 0.18) inset,
-    0 24px 44px -8px rgba(9, 13, 22, 0.55),
-    0 8px 20px -2px rgba(37, 99, 235, 0.28);
+    0 14px 26px -6px rgba(9, 13, 22, 0.45);
 }
 
 /* 3D Tactile Primary Blue Button */
@@ -91,57 +102,55 @@ body {
   color: #FFFFFF;
   border: 1px solid #1D4ED8;
   border-top: 1px solid #60A5FA;
-  border-bottom: 4px solid #1E3A8A;
+  border-bottom: 3px solid #1E3A8A;
   box-shadow: 
     0 1px 0 0 rgba(255, 255, 255, 0.35) inset,
-    0 6px 14px -2px rgba(37, 99, 235, 0.4),
-    0 2px 4px 0 rgba(15, 23, 42, 0.12);
-  transition: all 0.16s cubic-bezier(0.16, 1, 0.3, 1);
+    0 4px 10px -2px rgba(37, 99, 235, 0.35);
+  transition: all 0.14s ease;
+  transform: translateZ(0);
 }
 
 .btn-3d-primary:hover {
   background: linear-gradient(180deg, #60A5FA 0%, #2563EB 50%, #1E40AF 100%);
-  transform: translateY(-2px);
+  transform: translateY(-1.5px) translateZ(0);
   box-shadow: 
     0 1px 0 0 rgba(255, 255, 255, 0.45) inset,
-    0 10px 22px -2px rgba(37, 99, 235, 0.5),
-    0 4px 8px 0 rgba(15, 23, 42, 0.15);
+    0 6px 14px -2px rgba(37, 99, 235, 0.45);
 }
 
 .btn-3d-primary:active {
-  transform: translateY(2px);
+  transform: translateY(1.5px) translateZ(0);
   border-bottom-width: 1px;
-  box-shadow: 
-    0 2px 6px 0 rgba(37, 99, 235, 0.3);
+  box-shadow: 0 1px 4px 0 rgba(37, 99, 235, 0.3);
 }
 
 /* 3D Tactile Secondary White/Slate Button */
 .btn-3d-secondary {
-  background: linear-gradient(180deg, #FFFFFF 0%, #F1F5F9 100%);
+  background: linear-gradient(180deg, #FFFFFF 0%, #F8FAFC 100%);
   color: #111827;
   border: 1px solid #CBD5E1;
   border-top: 1px solid #FFFFFF;
-  border-bottom: 3px solid #94A3B8;
+  border-bottom: 2px solid #94A3B8;
   box-shadow: 
     0 1px 0 0 rgba(255, 255, 255, 0.9) inset,
-    0 4px 10px -2px rgba(15, 23, 42, 0.06);
-  transition: all 0.16s ease;
+    0 2px 6px -1px rgba(15, 23, 42, 0.05);
+  transition: all 0.14s ease;
+  transform: translateZ(0);
 }
 
 .btn-3d-secondary:hover {
-  background: linear-gradient(180deg, #FFFFFF 0%, #E2E8F0 100%);
+  background: linear-gradient(180deg, #FFFFFF 0%, #F1F5F9 100%);
   border-color: #93C5FD;
   border-bottom-color: #3B82F6;
-  transform: translateY(-1.5px);
+  transform: translateY(-1px) translateZ(0);
   box-shadow: 
     0 1px 0 0 rgba(255, 255, 255, 1) inset,
-    0 8px 16px -3px rgba(37, 99, 235, 0.12);
+    0 4px 10px -2px rgba(37, 99, 235, 0.12);
 }
 
 .btn-3d-secondary:active {
-  transform: translateY(1.5px);
+  transform: translateY(1px) translateZ(0);
   border-bottom-width: 1px;
-  box-shadow: 0 1px 2px 0 rgba(15, 23, 42, 0.05);
 }
 
 /* 3D Tactile Dark Button */
@@ -150,23 +159,21 @@ body {
   color: #FFFFFF;
   border: 1px solid #334155;
   border-top: 1px solid #475569;
-  border-bottom: 4px solid #020617;
+  border-bottom: 3px solid #020617;
   box-shadow: 
     0 1px 0 0 rgba(255, 255, 255, 0.15) inset,
-    0 6px 14px -2px rgba(15, 23, 42, 0.35);
-  transition: all 0.16s ease;
+    0 4px 10px -2px rgba(15, 23, 42, 0.3);
+  transition: all 0.14s ease;
+  transform: translateZ(0);
 }
 
 .btn-3d-dark:hover {
   background: linear-gradient(180deg, #334155 0%, #0F172A 100%);
-  transform: translateY(-2px);
-  box-shadow: 
-    0 1px 0 0 rgba(255, 255, 255, 0.25) inset,
-    0 10px 20px -2px rgba(15, 23, 42, 0.45);
+  transform: translateY(-1.5px) translateZ(0);
 }
 
 .btn-3d-dark:active {
-  transform: translateY(2px);
+  transform: translateY(1.5px) translateZ(0);
   border-bottom-width: 1px;
 }
 
@@ -176,9 +183,9 @@ body {
   border: 1px solid #CBD5E1;
   border-top: 2px solid #94A3B8;
   box-shadow: 
-    inset 0 2px 4px 0 rgba(15, 23, 42, 0.05),
+    inset 0 1px 3px 0 rgba(15, 23, 42, 0.05),
     0 1px 0 0 rgba(255, 255, 255, 0.9);
-  transition: all 0.18s ease;
+  transition: border-color 0.15s ease, box-shadow 0.15s ease;
 }
 
 .input-3d:focus {
@@ -193,42 +200,27 @@ body {
 /* 3D Floating Spherical / Isometric Orbs */
 .orb-3d-blue {
   background: radial-gradient(circle at 30% 30%, #60A5FA 0%, #2563EB 55%, #1E3A8A 100%);
-  box-shadow: 
-    0 8px 18px -3px rgba(37, 99, 235, 0.45),
-    inset 0 2px 4px rgba(255, 255, 255, 0.45),
-    inset 0 -2px 4px rgba(15, 23, 42, 0.35);
+  box-shadow: 0 4px 12px -2px rgba(37, 99, 235, 0.35);
 }
 
 .orb-3d-dark {
   background: radial-gradient(circle at 30% 30%, #475569 0%, #1E293B 55%, #090D16 100%);
-  box-shadow: 
-    0 8px 18px -3px rgba(15, 23, 42, 0.4),
-    inset 0 2px 4px rgba(255, 255, 255, 0.35),
-    inset 0 -2px 4px rgba(0, 0, 0, 0.5);
+  box-shadow: 0 4px 12px -2px rgba(15, 23, 42, 0.35);
 }
 
 .orb-3d-emerald {
   background: radial-gradient(circle at 30% 30%, #34D399 0%, #10B981 55%, #065F46 100%);
-  box-shadow: 
-    0 8px 18px -3px rgba(16, 185, 129, 0.4),
-    inset 0 2px 4px rgba(255, 255, 255, 0.45),
-    inset 0 -2px 4px rgba(6, 78, 59, 0.4);
+  box-shadow: 0 4px 12px -2px rgba(16, 185, 129, 0.35);
 }
 
 .orb-3d-amber {
   background: radial-gradient(circle at 30% 30%, #FBBF24 0%, #F59E0B 55%, #92400E 100%);
-  box-shadow: 
-    0 8px 18px -3px rgba(245, 158, 11, 0.4),
-    inset 0 2px 4px rgba(255, 255, 255, 0.45),
-    inset 0 -2px 4px rgba(120, 53, 15, 0.4);
+  box-shadow: 0 4px 12px -2px rgba(245, 158, 11, 0.35);
 }
 
 .orb-3d-red {
   background: radial-gradient(circle at 30% 30%, #F87171 0%, #EF4444 55%, #991B1B 100%);
-  box-shadow: 
-    0 8px 18px -3px rgba(239, 68, 68, 0.4),
-    inset 0 2px 4px rgba(255, 255, 255, 0.45),
-    inset 0 -2px 4px rgba(127, 29, 29, 0.4);
+  box-shadow: 0 4px 12px -2px rgba(239, 68, 68, 0.35);
 }
 
 /* 3D Sidebar Navigation Pills */
@@ -236,49 +228,41 @@ body {
   background: linear-gradient(180deg, #EFF6FF 0%, #DBEAFE 100%);
   color: #1D4ED8;
   border: 1px solid #93C5FD;
-  border-bottom: 3px solid #3B82F6;
+  border-bottom: 2px solid #3B82F6;
   box-shadow: 
     0 1px 0 0 rgba(255, 255, 255, 0.9) inset,
-    0 6px 14px -3px rgba(37, 99, 235, 0.18);
-  transform: translateY(-1px);
+    0 2px 6px -1px rgba(37, 99, 235, 0.15);
 }
 
 .nav-item-3d {
   border: 1px solid transparent;
-  transition: all 0.18s ease;
+  transition: all 0.14s ease;
 }
 
 .nav-item-3d:hover {
   background: linear-gradient(180deg, #FFFFFF 0%, #F1F5F9 100%);
   border-color: #E2E8F0;
   border-bottom: 2px solid #CBD5E1;
-  transform: translateX(3px);
-  box-shadow: 0 4px 10px -2px rgba(15, 23, 42, 0.05);
+  transform: translateX(2px);
 }
 
 /* 3D Pillar Chart Columns */
 .chart-pillar-blue {
   background: linear-gradient(90deg, #1D4ED8 0%, #3B82F6 38%, #93C5FD 55%, #1E40AF 100%);
-  box-shadow: 
-    0 6px 14px rgba(37, 99, 235, 0.35),
-    inset 0 2px 0 rgba(255, 255, 255, 0.65);
+  box-shadow: 0 4px 8px rgba(37, 99, 235, 0.25);
 }
 
 .chart-pillar-dark {
   background: linear-gradient(90deg, #0F172A 0%, #1E293B 40%, #475569 55%, #090D16 100%);
-  box-shadow: 
-    0 6px 14px rgba(15, 23, 42, 0.3),
-    inset 0 2px 0 rgba(255, 255, 255, 0.35);
+  box-shadow: 0 4px 8px rgba(15, 23, 42, 0.25);
 }
 
 .chart-pillar-emerald {
   background: linear-gradient(90deg, #047857 0%, #10B981 38%, #6EE7B7 55%, #065F46 100%);
-  box-shadow: 
-    0 6px 14px rgba(16, 185, 129, 0.35),
-    inset 0 2px 0 rgba(255, 255, 255, 0.65);
+  box-shadow: 0 4px 8px rgba(16, 185, 129, 0.25);
 }
 
-/* URL and Hyperlink Styling per specification */
+/* URL and Hyperlink Styling */
 a.pos-link {
   color: #2563EB;
   text-decoration: underline;

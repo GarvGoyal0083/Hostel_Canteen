@@ -19,6 +19,8 @@ import {
   Layers,
   ArrowRight,
   CheckCircle2,
+  Store,
+  SunMedium,
 } from "lucide-react";
 import { formatDateIST, formatINR, formatIST } from "@/lib/format";
 import { PaymentStatusBadge } from "@/components/StatusBadge";
@@ -239,6 +241,82 @@ export function DashboardView({
             New Sale (POS)
           </button>
         </div>
+      </div>
+
+      {/* 3D Canteen Operating Status Banner (High Visibility) */}
+      <div
+        className={`card-3d rounded-2xl p-4 sm:p-5 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 border-l-4 ${
+          canteen_status?.is_open === false
+            ? "border-l-red-500 bg-red-50/40"
+            : "border-l-emerald-500 bg-emerald-50/30"
+        }`}
+      >
+        <div className="flex items-center gap-3.5">
+          <div
+            className={`h-11 w-11 rounded-2xl flex items-center justify-center text-white shrink-0 ${
+              canteen_status?.is_open === false ? "orb-3d-red" : "orb-3d-emerald"
+            }`}
+          >
+            <Store className="h-5 w-5" />
+          </div>
+          <div>
+            <div className="flex items-center gap-2 flex-wrap">
+              <span className="text-xs font-black uppercase tracking-wider text-slate-500">
+                Shop Operating Status:
+              </span>
+              <span
+                className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-0.5 text-xs font-black shadow-2xs ${
+                  canteen_status?.is_open === false
+                    ? "bg-red-100 text-red-800 border border-red-300"
+                    : "bg-emerald-100 text-emerald-800 border border-emerald-300"
+                }`}
+              >
+                <span
+                  className={`h-2 w-2 rounded-full ${
+                    canteen_status?.is_open === false
+                      ? "bg-red-500"
+                      : "bg-emerald-500 animate-pulse"
+                  }`}
+                />
+                {canteen_status?.is_open === false ? "CLOSED" : "OPEN FOR ORDERS"}
+              </span>
+              {canteen_status?.is_open === false && canteen_status?.reopen_at && (
+                <span className="text-xs font-bold text-red-700 bg-red-50 border border-red-200 px-2 py-0.5 rounded-md">
+                  Reopening: {canteen_status.reopen_at}
+                </span>
+              )}
+            </div>
+            <p className="text-xs text-slate-600 mt-1">
+              {canteen_status?.is_open === false
+                ? (canteen_status.closure_reason || "Canteen is currently marked as closed. Customers see the closed notice.")
+                : "Shop is live and accepting orders. Students can view active menu and stock."}
+            </p>
+          </div>
+        </div>
+
+        {onOpenStatusModal && (
+          <button
+            type="button"
+            onClick={onOpenStatusModal}
+            className={`shrink-0 rounded-xl px-4 py-2.5 text-xs font-extrabold flex items-center gap-2 cursor-pointer transition shadow-sm ${
+              canteen_status?.is_open === false
+                ? "btn-3d-primary"
+                : "btn-3d-secondary text-slate-800 border-red-200 hover:border-red-400 hover:text-red-700"
+            }`}
+          >
+            {canteen_status?.is_open === false ? (
+              <>
+                <CheckCircle2 className="h-4 w-4" />
+                <span>Re-Open Shop Now</span>
+              </>
+            ) : (
+              <>
+                <SunMedium className="h-4 w-4 text-amber-500" />
+                <span>Close Shop (Today / Custom Time)</span>
+              </>
+            )}
+          </button>
+        )}
       </div>
 
       {/* 3D Demo / Clean Production Banner */}

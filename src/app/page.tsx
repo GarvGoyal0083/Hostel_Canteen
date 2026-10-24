@@ -79,6 +79,17 @@ const SIDEBAR_ITEMS: Array<{
   { id: "settings", label: "10. Settings", icon: Settings },
 ];
 
+const LiveISTClock = React.memo(function LiveISTClock() {
+  const [time, setTime] = useState("");
+  useEffect(() => {
+    const update = () => setTime(formatIST(new Date(), true));
+    update();
+    const timer = setInterval(update, 1000);
+    return () => clearInterval(timer);
+  }, []);
+  return <span className="truncate">{time}</span>;
+});
+
 export default function HostelCanteenPosApp() {
   const [authChecked, setAuthChecked] = useState(false);
   const [admin, setAdmin] = useState<AdminUser | null>(null);
@@ -105,7 +116,6 @@ export default function HostelCanteenPosApp() {
     string | null
   >(null);
   const [receiptSale, setReceiptSale] = useState<SaleRecord | null>(null);
-  const [currentTimeIST, setCurrentTimeIST] = useState<string>("");
   const [statusModalOpen, setStatusModalOpen] = useState(false);
   const [canteenStatus, setCanteenStatus] = useState<CanteenStatus>({
     is_open: true,
@@ -194,14 +204,6 @@ export default function HostelCanteenPosApp() {
     products: Product[];
     audit_logs: AuditLogRecord[];
   } | null>(null);
-
-  // Live IST clock
-  useEffect(() => {
-    const updateClock = () => setCurrentTimeIST(formatIST(new Date(), true));
-    updateClock();
-    const timer = setInterval(updateClock, 1000);
-    return () => clearInterval(timer);
-  }, []);
 
   const fetchAllData = useCallback(async () => {
     try {
@@ -516,7 +518,7 @@ export default function HostelCanteenPosApp() {
           </div>
           <div className="flex items-center gap-1.5 text-[10px] font-semibold text-slate-600 bg-white/80 rounded-lg px-2.5 py-1.5 border border-slate-200">
             <Clock className="h-3 w-3 text-[#2563EB] shrink-0" />
-            <span className="truncate">{currentTimeIST}</span>
+            <LiveISTClock />
           </div>
         </div>
       </aside>
@@ -524,7 +526,7 @@ export default function HostelCanteenPosApp() {
       {/* Main Content Area */}
       <main className="flex-1 lg:pl-68">
         {/* Top 3D Context & Quick Stats Bar */}
-        <div className="hidden lg:block sticky top-0 z-20 bg-white/85 backdrop-blur-md border-b border-slate-200 px-6 py-3">
+        <div className="hidden lg:block sticky top-0 z-20 bg-white border-b border-slate-200 px-6 py-3 shadow-2xs">
           <div className="max-w-7xl mx-auto flex items-center justify-between gap-4">
             <div className="flex items-center gap-2.5">
               <span className="inline-flex items-center gap-1.5 rounded-xl bg-[#EFF6FF] border border-blue-200 px-3 py-1 text-xs font-extrabold text-[#1D4ED8]">
@@ -706,6 +708,8 @@ export default function HostelCanteenPosApp() {
                   supabaseConfigured={appData.supabase_configured}
                   environmentMode={appData.environment_mode}
                   auditLogs={appData.audit_logs}
+                  canteenStatus={canteenStatus}
+                  onOpenStatusModal={() => setStatusModalOpen(true)}
                   onRefresh={fetchAllData}
                 />
               )}
