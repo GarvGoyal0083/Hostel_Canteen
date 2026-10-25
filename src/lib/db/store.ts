@@ -317,6 +317,49 @@ export async function updateProduct(
   });
 }
 
+const MAX_REFERENCE_IMAGES_PER_PRODUCT = 12;
+
+/**
+ * Attach a confirmed POS scan photo to a product so future offline recognition improves.
+ * Keeps only the most recent MAX_REFERENCE_IMAGES_PER_PRODUCT photos; returns removed URLs.
+ */
+export async function addProductReferenceImage(
+  productId: string,
+  imageUrl: string,
+  adminName: string
+): Promise<{ product: Product; removed: string[] }> {
+  return withTransactionLock(() => {
+    const db = readDatabase();
+    const idx = db.products.findIndex((p) => p.id === productId);
+    if (idx === -1) throw new Error("Product not found.");
+
+    const existing = db.products[idx];
+    const refs = [...(existing.reference_images || []), imageUrl];
+    const removed =
+      refs.length > MAX_REFERENCE_IMAGES_PER_PRODUCT
+        ? refs.splice(0, refs.length - MAX_REFERENCE_IMAGES_PER_PRODUCT)
+        : [];
+
+    const updated: Product = {
+      ...existing,
+      reference_images: refs,
+      updated_at: new Date().toISOString(),
+    };
+    db.products[idx] = updated;
+
+    appendAudit(db, {
+      entity_type: "PRODUCT",
+      entity_id: updated.id,
+      action: "ADD_REFERENCE_IMAGE",
+      summary: `Saved scan reference photo for "${updated.name}" (${refs.length} total)`,
+      performed_by: adminName,
+    });
+
+    writeDatabase(db);
+    return { product: updated, removed };
+  });
+}
+
 // ==============================================================================
 // 2. INVENTORY & STOCK MANAGEMENT OPERATIONS
 // ==============================================================================

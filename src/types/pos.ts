@@ -35,6 +35,7 @@ export interface Product {
   sku: string;
   category: ProductCategory;
   image_url?: string | null;
+  reference_images?: string[]; // Extra photos captured at POS to improve offline snack recognition
   purchase_price: number;
   selling_price: number;
   estimated_unit_profit: number; // selling_price - purchase_price

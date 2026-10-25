@@ -16,6 +16,7 @@ import {
   CreditCard,
   PlusCircle,
   Package,
+  ScanLine,
 } from "lucide-react";
 import {
   Customer,
@@ -26,6 +27,7 @@ import {
 } from "@/types/pos";
 import { formatINR, round2 } from "@/lib/format";
 import { PaymentStatusBadge, StockStatusBadge } from "@/components/StatusBadge";
+import { ScanSnackModal, type ScanCustomerSelection } from "@/components/ScanSnackModal";
 
 interface CartItem {
   product: Product;
@@ -99,6 +101,25 @@ export function PosBillingView({
   const [billNotes, setBillNotes] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
+  const [scanOpen, setScanOpen] = useState(false);
+
+  // Apply the customer chosen at the end of a "Scan Snack" session
+  const handleScanCustomerSelected = (selection: ScanCustomerSelection) => {
+    setErrorMsg(null);
+    if (selection.mode === "existing") {
+      setCustomerMode("existing");
+      setSelectedCustomerId(selection.customerId);
+    } else if (selection.mode === "new") {
+      setCustomerMode("new");
+      setNewCustomer({
+        name: selection.name,
+        room_number: selection.room_number,
+        phone: selection.phone,
+      });
+    } else {
+      setCustomerMode("anonymous");
+    }
+  };
 
   const activeProducts = useMemo(
     () => products.filter((p) => p.is_active),
@@ -507,15 +528,26 @@ export function PosBillingView({
                 Click any snack or drink to add to the cart immediately
               </p>
             </div>
-            <div className="relative w-full sm:w-72">
-              <Search className="absolute left-3 top-2.5 h-4 w-4 text-slate-400" />
-              <input
-                type="text"
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                placeholder="Search snack, drink, SKU..."
-                className="input-3d w-full rounded-xl pl-9 pr-3 py-2 text-xs text-slate-900"
-              />
+            <div className="flex w-full sm:w-auto items-center gap-2">
+              <div className="relative flex-1 sm:w-64">
+                <Search className="absolute left-3 top-2.5 h-4 w-4 text-slate-400" />
+                <input
+                  type="text"
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  placeholder="Search snack, drink, SKU..."
+                  className="input-3d w-full rounded-xl pl-9 pr-3 py-2 text-xs text-slate-900"
+                />
+              </div>
+              <button
+                type="button"
+                onClick={() => setScanOpen(true)}
+                className="btn-3d-primary shrink-0 rounded-xl px-3.5 py-2 text-xs font-bold flex items-center gap-1.5 cursor-pointer"
+                title="Identify a snack from a photo"
+              >
+                <ScanLine className="h-4 w-4" />
+                Scan Snack
+              </button>
             </div>
           </div>
 
@@ -1199,6 +1231,18 @@ export function PosBillingView({
           </button>
         </div>
       </div>
+
+      {scanOpen && (
+        <ScanSnackModal
+          open={scanOpen}
+          products={products}
+          customers={customers}
+          cartUnits={cart.reduce((a, b) => a + b.quantity, 0)}
+          onAddToCart={handleAddToCart}
+          onCustomerSelected={handleScanCustomerSelected}
+          onClose={() => setScanOpen(false)}
+        />
+      )}
     </div>
   );
 }
