@@ -49,6 +49,7 @@ import { SettingsView } from "@/components/views/SettingsView";
 import { CustomerPortalView } from "@/components/views/CustomerPortalView";
 import { CanteenStatusModal } from "@/components/CanteenStatusModal";
 import { ReceiptModal } from "@/components/ReceiptModal";
+import { CanteenLogo } from "@/components/CanteenLogo";
 
 type NavTab =
   | "dashboard"
@@ -317,13 +318,11 @@ export default function HostelCanteenPosApp() {
 
   return (
     <div className="min-h-screen flex flex-col lg:flex-row bg-[#F1F5F9] text-[#111827]">
-      {/* Mobile 3D Header */}
+      {/* Mobile Header */}
       <div className="flex items-center justify-between bg-[#090D16] px-4 py-3 text-white lg:hidden border-b border-slate-800 shadow-lg">
         <div className="flex items-center gap-2.5">
-          <div className="rounded-xl orb-3d-blue p-1.5">
-            <Store className="h-4 w-4 text-white" />
-          </div>
-          <span className="font-black text-sm tracking-tight">
+          <CanteenLogo className="h-8 w-8" size={32} />
+          <span className="font-bold text-sm tracking-tight">
             Hostel Canteen POS
           </span>
         </div>
@@ -384,9 +383,7 @@ export default function HostelCanteenPosApp() {
       >
         {/* Brand Header */}
         <div className="hidden lg:flex items-center gap-3 px-5 py-4 border-b border-slate-100">
-          <div className="h-10 w-10 rounded-xl orb-3d-blue flex items-center justify-center text-white shrink-0">
-            <Store className="h-5 w-5" />
-          </div>
+          <CanteenLogo className="h-10 w-10 shadow-sm" size={40} />
           <div>
             <div className="flex items-center gap-1.5">
               <span className="text-sm font-bold text-slate-900 leading-tight">

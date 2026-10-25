@@ -23,6 +23,7 @@ import {
 } from "lucide-react";
 import { AdminUser, Customer } from "@/types/pos";
 import { formatINR } from "@/lib/format";
+import { CanteenLogo } from "@/components/CanteenLogo";
 
 interface LoginViewProps {
   availableAdmins: Array<{ email: string; full_name: string; role: string }>;
@@ -126,9 +127,7 @@ export function LoginView({
         {/* Top Branding */}
         <div className="relative z-10 flex items-center justify-between">
           <div className="flex items-center gap-3.5">
-            <div className="h-12 w-12 rounded-2xl orb-3d-blue flex items-center justify-center text-white">
-              <Store className="h-6 w-6" />
-            </div>
+            <CanteenLogo className="h-12 w-12 shadow-md" size={48} />
             <div>
               <div className="flex items-center gap-2">
                 <span className="text-lg font-black tracking-tight text-white">

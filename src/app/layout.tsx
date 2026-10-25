@@ -5,6 +5,10 @@ export const metadata: Metadata = {
   title: "Hostel Canteen POS — Complete Canteen Management System",
   description:
     "Modern point-of-sale, inventory, customer udhaar, manual cash/UPI payment tracking, expense and profit management system for hostel canteens.",
+  icons: {
+    icon: [{ url: "/logo.svg", type: "image/svg+xml" }],
+    apple: "/logo.svg",
+  },
 };
 
 export default function RootLayout({

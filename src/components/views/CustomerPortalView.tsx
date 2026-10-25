@@ -31,6 +31,7 @@ import {
 import { formatINR, formatIST } from "@/lib/format";
 import { PaymentStatusBadge } from "@/components/StatusBadge";
 import { ReceiptModal } from "@/components/ReceiptModal";
+import { CanteenLogo } from "@/components/CanteenLogo";
 import { SunMedium } from "lucide-react";
 
 interface PublicProduct {
@@ -203,9 +204,7 @@ export function CustomerPortalView({
         <div className="max-w-6xl mx-auto px-4 sm:px-6 py-3 flex flex-wrap items-center justify-between gap-3">
           {/* Brand Logo */}
           <div className="flex items-center gap-3">
-            <div className="h-10 w-10 rounded-xl orb-3d-blue flex items-center justify-center text-white shrink-0">
-              <Store className="h-5 w-5" />
-            </div>
+            <CanteenLogo className="h-10 w-10 shadow-sm" size={40} />
             <div>
               <div className="flex items-center gap-2">
                 <span className="text-base font-bold tracking-tight text-slate-900">

@@ -5,6 +5,7 @@ import { Printer, Download, X, AlertTriangle, CheckCircle2 } from "lucide-react"
 import { SaleRecord } from "@/types/pos";
 import { formatINR, formatIST } from "@/lib/format";
 import { PaymentStatusBadge, SaleStatusBadge } from "@/components/StatusBadge";
+import { CanteenLogo } from "@/components/CanteenLogo";
 
 export function ReceiptModal({
   sale,
@@ -125,6 +126,7 @@ export function ReceiptModal({
         {/* Printable Receipt Content */}
         <div id="printable-receipt" className="p-6 bg-white text-[#111827] space-y-4">
           <div className="text-center border-b border-dashed border-gray-300 pb-4">
+            <CanteenLogo className="h-10 w-10 mx-auto mb-2" size={40} />
             <h2 className="text-xl font-extrabold tracking-tight text-[#111827]">
               HOSTEL CANTEEN POS
             </h2>
