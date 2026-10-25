@@ -67,16 +67,16 @@ const SIDEBAR_ITEMS: Array<{
   label: string;
   icon: React.ComponentType<{ className?: string }>;
 }> = [
-  { id: "dashboard", label: "1. Dashboard", icon: LayoutDashboard },
-  { id: "pos", label: "2. New Sale / POS", icon: ShoppingCart },
-  { id: "products", label: "3. Products", icon: Package },
-  { id: "inventory", label: "4. Inventory", icon: Boxes },
-  { id: "customers", label: "5. Customers", icon: Users },
-  { id: "transactions", label: "6. Transactions", icon: ReceiptText },
-  { id: "payments", label: "7. Payments", icon: CreditCard },
-  { id: "expenses", label: "8. Expenses", icon: Wallet },
-  { id: "reports", label: "9. Reports", icon: BarChart3 },
-  { id: "settings", label: "10. Settings", icon: Settings },
+  { id: "dashboard", label: "Dashboard", icon: LayoutDashboard },
+  { id: "pos", label: "Fast POS Billing", icon: ShoppingCart },
+  { id: "products", label: "Products & Snacks", icon: Package },
+  { id: "inventory", label: "Inventory Stock", icon: Boxes },
+  { id: "customers", label: "Students & Udhaar", icon: Users },
+  { id: "transactions", label: "Sales & Receipts", icon: ReceiptText },
+  { id: "payments", label: "Payments & Ledger", icon: CreditCard },
+  { id: "expenses", label: "Expenses", icon: Wallet },
+  { id: "reports", label: "Analytics & P&L", icon: BarChart3 },
+  { id: "settings", label: "Settings", icon: Settings },
 ];
 
 const LiveISTClock = React.memo(function LiveISTClock() {
@@ -361,64 +361,64 @@ export default function HostelCanteenPosApp() {
         </div>
       </div>
 
-      {/* 3D Floating Sidebar Navigation (10 Admin Modules + Student Portal Switcher) */}
+      {/* Clean Modern Floating Sidebar Navigation */}
       <aside
         className={`${
           mobileMenuOpen ? "block" : "hidden"
-        } lg:flex lg:w-68 lg:flex-col lg:fixed lg:inset-y-0 bg-white/95 backdrop-blur-md border-r-2 border-slate-200 shadow-xl z-40`}
+        } lg:flex lg:w-68 lg:flex-col lg:fixed lg:inset-y-0 bg-white border-r border-slate-200 shadow-xs z-40`}
       >
-        {/* 3D Brand Header */}
-        <div className="hidden lg:flex items-center gap-3.5 px-5 py-4 border-b border-slate-200 bg-gradient-to-b from-white to-slate-50/80">
-          <div className="h-11 w-11 rounded-2xl orb-3d-blue flex items-center justify-center text-white shrink-0">
+        {/* Brand Header */}
+        <div className="hidden lg:flex items-center gap-3 px-5 py-4 border-b border-slate-100">
+          <div className="h-10 w-10 rounded-xl orb-3d-blue flex items-center justify-center text-white shrink-0">
             <Store className="h-5 w-5" />
           </div>
           <div>
             <div className="flex items-center gap-1.5">
-              <span className="text-sm font-black text-[#111827] leading-tight">
+              <span className="text-sm font-bold text-slate-900 leading-tight">
                 Hostel Canteen
               </span>
-              <span className="rounded-md bg-[#EFF6FF] border border-blue-200 px-1.5 py-0.2 text-[9px] font-black text-[#2563EB]">
-                3D POS
+              <span className="rounded-md bg-blue-50 border border-blue-200 px-1.5 py-0.5 text-[10px] font-bold text-blue-700">
+                POS
               </span>
             </div>
             <div className="text-[11px] text-slate-500 font-medium">
-              Admin Command Center
+              Management Portal
             </div>
           </div>
         </div>
 
-        {/* Quick 3D Action Buttons (Shop Status + New Sale + Student Portal View) */}
-        <div className="p-3.5 border-b border-slate-200 space-y-2 bg-slate-50/50">
+        {/* Quick Action Buttons */}
+        <div className="p-3 border-b border-slate-100 space-y-2 bg-slate-50/40">
           {/* Shop Operating Status Widget */}
           <button
             type="button"
             onClick={() => setStatusModalOpen(true)}
-            className={`w-full rounded-xl p-2.5 text-xs font-extrabold flex items-center justify-between transition cursor-pointer border shadow-2xs ${
+            className={`w-full rounded-xl p-2.5 text-xs font-semibold flex items-center justify-between transition cursor-pointer border ${
               canteenStatus.is_open
-                ? "bg-emerald-50 border-emerald-300 text-emerald-800 hover:bg-emerald-100"
-                : "bg-red-50 border-red-300 text-red-800 hover:bg-red-100"
+                ? "bg-emerald-50/80 border-emerald-200 text-emerald-800 hover:bg-emerald-100/80"
+                : "bg-red-50/80 border-red-200 text-red-800 hover:bg-red-100/80"
             }`}
           >
-            <div className="flex items-center gap-2 text-left">
+            <div className="flex items-center gap-2 text-left min-w-0">
               <span
-                className={`h-2.5 w-2.5 rounded-full shrink-0 ${
+                className={`h-2 w-2 rounded-full shrink-0 ${
                   canteenStatus.is_open
                     ? "bg-emerald-500 animate-pulse"
                     : "bg-red-500"
                 }`}
               />
               <div className="truncate">
-                <div className="text-[11px] font-black uppercase tracking-wider leading-none">
+                <div className="text-[11px] font-bold uppercase tracking-wider leading-none">
                   {canteenStatus.is_open ? "Shop Open" : "Shop Closed"}
                 </div>
-                <div className="text-[9px] text-slate-500 font-medium mt-0.5 truncate max-w-[140px]">
+                <div className="text-[10px] text-slate-500 font-normal mt-0.5 truncate max-w-[130px]">
                   {canteenStatus.is_open
                     ? "Taking orders"
                     : canteenStatus.reopen_at || "Closed"}
                 </div>
               </div>
             </div>
-            <span className="rounded bg-white px-2 py-0.5 text-[9px] font-extrabold border border-slate-200 shadow-2xs">
+            <span className="rounded-md bg-white px-2 py-0.5 text-[10px] font-bold text-slate-700 border border-slate-200">
               Change
             </span>
           </button>
@@ -428,10 +428,10 @@ export default function HostelCanteenPosApp() {
               setActiveTab("pos");
               setMobileMenuOpen(false);
             }}
-            className="btn-3d-primary w-full inline-flex items-center justify-center gap-2 rounded-xl px-4 py-2.5 text-xs font-extrabold cursor-pointer"
+            className="btn-3d-primary w-full inline-flex items-center justify-center gap-2 rounded-xl px-4 py-2.5 text-xs font-bold cursor-pointer"
           >
             <PlusCircle className="h-4 w-4" />
-            <span>New Sale / Fast POS</span>
+            <span>Fast POS Billing</span>
           </button>
 
           <button
@@ -439,10 +439,10 @@ export default function HostelCanteenPosApp() {
               setActiveTab("customer_portal");
               setMobileMenuOpen(false);
             }}
-            className="btn-3d-secondary w-full inline-flex items-center justify-center gap-2 rounded-xl px-3.5 py-2 text-xs font-extrabold text-slate-800 cursor-pointer"
+            className="btn-3d-secondary w-full inline-flex items-center justify-center gap-2 rounded-xl px-3.5 py-2 text-xs font-bold text-slate-700 cursor-pointer"
           >
             <GraduationCap className="h-4 w-4 text-[#2563EB]" />
-            <span>Open Student Portal</span>
+            <span>Student Portal View</span>
           </button>
         </div>
 
@@ -497,11 +497,11 @@ export default function HostelCanteenPosApp() {
           })}
         </nav>
 
-        {/* 3D Admin Footer */}
-        <div className="border-t border-slate-200 p-4 bg-gradient-to-b from-slate-50 to-slate-100 space-y-2.5 text-xs">
+        {/* Admin Footer */}
+        <div className="border-t border-slate-100 p-3.5 bg-slate-50/50 space-y-2 text-xs">
           <div className="flex items-center justify-between">
             <div className="truncate pr-2">
-              <div className="font-extrabold text-[#111827] truncate">
+              <div className="font-bold text-slate-900 truncate text-xs">
                 {admin.full_name}
               </div>
               <div className="text-[10px] text-slate-500 truncate">
@@ -510,13 +510,13 @@ export default function HostelCanteenPosApp() {
             </div>
             <button
               onClick={handleLogout}
-              className="btn-3d-secondary rounded-xl p-2 text-slate-700 hover:text-red-600 cursor-pointer"
+              className="btn-3d-secondary rounded-lg p-2 text-slate-600 hover:text-red-600 cursor-pointer"
               title="Sign Out"
             >
               <LogOut className="h-3.5 w-3.5" />
             </button>
           </div>
-          <div className="flex items-center gap-1.5 text-[10px] font-semibold text-slate-600 bg-white/80 rounded-lg px-2.5 py-1.5 border border-slate-200">
+          <div className="flex items-center gap-1.5 text-[10px] font-medium text-slate-500 bg-white rounded-lg px-2.5 py-1.5 border border-slate-200">
             <Clock className="h-3 w-3 text-[#2563EB] shrink-0" />
             <LiveISTClock />
           </div>
@@ -525,27 +525,27 @@ export default function HostelCanteenPosApp() {
 
       {/* Main Content Area */}
       <main className="flex-1 lg:pl-68">
-        {/* Top 3D Context & Quick Stats Bar */}
-        <div className="hidden lg:block sticky top-0 z-20 bg-white border-b border-slate-200 px-6 py-3 shadow-2xs">
+        {/* Top Context & Quick Stats Bar */}
+        <div className="hidden lg:block sticky top-0 z-20 bg-white/95 backdrop-blur-md border-b border-slate-200 px-6 py-2.5 shadow-xs">
           <div className="max-w-7xl mx-auto flex items-center justify-between gap-4">
-            <div className="flex items-center gap-2.5">
-              <span className="inline-flex items-center gap-1.5 rounded-xl bg-[#EFF6FF] border border-blue-200 px-3 py-1 text-xs font-extrabold text-[#1D4ED8]">
+            <div className="flex items-center gap-3">
+              <span className="inline-flex items-center gap-1.5 rounded-lg bg-blue-50 border border-blue-200 px-3 py-1 text-xs font-bold text-blue-700">
                 <Sparkles className="h-3.5 w-3.5 text-[#2563EB]" />
                 {SIDEBAR_ITEMS.find((i) => i.id === activeTab)?.label ||
                   "Dashboard"}
               </span>
               {appData && (
-                <div className="flex items-center gap-2 text-xs text-slate-500 pl-2">
+                <div className="flex items-center gap-2.5 text-xs text-slate-500 pl-1">
                   <span>
                     Today:{" "}
-                    <strong className="text-[#111827]">
+                    <strong className="text-slate-900 font-bold">
                       {formatINR(appData.kpis.today_sales)}
                     </strong>
                   </span>
                   <span className="text-slate-300">•</span>
                   <span>
-                    Active Udhaar:{" "}
-                    <strong className="text-[#2563EB]">
+                    Pending Udhaar:{" "}
+                    <strong className="text-blue-600 font-bold">
                       {formatINR(appData.kpis.customer_udhaar_total)}
                     </strong>
                   </span>

@@ -260,21 +260,21 @@ export function LoginView({
       {/* Right Pane: Full-height 3D Login & Portal Switcher */}
       <div className="w-full lg:w-[48%] flex flex-col justify-between p-6 sm:p-10 lg:p-14">
         <div className="max-w-md w-full mx-auto my-auto space-y-6">
-          {/* 3D Role Switcher Toggle (Admin vs Student/Customer) */}
-          <div className="card-3d-static rounded-2xl p-1.5 grid grid-cols-2 gap-2">
+          {/* Clean Segmented Control: Admin vs Student */}
+          <div className="bg-slate-200/70 p-1 rounded-xl grid grid-cols-2 gap-1 border border-slate-200/80">
             <button
               type="button"
               onClick={() => {
                 setPortalMode("admin");
                 setErrorMsg(null);
               }}
-              className={`rounded-xl py-3 px-3 text-xs font-extrabold flex items-center justify-center gap-2 transition cursor-pointer ${
+              className={`rounded-lg py-2.5 px-3 text-xs font-semibold flex items-center justify-center gap-2 transition cursor-pointer ${
                 portalMode === "admin"
-                  ? "btn-3d-primary"
-                  : "text-slate-600 hover:bg-slate-100"
+                  ? "bg-white text-slate-900 shadow-xs"
+                  : "text-slate-600 hover:text-slate-900"
               }`}
             >
-              <ShieldCheck className="h-4 w-4" />
+              <ShieldCheck className="h-4 w-4 text-blue-600" />
               <span>Admin Terminal</span>
             </button>
             <button
@@ -283,14 +283,14 @@ export function LoginView({
                 setPortalMode("customer");
                 setErrorMsg(null);
               }}
-              className={`rounded-xl py-3 px-3 text-xs font-extrabold flex items-center justify-center gap-2 transition cursor-pointer ${
+              className={`rounded-lg py-2.5 px-3 text-xs font-semibold flex items-center justify-center gap-2 transition cursor-pointer ${
                 portalMode === "customer"
-                  ? "btn-3d-primary"
-                  : "text-slate-600 hover:bg-slate-100"
+                  ? "bg-white text-slate-900 shadow-xs"
+                  : "text-slate-600 hover:text-slate-900"
               }`}
             >
-              <GraduationCap className="h-4 w-4" />
-              <span>Customer / Student</span>
+              <GraduationCap className="h-4 w-4 text-emerald-600" />
+              <span>Student Portal</span>
             </button>
           </div>
 

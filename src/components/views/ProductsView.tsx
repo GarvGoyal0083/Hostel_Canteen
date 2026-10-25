@@ -328,28 +328,28 @@ export function ProductsView({
         <div className="overflow-x-auto">
           <table className="w-full text-xs">
             <thead>
-              <tr className="border-b border-gray-200 bg-[#F3F4F6] text-left text-gray-600">
-                <th className="px-4 py-3 font-semibold">Product & SKU</th>
-                <th className="px-4 py-3 font-semibold">Category</th>
-                <th className="px-4 py-3 text-right font-semibold">
+              <tr className="border-b border-slate-200 bg-slate-50/70 text-left text-[11px] font-semibold text-slate-500 uppercase tracking-wider">
+                <th className="px-4 py-3">Product &amp; SKU</th>
+                <th className="px-4 py-3">Category</th>
+                <th className="px-4 py-3 text-right">
                   Purchase Cost
                 </th>
-                <th className="px-4 py-3 text-right font-semibold">
+                <th className="px-4 py-3 text-right">
                   Selling Price
                 </th>
-                <th className="px-4 py-3 text-right font-semibold">
+                <th className="px-4 py-3 text-right">
                   Est. Unit Profit
                 </th>
-                <th className="px-4 py-3 text-center font-semibold">
+                <th className="px-4 py-3 text-center">
                   Available Stock
                 </th>
-                <th className="px-4 py-3 font-semibold">
+                <th className="px-4 py-3">
                   Supplier / Expiry / Batch
                 </th>
-                <th className="px-4 py-3 text-right font-semibold">Actions</th>
+                <th className="px-4 py-3 text-right">Actions</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-gray-100">
+            <tbody className="divide-y divide-slate-100">
               {filteredProducts.length === 0 ? (
                 <tr>
                   <td

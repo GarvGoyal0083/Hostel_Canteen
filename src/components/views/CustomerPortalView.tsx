@@ -197,27 +197,27 @@ export function CustomerPortalView({
   );
 
   return (
-    <div className="min-h-screen bg-[#F1F5F9] text-[#111827] pb-16">
-      {/* Top 3D Floating Navigation Bar */}
-      <header className="sticky top-0 z-30 bg-white border-b-2 border-slate-200 shadow-xs">
-        <div className="max-w-6xl mx-auto px-4 sm:px-6 py-3.5 flex flex-wrap items-center justify-between gap-3">
+    <div className="min-h-screen bg-[#F8FAFC] text-[#0F172A] pb-16">
+      {/* Top Clean Modern Navigation Bar */}
+      <header className="sticky top-0 z-30 bg-white/95 backdrop-blur-md border-b border-slate-200 shadow-xs">
+        <div className="max-w-6xl mx-auto px-4 sm:px-6 py-3 flex flex-wrap items-center justify-between gap-3">
           {/* Brand Logo */}
           <div className="flex items-center gap-3">
-            <div className="h-11 w-11 rounded-2xl orb-3d-blue flex items-center justify-center text-white shrink-0">
+            <div className="h-10 w-10 rounded-xl orb-3d-blue flex items-center justify-center text-white shrink-0">
               <Store className="h-5 w-5" />
             </div>
             <div>
               <div className="flex items-center gap-2">
-                <span className="text-base sm:text-lg font-extrabold tracking-tight text-[#111827]">
+                <span className="text-base font-bold tracking-tight text-slate-900">
                   Hostel Canteen
                 </span>
                 {canteenStatus.is_open ? (
-                  <span className="inline-flex items-center gap-1 rounded-full bg-emerald-50 border border-emerald-200 px-2.5 py-0.5 text-[10px] font-bold text-emerald-700 shadow-2xs">
+                  <span className="inline-flex items-center gap-1 rounded-full bg-emerald-50 border border-emerald-200 px-2 py-0.5 text-[10px] font-semibold text-emerald-700">
                     <span className="h-1.5 w-1.5 rounded-full bg-emerald-500 animate-pulse" />
                     Open for Orders
                   </span>
                 ) : (
-                  <span className="inline-flex items-center gap-1 rounded-full bg-red-50 border border-red-200 px-2.5 py-0.5 text-[10px] font-bold text-red-700 shadow-2xs">
+                  <span className="inline-flex items-center gap-1 rounded-full bg-red-50 border border-red-200 px-2 py-0.5 text-[10px] font-semibold text-red-700">
                     <span className="h-1.5 w-1.5 rounded-full bg-red-500" />
                     Closed • {canteenStatus.reopen_at || "Reopening Soon"}
                   </span>
@@ -451,24 +451,24 @@ export function CustomerPortalView({
           </div>
         )}
 
-        {/* 3 Clean 3D Navigation Tabs */}
+        {/* Clean Navigation Tabs */}
         <div className="flex flex-wrap items-center justify-between gap-3">
-          <div className="inline-flex rounded-2xl bg-white p-1.5 border border-slate-200 shadow-xs gap-1.5">
+          <div className="inline-flex rounded-xl bg-white p-1 border border-slate-200 shadow-2xs gap-1">
             <button
               onClick={() => setActiveTab("stock")}
-              className={`rounded-xl px-4 py-2.5 text-xs font-extrabold flex items-center gap-2 transition cursor-pointer ${
+              className={`rounded-lg px-3.5 py-2 text-xs font-semibold flex items-center gap-2 transition cursor-pointer ${
                 activeTab === "stock"
-                  ? "btn-3d-primary"
-                  : "text-slate-700 hover:bg-slate-100"
+                  ? "bg-blue-600 text-white shadow-xs"
+                  : "text-slate-600 hover:text-slate-900 hover:bg-slate-50"
               }`}
             >
               <Package className="h-4 w-4" />
               <span>Live Snack Stock</span>
               <span
-                className={`rounded-full px-2 py-0.5 text-[10px] font-black ${
+                className={`rounded-full px-2 py-0.5 text-[10px] font-bold ${
                   activeTab === "stock"
-                    ? "bg-white/25 text-white"
-                    : "bg-blue-50 text-[#2563EB]"
+                    ? "bg-white/20 text-white"
+                    : "bg-blue-50 text-blue-700"
                 }`}
               >
                 {inStockCount}
@@ -483,19 +483,19 @@ export function CustomerPortalView({
                   setActiveTab("purchases");
                 }
               }}
-              className={`rounded-xl px-4 py-2.5 text-xs font-extrabold flex items-center gap-2 transition cursor-pointer ${
+              className={`rounded-lg px-3.5 py-2 text-xs font-semibold flex items-center gap-2 transition cursor-pointer ${
                 activeTab === "purchases"
-                  ? "btn-3d-primary"
-                  : "text-slate-700 hover:bg-slate-100"
+                  ? "bg-blue-600 text-white shadow-xs"
+                  : "text-slate-600 hover:text-slate-900 hover:bg-slate-50"
               }`}
             >
               <ReceiptText className="h-4 w-4" />
               <span>My Purchases</span>
               {currentCustomer && (
                 <span
-                  className={`rounded-full px-2 py-0.5 text-[10px] font-black ${
+                  className={`rounded-full px-2 py-0.5 text-[10px] font-bold ${
                     activeTab === "purchases"
-                      ? "bg-white/25 text-white"
+                      ? "bg-white/20 text-white"
                       : "bg-slate-100 text-slate-700"
                   }`}
                 >
@@ -512,10 +512,10 @@ export function CustomerPortalView({
                   setActiveTab("ledger");
                 }
               }}
-              className={`rounded-xl px-4 py-2.5 text-xs font-extrabold flex items-center gap-2 transition cursor-pointer ${
+              className={`rounded-lg px-3.5 py-2 text-xs font-semibold flex items-center gap-2 transition cursor-pointer ${
                 activeTab === "ledger"
-                  ? "btn-3d-primary"
-                  : "text-slate-700 hover:bg-slate-100"
+                  ? "bg-blue-600 text-white shadow-xs"
+                  : "text-slate-600 hover:text-slate-900 hover:bg-slate-50"
               }`}
             >
               <BookOpen className="h-4 w-4" />
@@ -523,8 +523,8 @@ export function CustomerPortalView({
             </button>
           </div>
 
-          <div className="text-xs text-slate-500 font-semibold flex items-center gap-1.5">
-            <Clock className="h-3.5 w-3.5 text-[#2563EB]" />
+          <div className="text-xs text-slate-500 font-normal flex items-center gap-1.5">
+            <Clock className="h-3.5 w-3.5 text-blue-600" />
             <span>Prices &amp; stock updated live from Canteen POS</span>
           </div>
         </div>
@@ -622,34 +622,34 @@ export function CustomerPortalView({
                   return (
                     <div
                       key={product.id}
-                      className={`card-3d rounded-2xl p-5 flex flex-col justify-between gap-4 ${
-                        isOut ? "opacity-65" : ""
+                      className={`card-3d rounded-2xl p-4 sm:p-5 flex flex-col justify-between gap-4 ${
+                        isOut ? "opacity-60" : ""
                       }`}
                     >
                       <div className="space-y-3">
                         {/* Category & Price Header */}
                         <div className="flex items-start justify-between gap-2">
-                          <span className="rounded-lg bg-[#EFF6FF] border border-blue-200 px-2.5 py-1 text-[10px] font-extrabold text-[#1D4ED8]">
+                          <span className="rounded-lg bg-blue-50 border border-blue-200/80 px-2.5 py-1 text-[11px] font-semibold text-blue-700">
                             {product.category}
                           </span>
-                          <div className="rounded-xl bg-[#111827] text-white px-3 py-1.5 text-sm font-black shadow-sm">
+                          <div className="rounded-lg bg-slate-900 text-white px-2.5 py-1 text-xs sm:text-sm font-bold shadow-xs">
                             {formatINR(product.selling_price)}
                           </div>
                         </div>
 
-                        {/* 3D Product Image Display */}
-                        <div className="relative h-44 w-full rounded-2xl bg-white border border-slate-200 shadow-inner flex items-center justify-center overflow-hidden p-3 group">
+                        {/* Product Image Display */}
+                        <div className="relative h-44 w-full rounded-xl bg-slate-50/70 border border-slate-100 flex items-center justify-center overflow-hidden p-3 group">
                           {product.image_url ? (
                             <img
                               src={product.image_url}
                               alt={product.name}
-                              className="h-full w-full object-contain transition-transform duration-300 group-hover:scale-108 select-none"
+                              className="h-full w-full object-contain transition-transform duration-300 group-hover:scale-105 select-none"
                               loading="lazy"
                             />
                           ) : (
                             <div className="flex flex-col items-center justify-center text-slate-300 py-6">
-                              <Package className="h-12 w-12 text-slate-300 stroke-[1.5]" />
-                              <span className="text-[11px] font-semibold text-slate-400 mt-1">
+                              <Package className="h-10 w-10 text-slate-300 stroke-[1.5]" />
+                              <span className="text-[11px] font-medium text-slate-400 mt-1">
                                 Hostel Snack
                               </span>
                             </div>
@@ -658,7 +658,7 @@ export function CustomerPortalView({
 
                         {/* Product Name & SKU */}
                         <div>
-                          <h3 className="text-base font-extrabold text-[#111827] leading-snug">
+                          <h3 className="text-sm sm:text-base font-bold text-slate-900 leading-snug">
                             {product.name}
                           </h3>
                           <p className="text-[11px] text-slate-400 font-mono mt-0.5">
