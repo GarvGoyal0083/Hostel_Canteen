@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useMemo } from "react";
+import React, { useState, useMemo, useEffect } from "react";
 import {
   Search,
   ShoppingCart,
@@ -55,6 +55,7 @@ interface PosBillingProps {
   customers: Customer[];
   adminName: string;
   onSaleCompleted: (sale: SaleRecord) => void;
+  externalScanTrigger?: number;
 }
 
 export function PosBillingView({
@@ -62,6 +63,7 @@ export function PosBillingView({
   customers,
   adminName,
   onSaleCompleted,
+  externalScanTrigger,
 }: PosBillingProps) {
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedCategory, setSelectedCategory] = useState("ALL");
@@ -102,6 +104,13 @@ export function PosBillingView({
   const [submitting, setSubmitting] = useState(false);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const [scanOpen, setScanOpen] = useState(false);
+
+  // Trigger scanner when user clicks "Scan Snack" at the top of the page
+  useEffect(() => {
+    if (externalScanTrigger && externalScanTrigger > 0) {
+      setScanOpen(true);
+    }
+  }, [externalScanTrigger]);
 
   // Apply the customer chosen at the end of a "Scan Snack" session
   const handleScanCustomerSelected = (selection: ScanCustomerSelection) => {

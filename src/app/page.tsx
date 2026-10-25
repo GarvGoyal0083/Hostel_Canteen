@@ -20,6 +20,7 @@ import {
   PlusCircle,
   GraduationCap,
   Sparkles,
+  ScanLine,
 } from "lucide-react";
 import {
   AdminUser,
@@ -117,6 +118,12 @@ export default function HostelCanteenPosApp() {
   >(null);
   const [receiptSale, setReceiptSale] = useState<SaleRecord | null>(null);
   const [statusModalOpen, setStatusModalOpen] = useState(false);
+  const [scanTrigger, setScanTrigger] = useState(0);
+
+  const handleOpenScan = useCallback(() => {
+    setActiveTab("pos");
+    setScanTrigger((prev) => prev + 1);
+  }, []);
   const [canteenStatus, setCanteenStatus] = useState<CanteenStatus>({
     is_open: true,
     closure_type: "open",
@@ -343,8 +350,16 @@ export default function HostelCanteenPosApp() {
             Student View
           </button>
           <button
+            onClick={handleOpenScan}
+            className="rounded-lg bg-blue-600 px-2.5 py-1 text-xs font-bold text-white flex items-center gap-1 shadow-xs"
+            title="Scan snack photo"
+          >
+            <ScanLine className="h-3.5 w-3.5" />
+            <span>Scan</span>
+          </button>
+          <button
             onClick={() => setActiveTab("pos")}
-            className="btn-3d-primary rounded-lg px-2.5 py-1 text-xs font-bold text-white"
+            className="btn-3d-secondary rounded-lg px-2.5 py-1 text-xs font-bold text-slate-800"
           >
             + POS
           </button>
@@ -421,6 +436,18 @@ export default function HostelCanteenPosApp() {
             <span className="rounded-md bg-white px-2 py-0.5 text-[10px] font-bold text-slate-700 border border-slate-200">
               Change
             </span>
+          </button>
+
+          <button
+            type="button"
+            onClick={() => {
+              handleOpenScan();
+              setMobileMenuOpen(false);
+            }}
+            className="w-full inline-flex items-center justify-center gap-2 rounded-xl bg-blue-50 border border-blue-200 px-3.5 py-2 text-xs font-bold text-blue-700 hover:bg-blue-100 transition cursor-pointer"
+          >
+            <ScanLine className="h-4 w-4 text-blue-600" />
+            <span>Scan Snack Photo</span>
           </button>
 
           <button
@@ -554,6 +581,17 @@ export default function HostelCanteenPosApp() {
             </div>
 
             <div className="flex items-center gap-2.5">
+              {/* Scan Snack Button - Highly Accessible at Top of Page */}
+              <button
+                type="button"
+                onClick={handleOpenScan}
+                className="btn-3d-primary rounded-xl px-4 py-1.5 text-xs font-extrabold flex items-center gap-2 cursor-pointer shadow-sm hover:scale-[1.02] active:scale-95 transition-all"
+                title="Scan a snack photo with camera or file upload"
+              >
+                <ScanLine className="h-4 w-4" />
+                <span>Scan Snack</span>
+              </button>
+
               <button
                 type="button"
                 onClick={() => setStatusModalOpen(true)}
@@ -589,9 +627,9 @@ export default function HostelCanteenPosApp() {
               </button>
               <button
                 onClick={() => setActiveTab("pos")}
-                className="btn-3d-primary rounded-xl px-3.5 py-1.5 text-xs font-extrabold flex items-center gap-1.5 cursor-pointer"
+                className="btn-3d-secondary rounded-xl px-3.5 py-1.5 text-xs font-extrabold flex items-center gap-1.5 cursor-pointer"
               >
-                <ShoppingCart className="h-3.5 w-3.5" />
+                <ShoppingCart className="h-3.5 w-3.5 text-slate-700" />
                 <span>Fast Billing</span>
               </button>
             </div>
@@ -624,6 +662,7 @@ export default function HostelCanteenPosApp() {
                   products={appData.products}
                   customers={appData.customers}
                   adminName={admin.full_name}
+                  externalScanTrigger={scanTrigger}
                   onSaleCompleted={(newSale) => {
                     setReceiptSale(newSale);
                     fetchAllData();
