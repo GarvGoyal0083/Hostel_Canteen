@@ -1,5 +1,6 @@
 import fs from "fs";
 import path from "path";
+import os from "os";
 import crypto from "crypto";
 import {
   AuditLogRecord,
@@ -27,7 +28,13 @@ import {
 } from "@/lib/db/seed";
 import { getISTCompactDateKey, getISTDateString, round2 } from "@/lib/format";
 
-const DATA_DIR = path.join(process.cwd(), "data");
+const isServerless = Boolean(
+  process.env.VERCEL ||
+    process.env.AWS_LAMBDA_FUNCTION_NAME ||
+    process.env.LAMBDA_TASK_ROOT
+);
+
+const DATA_DIR = isServerless ? os.tmpdir() : path.join(process.cwd(), "data");
 const DB_FILE_PATH =
   process.env.POS_DB_FILE_PATH || path.join(DATA_DIR, "canteen_store.json");
 
@@ -41,17 +48,42 @@ export async function withTransactionLock<T>(fn: () => Promise<T> | T): Promise<
 }
 
 function ensureDataDir(): void {
-  const dir = path.dirname(DB_FILE_PATH);
-  if (!fs.existsSync(dir)) {
-    fs.mkdirSync(dir, { recursive: true });
+  try {
+    const dir = path.dirname(DB_FILE_PATH);
+    if (!fs.existsSync(dir)) {
+      fs.mkdirSync(dir, { recursive: true });
+    }
+  } catch (err) {
+    console.warn(`[store] Could not ensure directory ${path.dirname(DB_FILE_PATH)}:`, err);
   }
 }
 
 export function readDatabase(): DatabaseSchema {
   ensureDataDir();
   if (!fs.existsSync(DB_FILE_PATH)) {
+    // 1. Check if a pre-bundled store exists in the deployed app bundle
+    const bundledCandidates = [
+      path.join(process.cwd(), "src", "lib", "db", "default_seed.json"),
+      path.join(process.cwd(), "data", "canteen_store.json"),
+    ];
+    for (const candidate of bundledCandidates) {
+      if (fs.existsSync(candidate)) {
+        try {
+          const raw = fs.readFileSync(candidate, "utf8");
+          const parsed = JSON.parse(raw) as DatabaseSchema;
+          writeDatabase(parsed);
+          return parsed;
+        } catch {
+          // continue fallback
+        }
+      }
+    }
+
     const isProd = process.env.NODE_ENV === "production";
-    const seedDev = process.env.SEED_DEV_SAMPLE_DATA !== "false" && !isProd;
+    const seedDev =
+      process.env.SEED_DEV_SAMPLE_DATA === "true" ||
+      (!isProd && process.env.SEED_DEV_SAMPLE_DATA !== "false") ||
+      process.env.SEED_DEMO_DATA === "true";
     const initial = seedDev
       ? createDevelopmentSampleDatabase()
       : createCleanProductionDatabase();
@@ -59,16 +91,32 @@ export function readDatabase(): DatabaseSchema {
     return initial;
   }
 
-  const raw = fs.readFileSync(DB_FILE_PATH, "utf8");
-  return JSON.parse(raw) as DatabaseSchema;
+  try {
+    const raw = fs.readFileSync(DB_FILE_PATH, "utf8");
+    return JSON.parse(raw) as DatabaseSchema;
+  } catch (err) {
+    console.warn(`[store] Failed to parse ${DB_FILE_PATH}, falling back to default seed:`, err);
+    const initial = createDevelopmentSampleDatabase();
+    try {
+      writeDatabase(initial);
+    } catch {
+      // ignore
+    }
+    return initial;
+  }
 }
 
 export function writeDatabase(db: DatabaseSchema): void {
   ensureDataDir();
   db.meta.updated_at = new Date().toISOString();
   const tempPath = `${DB_FILE_PATH}.tmp`;
-  fs.writeFileSync(tempPath, JSON.stringify(db, null, 2), "utf8");
-  fs.renameSync(tempPath, DB_FILE_PATH);
+  try {
+    fs.writeFileSync(tempPath, JSON.stringify(db, null, 2), "utf8");
+    fs.renameSync(tempPath, DB_FILE_PATH);
+  } catch (err) {
+    console.error(`[store] Failed to write database to ${DB_FILE_PATH}:`, err);
+    if (!isServerless) throw err;
+  }
 }
 
 function appendAudit(

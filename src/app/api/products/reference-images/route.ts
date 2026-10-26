@@ -1,18 +1,39 @@
 import fs from "node:fs";
 import path from "node:path";
+import os from "node:os";
 import crypto from "node:crypto";
 import { NextRequest, NextResponse } from "next/server";
 import { requireAdminAuth } from "@/lib/auth";
 import { addProductReferenceImage } from "@/lib/db/store";
 
+const isServerless = Boolean(
+  process.env.VERCEL ||
+    process.env.AWS_LAMBDA_FUNCTION_NAME ||
+    process.env.LAMBDA_TASK_ROOT
+);
+
 /**
  * Reference photos captured at the POS "Scan Snack" scanner.
- * Stored under data/product-refs/ (not public/) so newly captured photos are
- * served immediately in both dev and production builds.
+ * Stored under /tmp/product-refs on Vercel or data/product-refs locally so newly
+ * captured photos are served immediately without read-only filesystem errors.
  */
-const REFS_DIR = path.join(process.cwd(), "data", "product-refs");
+const REFS_DIR =
+  process.env.PRODUCT_REFS_DIR ||
+  (isServerless
+    ? path.join(os.tmpdir(), "product-refs")
+    : path.join(process.cwd(), "data", "product-refs"));
 const MAX_IMAGE_BYTES = 600 * 1024; // compressed JPEG from the browser is ~20-60 KB
 const SAFE_FILE = /^[a-zA-Z0-9_-]+\.jpg$/;
+
+function ensureRefsDir(): void {
+  try {
+    if (!fs.existsSync(REFS_DIR)) {
+      fs.mkdirSync(REFS_DIR, { recursive: true });
+    }
+  } catch (err) {
+    console.warn(`[product-refs] Could not ensure directory ${REFS_DIR}:`, err);
+  }
+}
 
 function refUrl(fileName: string) {
   return `/api/products/reference-images?file=${encodeURIComponent(fileName)}`;
@@ -63,7 +84,7 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "Image is empty or too large." }, { status: 400 });
     }
 
-    fs.mkdirSync(REFS_DIR, { recursive: true });
+    ensureRefsDir();
     const safeId = productId.replace(/[^a-zA-Z0-9_-]/g, "");
     const fileName = `${safeId}-${Date.now()}-${crypto.randomBytes(3).toString("hex")}.jpg`;
     fs.writeFileSync(path.join(REFS_DIR, fileName), buffer);
@@ -76,9 +97,13 @@ export async function POST(req: NextRequest) {
 
     // Delete photo files that rotated out of the per-product limit
     for (const url of removed) {
-      const old = new URL(url, "http://local").searchParams.get("file");
-      if (old && SAFE_FILE.test(old)) {
-        fs.rmSync(path.join(REFS_DIR, old), { force: true });
+      try {
+        const old = new URL(url, "http://local").searchParams.get("file");
+        if (old && SAFE_FILE.test(old)) {
+          fs.rmSync(path.join(REFS_DIR, old), { force: true });
+        }
+      } catch {
+        // ignore removal error in serverless environment
       }
     }
 
