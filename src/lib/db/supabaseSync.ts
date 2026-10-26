@@ -4,12 +4,17 @@ import { createSupabaseAdminClient, isSupabaseConfigured } from "@/lib/supabase/
 let lastRemoteUpdateTime: number = 0;
 let lastSyncCheckTime: number = 0;
 let isCloudPersistenceActive: boolean = false;
+let lastSyncError: string | null = null;
 
 // Minimum interval (in ms) to poll Supabase on reads to prevent redundant network round-trips
 const SYNC_COOLDOWN_MS = 2500;
 
 export function getCloudPersistenceStatus(): boolean {
   return isCloudPersistenceActive;
+}
+
+export function getLastSyncError(): string | null {
+  return lastSyncError;
 }
 
 /**

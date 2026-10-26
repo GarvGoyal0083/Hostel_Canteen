@@ -30,10 +30,11 @@ import { getISTCompactDateKey, getISTDateString, round2 } from "@/lib/format";
 import {
   fetchRemoteDatabase,
   getCloudPersistenceStatus,
+  getLastSyncError,
   pushRemoteDatabase,
 } from "@/lib/db/supabaseSync";
 
-export { getCloudPersistenceStatus };
+export { getCloudPersistenceStatus, getLastSyncError };
 
 const isServerless = Boolean(
   process.env.VERCEL ||

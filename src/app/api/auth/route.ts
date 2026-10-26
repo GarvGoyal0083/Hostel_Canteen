@@ -7,6 +7,7 @@ import {
 import {
   ensureDatabaseSync,
   getCloudPersistenceStatus,
+  getLastSyncError,
   readDatabase,
   withTransactionLock,
   writeDatabase,
@@ -21,6 +22,7 @@ export async function GET() {
     admin,
     supabase_configured: isSupabaseConfigured(),
     supabase_cloud_synced: getCloudPersistenceStatus(),
+    supabase_sync_error: getLastSyncError(),
     environment_mode: db.meta.environment_mode,
     available_admins: db.users
       .filter((u) => u.is_active)

@@ -21,6 +21,7 @@ import {
   GraduationCap,
   Sparkles,
   ScanLine,
+  AlertTriangle,
 } from "lucide-react";
 import {
   AdminUser,
@@ -147,6 +148,7 @@ export default function HostelCanteenPosApp() {
     environment_mode: "development_sample" | "production_clean";
     supabase_configured: boolean;
     supabase_cloud_synced?: boolean;
+    supabase_sync_error?: string | null;
     kpis: {
       today_sales: number;
       weekly_sales: number;
@@ -550,6 +552,25 @@ export default function HostelCanteenPosApp() {
 
       {/* Main Content Area */}
       <main className="flex-1 lg:pl-68">
+        {/* Persistence Alert Banner if table is not yet set up in Supabase */}
+        {appData?.supabase_configured && appData?.supabase_cloud_synced === false && (
+          <div className="bg-gradient-to-r from-red-600 to-amber-600 text-white px-5 py-2 text-xs font-bold flex items-center justify-between gap-3 shadow-sm sticky top-0 z-30">
+            <div className="flex items-center gap-2">
+              <AlertTriangle className="h-4 w-4 shrink-0 text-amber-200" />
+              <span>
+                <strong>Cloud Persistence Alert:</strong> Products and students are currently saved in temporary memory. Table <code>canteen_store</code> must be created in Supabase to save permanently.
+              </span>
+            </div>
+            <button
+              type="button"
+              onClick={() => setActiveTab("settings")}
+              className="bg-white text-red-900 rounded-lg px-2.5 py-1 text-[11px] font-black hover:bg-red-50 cursor-pointer shadow-xs shrink-0 transition"
+            >
+              Fix in Settings &rarr;
+            </button>
+          </div>
+        )}
+
         {/* Top Context & Quick Stats Bar */}
         <div className="hidden lg:block sticky top-0 z-20 bg-white/95 backdrop-blur-md border-b border-slate-200 px-6 py-2.5 shadow-xs">
           <div className="max-w-7xl mx-auto flex items-center justify-between gap-4">
@@ -744,6 +765,7 @@ export default function HostelCanteenPosApp() {
                   admin={admin}
                   supabaseConfigured={appData.supabase_configured}
                   supabaseCloudSynced={appData.supabase_cloud_synced}
+                  supabaseSyncError={appData.supabase_sync_error}
                   environmentMode={appData.environment_mode}
                   auditLogs={appData.audit_logs}
                   canteenStatus={canteenStatus}

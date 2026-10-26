@@ -13,6 +13,7 @@ import {
   Store,
   Clock,
   SunMedium,
+  CheckCircle2,
 } from "lucide-react";
 import { AdminUser, AuditLogRecord, CanteenStatus } from "@/types/pos";
 import { downloadCSV, formatIST } from "@/lib/format";
@@ -21,6 +22,7 @@ interface SettingsViewProps {
   admin: AdminUser;
   supabaseConfigured: boolean;
   supabaseCloudSynced?: boolean;
+  supabaseSyncError?: string | null;
   environmentMode: "development_sample" | "production_clean";
   auditLogs: AuditLogRecord[];
   canteenStatus?: CanteenStatus;
@@ -32,6 +34,7 @@ export function SettingsView({
   admin,
   supabaseConfigured,
   supabaseCloudSynced,
+  supabaseSyncError,
   environmentMode,
   auditLogs,
   canteenStatus,
@@ -39,6 +42,58 @@ export function SettingsView({
   onRefresh,
 }: SettingsViewProps) {
   const [switching, setSwitching] = useState(false);
+  const [testingSupabase, setTestingSupabase] = useState(false);
+  const [testResult, setTestResult] = useState<{
+    status: "success" | "error";
+    message: string;
+  } | null>(null);
+  const [copiedSql, setCopiedSql] = useState(false);
+
+  const SQL_MIGRATION_SNIPPET = `-- Run this in Supabase Dashboard -> SQL Editor
+CREATE TABLE IF NOT EXISTS public.canteen_store (
+    id TEXT PRIMARY KEY DEFAULT 'main',
+    data JSONB NOT NULL,
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+ALTER TABLE public.canteen_store ENABLE ROW LEVEL SECURITY;
+
+CREATE POLICY "Allow all access to canteen_store"
+ON public.canteen_store FOR ALL USING (true) WITH CHECK (true);`;
+
+  const handleCopySql = () => {
+    navigator.clipboard.writeText(SQL_MIGRATION_SNIPPET);
+    setCopiedSql(true);
+    setTimeout(() => setCopiedSql(false), 3000);
+  };
+
+  const handleTestSupabaseConnection = async () => {
+    setTestingSupabase(true);
+    setTestResult(null);
+    try {
+      const res = await fetch("/api/supabase-status");
+      const data = await res.json();
+      if (data.persisting) {
+        setTestResult({
+          status: "success",
+          message: "🎉 Success! Supabase Cloud Persistence is active and saving permanently across all browsers and devices.",
+        });
+        onRefresh();
+      } else {
+        setTestResult({
+          status: "error",
+          message: data.error || "Table 'canteen_store' was not detected in Supabase.",
+        });
+      }
+    } catch (err) {
+      setTestResult({
+        status: "error",
+        message: err instanceof Error ? err.message : "Connection test failed.",
+      });
+    } finally {
+      setTestingSupabase(false);
+    }
+  };
 
   const handleDownloadFullBackup = async () => {
     try {
@@ -285,25 +340,95 @@ export function SettingsView({
               </span>
             </div>
 
+            {/* Cloud Persistence Warning & 1-Click Fix */}
             {supabaseConfigured && !supabaseCloudSynced && (
-              <div className="rounded-lg bg-amber-50 border border-amber-200 p-2.5 text-[11px] text-amber-900 space-y-1.5">
-                <div className="font-bold flex items-center gap-1.5">
-                  <AlertTriangle className="h-3.5 w-3.5 text-amber-600 shrink-0" />
-                  <span>Enable Multi-Browser Cloud Persistence</span>
+              <div className="rounded-xl bg-red-50 border border-red-200 p-3 text-[11px] text-red-900 space-y-2">
+                <div className="font-extrabold flex items-center gap-1.5 text-red-800">
+                  <AlertTriangle className="h-4 w-4 text-red-600 shrink-0" />
+                  <span>ACTION REQUIRED: Permanent Cloud Storage Not Yet Active</span>
                 </div>
-                <p className="text-[10px] leading-relaxed text-amber-800">
-                  To keep registered students and orders permanently synced across all devices and prevent Vercel serverless cache resets, open your <strong>Supabase Dashboard &rarr; SQL Editor</strong> and run:
+                <p className="text-[11px] leading-relaxed text-red-700">
+                  Your products, sales, and registered students are currently saving to <strong>temporary serverless memory</strong>. To prevent data from disappearing when Vercel restarts, run this 10-second setup:
                 </p>
-                <pre className="rounded bg-white p-2 font-mono text-[10px] text-slate-800 border border-amber-200 overflow-x-auto select-all">
-{`CREATE TABLE IF NOT EXISTS public.canteen_store (
-  id TEXT PRIMARY KEY DEFAULT 'main',
-  data JSONB NOT NULL,
-  updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
-);
-ALTER TABLE public.canteen_store ENABLE ROW LEVEL SECURITY;
-CREATE POLICY "Allow all access to canteen_store"
-ON public.canteen_store FOR ALL USING (true) WITH CHECK (true);`}
-                </pre>
+
+                <div className="space-y-1.5 pt-1">
+                  <div className="flex items-center justify-between">
+                    <span className="text-[10px] font-bold text-slate-700">
+                      Step 1: Copy this SQL script
+                    </span>
+                    <button
+                      type="button"
+                      onClick={handleCopySql}
+                      className="rounded bg-[#2563EB] text-white px-2 py-0.5 text-[10px] font-bold hover:bg-blue-700 transition cursor-pointer"
+                    >
+                      {copiedSql ? "✓ Copied!" : "Copy SQL Code"}
+                    </button>
+                  </div>
+                  <pre className="rounded-lg bg-slate-900 text-slate-100 p-2 font-mono text-[9.5px] overflow-x-auto select-all leading-tight">
+{SQL_MIGRATION_SNIPPET}
+                  </pre>
+                </div>
+
+                <div className="pt-1 flex flex-col sm:flex-row gap-2">
+                  <a
+                    href="https://supabase.com/dashboard/project/_/sql"
+                    target="_blank"
+                    rel="noreferrer"
+                    className="flex-1 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white py-2 text-center text-xs font-bold transition flex items-center justify-center gap-1 cursor-pointer"
+                  >
+                    <span>Step 2: Open Supabase SQL Editor &rarr;</span>
+                  </a>
+                  <button
+                    type="button"
+                    onClick={handleTestSupabaseConnection}
+                    disabled={testingSupabase}
+                    className="flex-1 rounded-lg border border-red-300 bg-white hover:bg-red-50 text-red-800 py-2 text-center text-xs font-bold transition flex items-center justify-center gap-1 cursor-pointer"
+                  >
+                    <RefreshCw className={`h-3.5 w-3.5 ${testingSupabase ? "animate-spin" : ""}`} />
+                    <span>{testingSupabase ? "Verifying..." : "Step 3: Test & Verify Sync"}</span>
+                  </button>
+                </div>
+
+                {testResult && (
+                  <div
+                    className={`rounded-lg p-2.5 text-xs font-bold flex items-start gap-2 ${
+                      testResult.status === "success"
+                        ? "bg-emerald-100 text-emerald-900 border border-emerald-300"
+                        : "bg-red-100 text-red-900 border border-red-300"
+                    }`}
+                  >
+                    {testResult.status === "success" ? (
+                      <CheckCircle2 className="h-4 w-4 text-emerald-600 shrink-0 mt-0.5" />
+                    ) : (
+                      <AlertTriangle className="h-4 w-4 text-red-600 shrink-0 mt-0.5" />
+                    )}
+                    <div className="space-y-0.5">
+                      <div>{testResult.message}</div>
+                    </div>
+                  </div>
+                )}
+              </div>
+            )}
+
+            {/* When Cloud Persistence is Verified Active */}
+            {supabaseConfigured && supabaseCloudSynced && (
+              <div className="rounded-xl bg-emerald-50 border border-emerald-200 p-3 text-[11px] text-emerald-900 space-y-1.5">
+                <div className="font-extrabold flex items-center gap-1.5 text-emerald-800">
+                  <CheckCircle2 className="h-4 w-4 text-emerald-600 shrink-0" />
+                  <span>Cloud Persistence Verified Active ✅</span>
+                </div>
+                <p className="text-[11px] text-emerald-700 leading-relaxed">
+                  All products, counter sales, and registered students are permanently stored in your Supabase PostgreSQL cloud database and stay synchronized across all devices in real time.
+                </p>
+                <button
+                  type="button"
+                  onClick={handleTestSupabaseConnection}
+                  disabled={testingSupabase}
+                  className="rounded bg-white border border-emerald-300 text-emerald-800 px-2 py-1 text-[10px] font-bold hover:bg-emerald-100 transition cursor-pointer"
+                >
+                  <RefreshCw className={`inline h-3 w-3 mr-1 ${testingSupabase ? "animate-spin" : ""}`} />
+                  {testingSupabase ? "Checking..." : "Re-test Connection"}
+                </button>
               </div>
             )}
 
