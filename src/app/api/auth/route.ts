@@ -25,14 +25,16 @@ export async function GET() {
     available_admins: db.users
       .filter((u) => u.is_active)
       .map((u) => ({ email: u.email, full_name: u.full_name, role: u.role })),
-    available_customers: db.customers
-      .filter((c) => c.is_active)
-      .map((c) => ({
-        id: c.id,
-        name: c.name,
-        room_number: c.room_number,
-        outstanding_dues: c.outstanding_dues,
-      })),
+    available_customers: admin
+      ? db.customers
+          .filter((c) => c.is_active)
+          .map((c) => ({
+            id: c.id,
+            name: c.name,
+            room_number: c.room_number,
+            outstanding_dues: c.outstanding_dues,
+          }))
+      : [],
   });
 }
 

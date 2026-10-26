@@ -53,11 +53,15 @@ export function LoginView({
   const [showPassword, setShowPassword] = useState(false);
 
   // Student / Customer state
-  const [studentName, setStudentName] = useState("");
-  const [studentRoom, setStudentRoom] = useState("");
-  const [selectedCustomerId, setSelectedCustomerId] = useState<string>(
-    availableCustomers[0]?.id || ""
-  );
+  const [studentAuthMode, setStudentAuthMode] = useState<"signin" | "register">("signin");
+  const [studentIdentifier, setStudentIdentifier] = useState("");
+  const [studentMobilePassword, setStudentMobilePassword] = useState("");
+  const [showStudentPassword, setShowStudentPassword] = useState(false);
+
+  // New Student Registration state
+  const [regName, setRegName] = useState("");
+  const [regRoom, setRegRoom] = useState("");
+  const [regMobile, setRegMobile] = useState("");
 
   const [loading, setLoading] = useState(false);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
@@ -91,9 +95,19 @@ export function LoginView({
     setLoading(true);
 
     try {
-      const payload = selectedCustomerId
-        ? { customerId: selectedCustomerId }
-        : { name: studentName, room_number: studentRoom };
+      const payload =
+        studentAuthMode === "register"
+          ? {
+              action: "register",
+              name: regName.trim(),
+              room_number: regRoom.trim(),
+              phone: regMobile.trim(),
+            }
+          : {
+              action: "login",
+              name: studentIdentifier.trim(),
+              password: studentMobilePassword.trim(),
+            };
 
       const res = await fetch("/api/customer-portal", {
         method: "POST",
@@ -102,7 +116,7 @@ export function LoginView({
       });
       const data = await res.json();
       if (!res.ok) {
-        throw new Error(data.error || "Could not open student portal.");
+        throw new Error(data.error || "Could not sign in to student portal.");
       }
       if (onCustomerLoginSuccess) {
         onCustomerLoginSuccess(data.customer);
@@ -426,116 +440,167 @@ export function LoginView({
             </div>
           ) : (
             /* ================================================================
-               STUDENT / CUSTOMER PORTAL LOGIN FORM
+               STUDENT / CUSTOMER PORTAL LOGIN & REGISTRATION
                ================================================================ */
             <div className="card-3d-static rounded-2xl p-6 sm:p-7 space-y-5">
               <div className="space-y-1.5">
                 <div className="inline-flex items-center gap-1.5 rounded-full bg-emerald-50 px-3 py-1 text-[11px] font-extrabold text-emerald-700 border border-emerald-200">
                   <GraduationCap className="h-3.5 w-3.5 text-emerald-600" />
-                  Hostel Resident Self-Service
+                  Hostel Resident Portal
                 </div>
                 <h2 className="text-2xl font-black text-[#111827] tracking-tight">
-                  Student Canteen Portal
+                  {studentAuthMode === "signin"
+                    ? "Student Canteen Sign In"
+                    : "Register as New Student"}
                 </h2>
                 <p className="text-xs text-slate-500">
-                  Check live snack stock, view what you purchased, download receipts, and check your room udhaar.
+                  {studentAuthMode === "signin"
+                    ? "Check your purchases, download bills, and track room udhaar securely."
+                    : "Create your student canteen account to maintain personal bills and counter udhaar."}
                 </p>
               </div>
 
-              {/* 1-Click Existing Student Selector */}
-              {availableCustomers.length > 0 && (
-                <div className="space-y-2">
-                  <label className="text-[11px] font-extrabold uppercase tracking-wider text-slate-500 block">
-                    1-Click Select Your Room Profile:
-                  </label>
-                  <div className="max-h-40 overflow-y-auto space-y-1.5 pr-1">
-                    {availableCustomers.map((c) => {
-                      const isSelected = selectedCustomerId === c.id;
-                      return (
-                        <button
-                          key={c.id}
-                          type="button"
-                          onClick={() => {
-                            setSelectedCustomerId(c.id);
-                            setStudentName("");
-                            setStudentRoom("");
-                          }}
-                          className={`w-full rounded-xl px-3.5 py-2.5 text-xs flex items-center justify-between transition cursor-pointer ${
-                            isSelected
-                              ? "nav-item-3d-active font-extrabold"
-                              : "btn-3d-secondary"
-                          }`}
-                        >
-                          <div className="flex items-center gap-2">
-                            <span className="font-extrabold text-[#111827]">
-                              {c.name}
-                            </span>
-                            {c.room_number && (
-                              <span className="rounded bg-blue-100 px-1.5 py-0.5 text-[10px] font-bold text-[#1D4ED8]">
-                                Room {c.room_number}
-                              </span>
-                            )}
-                          </div>
-                          <span
-                            className={`text-[11px] font-bold ${
-                              c.outstanding_dues > 0
-                                ? "text-amber-600"
-                                : "text-emerald-600"
-                            }`}
-                          >
-                            {c.outstanding_dues > 0
-                              ? `Due: ${formatINR(c.outstanding_dues)}`
-                              : "No Dues"}
-                          </span>
-                        </button>
-                      );
-                    })}
-                  </div>
-                </div>
-              )}
+              {/* Mode Toggle: Sign In vs Register */}
+              <div className="grid grid-cols-2 p-1 bg-slate-100 rounded-xl border border-slate-200 text-xs">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setStudentAuthMode("signin");
+                    setErrorMsg(null);
+                  }}
+                  className={`py-2 text-xs font-black rounded-lg transition cursor-pointer ${
+                    studentAuthMode === "signin"
+                      ? "bg-white text-blue-700 shadow-xs border border-blue-200"
+                      : "text-slate-600 hover:text-slate-900"
+                  }`}
+                >
+                  Sign In
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setStudentAuthMode("register");
+                    setErrorMsg(null);
+                  }}
+                  className={`py-2 text-xs font-black rounded-lg transition cursor-pointer ${
+                    studentAuthMode === "register"
+                      ? "bg-white text-emerald-700 shadow-xs border border-emerald-200"
+                      : "text-slate-600 hover:text-slate-900"
+                  }`}
+                >
+                  + New Student Register
+                </button>
+              </div>
 
-              {/* Or Enter Name + Room Number */}
+              {/* Sign In / Register Form */}
               <form onSubmit={handleCustomerSubmit} className="space-y-4 text-xs">
-                <div className="pt-2 border-t border-slate-200 space-y-3">
-                  <div className="text-[11px] font-bold text-slate-500">
-                    Or enter your Name &amp; Hostel Room Number:
-                  </div>
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                {studentAuthMode === "signin" ? (
+                  /* ================= EXISTING STUDENT SIGN IN ================= */
+                  <div className="space-y-3">
                     <div>
                       <label className="font-bold text-[#111827] block mb-1">
-                        Your Name
+                        Student Name or Room Number *
                       </label>
                       <input
                         type="text"
-                        value={studentName}
-                        onChange={(e) => {
-                          setStudentName(e.target.value);
-                          if (e.target.value.trim()) setSelectedCustomerId("");
-                        }}
-                        placeholder="e.g. Rohan Sharma"
-                        className="input-3d w-full rounded-xl px-3 py-2.5 text-xs"
+                        required
+                        value={studentIdentifier}
+                        onChange={(e) => setStudentIdentifier(e.target.value)}
+                        placeholder="e.g. Aarav Sharma or B-204"
+                        className="input-3d w-full rounded-xl px-3.5 py-2.5 text-xs text-[#111827]"
                       />
                     </div>
+
                     <div>
-                      <label className="font-bold text-[#111827] block mb-1">
-                        Room Number
-                      </label>
+                      <div className="flex items-center justify-between mb-1">
+                        <label className="font-bold text-[#111827]">
+                          Password (Mobile Number) *
+                        </label>
+                        <span className="text-[10px] text-blue-600 font-semibold">
+                          🔒 Registered mobile number
+                        </span>
+                      </div>
                       <div className="relative">
-                        <DoorOpen className="absolute left-3 top-2.5 h-4 w-4 text-slate-400" />
+                        <Lock className="absolute left-3.5 top-3 h-4 w-4 text-slate-400" />
                         <input
-                          type="text"
-                          value={studentRoom}
-                          onChange={(e) => {
-                            setStudentRoom(e.target.value);
-                            if (e.target.value.trim()) setSelectedCustomerId("");
-                          }}
-                          placeholder="e.g. B-204"
-                          className="input-3d w-full rounded-xl pl-9 pr-3 py-2.5 text-xs"
+                          type={showStudentPassword ? "text" : "password"}
+                          required
+                          value={studentMobilePassword}
+                          onChange={(e) => setStudentMobilePassword(e.target.value)}
+                          placeholder="Enter your 10-digit mobile number"
+                          maxLength={15}
+                          className="input-3d w-full rounded-xl pl-10 pr-10 py-2.5 text-xs text-[#111827]"
                         />
+                        <button
+                          type="button"
+                          onClick={() => setShowStudentPassword(!showStudentPassword)}
+                          className="absolute right-3 top-2.5 p-0.5 text-slate-400 hover:text-[#111827] cursor-pointer"
+                        >
+                          {showStudentPassword ? (
+                            <EyeOff className="h-4 w-4" />
+                          ) : (
+                            <Eye className="h-4 w-4" />
+                          )}
+                        </button>
                       </div>
                     </div>
                   </div>
-                </div>
+                ) : (
+                  /* ================= NEW STUDENT REGISTRATION ================= */
+                  <div className="space-y-3">
+                    <div>
+                      <label className="font-bold text-[#111827] block mb-1">
+                        Full Name *
+                      </label>
+                      <input
+                        type="text"
+                        required
+                        value={regName}
+                        onChange={(e) => setRegName(e.target.value)}
+                        placeholder="e.g. Rohan Sharma"
+                        className="input-3d w-full rounded-xl px-3.5 py-2.5 text-xs text-[#111827]"
+                      />
+                    </div>
+
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                      <div>
+                        <label className="font-bold text-[#111827] block mb-1">
+                          Hostel Room No. *
+                        </label>
+                        <div className="relative">
+                          <DoorOpen className="absolute left-3 top-2.5 h-4 w-4 text-slate-400" />
+                          <input
+                            type="text"
+                            required
+                            value={regRoom}
+                            onChange={(e) => setRegRoom(e.target.value)}
+                            placeholder="e.g. B-204"
+                            className="input-3d w-full rounded-xl pl-9 pr-3 py-2.5 text-xs text-[#111827]"
+                          />
+                        </div>
+                      </div>
+
+                      <div>
+                        <label className="font-bold text-[#111827] block mb-1">
+                          Mobile Number *
+                        </label>
+                        <input
+                          type="tel"
+                          required
+                          value={regMobile}
+                          onChange={(e) => setRegMobile(e.target.value)}
+                          placeholder="10-digit mobile"
+                          maxLength={10}
+                          className="input-3d w-full rounded-xl px-3.5 py-2.5 text-xs text-[#111827]"
+                        />
+                      </div>
+                    </div>
+
+                    <div className="rounded-xl bg-blue-50 border border-blue-200 p-2.5 text-[11px] text-blue-800">
+                      <strong>Security Note:</strong> Your 10-digit mobile number will be your private password to sign in to your passbook. Other students cannot access your account without it.
+                    </div>
+                  </div>
+                )}
 
                 <button
                   type="submit"
@@ -545,11 +610,40 @@ export function LoginView({
                   <ShoppingBag className="h-4 w-4" />
                   <span>
                     {loading
-                      ? "Loading Student Portal..."
-                      : "Enter Student Canteen Portal"}
+                      ? "Verifying..."
+                      : studentAuthMode === "signin"
+                      ? "Sign In to Student Passbook"
+                      : "Register & Open Passbook"}
                   </span>
                   <ArrowRight className="h-4 w-4" />
                 </button>
+
+                {/* Switch helper link */}
+                <div className="text-center pt-1">
+                  {studentAuthMode === "signin" ? (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setStudentAuthMode("register");
+                        setErrorMsg(null);
+                      }}
+                      className="text-[11px] font-bold text-[#2563EB] hover:underline cursor-pointer"
+                    >
+                      New hostel student? Register your account here &rarr;
+                    </button>
+                  ) : (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setStudentAuthMode("signin");
+                        setErrorMsg(null);
+                      }}
+                      className="text-[11px] font-bold text-[#2563EB] hover:underline cursor-pointer"
+                    >
+                      Already have an account? Sign in with Mobile &rarr;
+                    </button>
+                  )}
+                </div>
 
                 {onCustomerLoginSuccess && (
                   <button

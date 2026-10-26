@@ -8,6 +8,13 @@ import {
   listProducts,
 } from "@/lib/db/store";
 
+function normalizePhone(p?: string | null): string {
+  if (!p) return "";
+  const digits = p.replace(/[^0-9]/g, "");
+  // Take last 10 digits for consistent mobile number comparison
+  return digits.length >= 10 ? digits.slice(-10) : digits;
+}
+
 export async function GET(req: NextRequest) {
   try {
     await ensureDatabaseSync();
@@ -28,15 +35,6 @@ export async function GET(req: NextRequest) {
       is_active: p.is_active,
     }));
 
-    const allCustomers = listCustomers().map((c) => ({
-      id: c.id,
-      name: c.name,
-      room_number: c.room_number,
-      outstanding_dues: c.outstanding_dues,
-      total_purchases: c.total_purchases,
-      total_payments: c.total_payments,
-    }));
-
     if (customerId) {
       const details = getCustomerDetailsWithLedger(customerId);
       // Sanitize sale items so internal purchase cost/profit are not exposed to students
@@ -54,7 +52,6 @@ export async function GET(req: NextRequest) {
 
       return NextResponse.json({
         products: activeProducts,
-        customers: allCustomers,
         customer_profile: details.customer,
         sales: safeSales,
         payments: details.payments,
@@ -65,7 +62,6 @@ export async function GET(req: NextRequest) {
 
     return NextResponse.json({
       products: activeProducts,
-      customers: allCustomers,
       canteen_status: getCanteenStatus(),
     });
   } catch (err) {
@@ -85,62 +81,131 @@ export async function POST(req: NextRequest) {
   try {
     await ensureDatabaseSync();
     const body = await req.json();
-    const customerId = (body.customerId || "").trim();
-    const name = (body.name || "").trim();
-    const roomNumber = (body.room_number || "").trim();
-    const phone = (body.phone || "").trim();
+    const action = String(body.action || "login").toLowerCase();
+    const name = String(body.name || "").trim();
+    const roomNumber = String(body.room_number || "").trim();
+    const rawMobile = String(body.password || body.phone || body.mobile || "").trim();
+    const mobileDigits = normalizePhone(rawMobile);
 
     const customers = listCustomers();
 
-    // 1. Direct login by customerId
-    if (customerId) {
-      const found = customers.find((c) => c.id === customerId);
-      if (!found) {
+    // =========================================================================
+    // ACTION: REGISTER NEW STUDENT
+    // =========================================================================
+    if (action === "register") {
+      if (!name) {
         return NextResponse.json(
-          { error: "Student profile not found." },
-          { status: 404 }
+          { error: "Student full name is required." },
+          { status: 400 }
         );
       }
-      return NextResponse.json({ customer: found });
+      if (!roomNumber) {
+        return NextResponse.json(
+          { error: "Hostel room number is required." },
+          { status: 400 }
+        );
+      }
+      if (!mobileDigits || mobileDigits.length < 10) {
+        return NextResponse.json(
+          { error: "A valid 10-digit mobile number is required (this will be your password)." },
+          { status: 400 }
+        );
+      }
+
+      // Check if student with this mobile number already exists
+      const existingPhone = customers.find(
+        (c) => normalizePhone(c.phone) === mobileDigits
+      );
+      if (existingPhone) {
+        return NextResponse.json(
+          {
+            error: `An account with this mobile number already exists for "${existingPhone.name}". Please Sign In using your Name and Mobile Number.`,
+          },
+          { status: 400 }
+        );
+      }
+
+      // Check if student with same Name + Room already exists
+      const existingNameRoom = customers.find(
+        (c) =>
+          c.name.toLowerCase() === name.toLowerCase() &&
+          (c.room_number || "").toLowerCase() === roomNumber.toLowerCase()
+      );
+      if (existingNameRoom) {
+        return NextResponse.json(
+          {
+            error: `An account for "${name}" in Room ${roomNumber} already exists. Please Sign In with your mobile number.`,
+          },
+          { status: 400 }
+        );
+      }
+
+      const createdCustomer = await createCustomer(
+        {
+          name,
+          room_number: roomNumber,
+          phone: mobileDigits,
+          notes: "Self-registered via Student Portal",
+        },
+        "Student Self-Portal"
+      );
+
+      return NextResponse.json({
+        success: true,
+        customer: createdCustomer,
+        created: true,
+      });
     }
 
-    // 2. Login or self-register by Name + Room Number
-    if (!name) {
+    // =========================================================================
+    // ACTION: SIGN IN EXISTING STUDENT (Requires Name/Room + Mobile Number Password)
+    // =========================================================================
+    if (!name && !roomNumber) {
       return NextResponse.json(
-        { error: "Please enter your name or select your room profile." },
+        { error: "Please enter your Name or Room Number." },
+        { status: 400 }
+      );
+    }
+    if (!mobileDigits || mobileDigits.length < 10) {
+      return NextResponse.json(
+        { error: "Please enter your 10-digit registered mobile number as your password." },
         { status: 400 }
       );
     }
 
-    const existing = customers.find((c) => {
-      const nameMatch = c.name.toLowerCase() === name.toLowerCase();
-      if (!roomNumber) return nameMatch;
+    // Match student: candidate match by Name or Room, then verify mobile number password
+    const candidateMatches = customers.filter((c) => {
+      const nameMatch = name && c.name.toLowerCase().includes(name.toLowerCase());
       const roomMatch =
-        (c.room_number || "").toLowerCase() === roomNumber.toLowerCase();
-      return nameMatch && roomMatch;
-    }) || customers.find((c) => c.name.toLowerCase() === name.toLowerCase());
+        (roomNumber && (c.room_number || "").toLowerCase() === roomNumber.toLowerCase()) ||
+        (name && (c.room_number || "").toLowerCase() === name.toLowerCase());
+      return nameMatch || roomMatch;
+    });
 
-    if (existing) {
-      return NextResponse.json({ customer: existing, created: false });
+    const verifiedCustomer =
+      candidateMatches.find((c) => normalizePhone(c.phone) === mobileDigits) ||
+      customers.find((c) => normalizePhone(c.phone) === mobileDigits);
+
+    if (!verifiedCustomer) {
+      return NextResponse.json(
+        {
+          error:
+            "Invalid Name or Mobile Number password. If you are a new student, please click 'Register as New Student'.",
+        },
+        { status: 401 }
+      );
     }
 
-    // Create new hostel student customer account
-    const createdCustomer = await createCustomer(
-      {
-        name,
-        room_number: roomNumber || undefined,
-        phone: phone || undefined,
-        notes: "Self-registered via Student Canteen Portal",
-      },
-      "Student Self-Portal"
-    );
-
-    return NextResponse.json({ customer: createdCustomer, created: true });
+    return NextResponse.json({
+      success: true,
+      customer: verifiedCustomer,
+      created: false,
+    });
   } catch (err) {
     return NextResponse.json(
       {
         error:
-          err instanceof Error ? err.message : "Customer portal login failed.",
+          err instanceof Error ? err.message : "Student portal authentication failed.",
       },
       { status: 400 }
     );

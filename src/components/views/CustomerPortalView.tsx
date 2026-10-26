@@ -20,6 +20,9 @@ import {
   Wallet,
   CreditCard,
   UserPlus,
+  Lock,
+  Eye,
+  EyeOff,
 } from "lucide-react";
 import {
   Customer,
@@ -98,8 +101,15 @@ export function CustomerPortalView({
 
   // Quick Student Switch / Self-Login Modal
   const [showSwitchModal, setShowSwitchModal] = useState(false);
-  const [loginName, setLoginName] = useState("");
-  const [loginRoom, setLoginRoom] = useState("");
+  const [authMode, setAuthMode] = useState<"signin" | "register">("signin");
+  const [loginIdentifier, setLoginIdentifier] = useState("");
+  const [loginPassword, setLoginPassword] = useState("");
+  const [showLoginPassword, setShowLoginPassword] = useState(false);
+
+  const [regName, setRegName] = useState("");
+  const [regRoom, setRegRoom] = useState("");
+  const [regMobile, setRegMobile] = useState("");
+
   const [loginError, setLoginError] = useState<string | null>(null);
   const [submittingLogin, setSubmittingLogin] = useState(false);
 
@@ -122,44 +132,53 @@ export function CustomerPortalView({
           setSales(data.sales || []);
           setPayments(data.payments || []);
           setLedger(data.ledger || []);
-        } else if (!custId && data.customers?.length > 0 && !currentCustomer) {
-          // Keep as guest or load first if initialCustomer was set
+        } else if (!custId) {
+          // Stay in guest view
         }
       }
     } finally {
       setLoading(false);
     }
-  }, [currentCustomer]);
+  }, []);
 
   useEffect(() => {
     fetchPortalData(initialCustomer?.id);
   }, [initialCustomer?.id, fetchPortalData]);
-
-  const handleSelectStudent = async (custId: string) => {
-    setShowSwitchModal(false);
-    await fetchPortalData(custId);
-  };
 
   const handleSelfLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoginError(null);
     setSubmittingLogin(true);
     try {
+      const payload =
+        authMode === "register"
+          ? {
+              action: "register",
+              name: regName.trim(),
+              room_number: regRoom.trim(),
+              phone: regMobile.trim(),
+            }
+          : {
+              action: "login",
+              name: loginIdentifier.trim(),
+              password: loginPassword.trim(),
+            };
+
       const res = await fetch("/api/customer-portal", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          name: loginName,
-          room_number: loginRoom,
-        }),
+        body: JSON.stringify(payload),
       });
       const data = await res.json();
       if (!res.ok) {
-        throw new Error(data.error || "Could not sign in.");
+        throw new Error(data.error || "Authentication failed.");
       }
       setShowSwitchModal(false);
-      setLoginName("");
-      setLoginRoom("");
+      setLoginIdentifier("");
+      setLoginPassword("");
+      setRegName("");
+      setRegRoom("");
+      setRegMobile("");
       await fetchPortalData(data.customer.id);
     } catch (err) {
       setLoginError(err instanceof Error ? err.message : "Failed to sign in.");
@@ -923,10 +942,14 @@ export function CustomerPortalView({
                 </div>
                 <div>
                   <h3 className="text-base font-extrabold text-[#111827]">
-                    Hostel Student Sign In
+                    {authMode === "signin"
+                      ? "Student Canteen Sign In"
+                      : "Register as New Student"}
                   </h3>
                   <p className="text-xs text-slate-500">
-                    Select your room profile or enter your name
+                    {authMode === "signin"
+                      ? "Enter your name and mobile password"
+                      : "Create your student passbook account"}
                   </p>
                 </div>
               </div>
@@ -938,6 +961,38 @@ export function CustomerPortalView({
               </button>
             </div>
 
+            {/* Mode Switcher */}
+            <div className="grid grid-cols-2 p-1 bg-slate-100 rounded-xl border border-slate-200 text-xs">
+              <button
+                type="button"
+                onClick={() => {
+                  setAuthMode("signin");
+                  setLoginError(null);
+                }}
+                className={`py-1.5 text-xs font-black rounded-lg transition cursor-pointer ${
+                  authMode === "signin"
+                    ? "bg-white text-blue-700 shadow-xs border border-blue-200"
+                    : "text-slate-600 hover:text-slate-900"
+                }`}
+              >
+                Sign In
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  setAuthMode("register");
+                  setLoginError(null);
+                }}
+                className={`py-1.5 text-xs font-black rounded-lg transition cursor-pointer ${
+                  authMode === "register"
+                    ? "bg-white text-emerald-700 shadow-xs border border-emerald-200"
+                    : "text-slate-600 hover:text-slate-900"
+                }`}
+              >
+                + Register New Student
+              </button>
+            </div>
+
             {loginError && (
               <div className="rounded-xl bg-red-50 border border-red-200 p-3 flex items-center gap-2 text-xs text-red-700">
                 <AlertTriangle className="h-4 w-4 shrink-0" />
@@ -945,98 +1000,119 @@ export function CustomerPortalView({
               </div>
             )}
 
-            {/* Existing Registered Students 1-Click List */}
-            {allCustomers.length > 0 && (
-              <div className="space-y-2">
-                <label className="text-[11px] font-bold uppercase tracking-wider text-slate-500 block">
-                  1-Click Select Your Hostel Profile:
-                </label>
-                <div className="max-h-44 overflow-y-auto space-y-1.5 pr-1">
-                  {allCustomers.map((c) => {
-                    const isSelected = currentCustomer?.id === c.id;
-                    return (
+            {/* Secure Sign In / Register Form */}
+            <form onSubmit={handleSelfLogin} className="space-y-3.5 text-xs">
+              {authMode === "signin" ? (
+                /* ================= SIGN IN ================= */
+                <div className="space-y-3">
+                  <div>
+                    <label className="text-[11px] font-bold text-slate-700 block mb-1">
+                      Student Name or Room Number *
+                    </label>
+                    <input
+                      type="text"
+                      required
+                      value={loginIdentifier}
+                      onChange={(e) => setLoginIdentifier(e.target.value)}
+                      placeholder="e.g. Aarav Sharma or B-204"
+                      className="input-3d w-full rounded-xl px-3 py-2 text-xs text-[#111827]"
+                    />
+                  </div>
+                  <div>
+                    <div className="flex items-center justify-between mb-1">
+                      <label className="text-[11px] font-bold text-slate-700">
+                        Password (Mobile Number) *
+                      </label>
+                      <span className="text-[10px] text-blue-600 font-semibold">
+                        🔒 Registered mobile
+                      </span>
+                    </div>
+                    <div className="relative">
+                      <Lock className="absolute left-3 top-2.5 h-3.5 w-3.5 text-slate-400" />
+                      <input
+                        type={showLoginPassword ? "text" : "password"}
+                        required
+                        value={loginPassword}
+                        onChange={(e) => setLoginPassword(e.target.value)}
+                        placeholder="10-digit mobile number"
+                        maxLength={15}
+                        className="input-3d w-full rounded-xl pl-9 pr-9 py-2 text-xs text-[#111827]"
+                      />
                       <button
-                        key={c.id}
                         type="button"
-                        onClick={() => handleSelectStudent(c.id)}
-                        className={`w-full rounded-xl p-3 text-xs flex items-center justify-between transition cursor-pointer ${
-                          isSelected
-                            ? "nav-item-3d-active font-bold"
-                            : "btn-3d-secondary"
-                        }`}
+                        onClick={() => setShowLoginPassword(!showLoginPassword)}
+                        className="absolute right-2.5 top-2 p-0.5 text-slate-400 hover:text-[#111827] cursor-pointer"
                       >
-                        <div className="flex items-center gap-2">
-                          <span className="font-extrabold text-[#111827]">
-                            {c.name}
-                          </span>
-                          {c.room_number && (
-                            <span className="rounded bg-blue-50 border border-blue-200 px-1.5 py-0.5 text-[10px] font-bold text-[#1D4ED8]">
-                              Room {c.room_number}
-                            </span>
-                          )}
-                        </div>
-                        <div className="text-right">
-                          {c.outstanding_dues > 0 ? (
-                            <span className="text-[11px] font-bold text-amber-600">
-                              Due: {formatINR(c.outstanding_dues)}
-                            </span>
-                          ) : (
-                            <span className="text-[11px] font-bold text-emerald-600">
-                              No Dues
-                            </span>
-                          )}
-                        </div>
+                        {showLoginPassword ? (
+                          <EyeOff className="h-3.5 w-3.5" />
+                        ) : (
+                          <Eye className="h-3.5 w-3.5" />
+                        )}
                       </button>
-                    );
-                  })}
+                    </div>
+                  </div>
                 </div>
-              </div>
-            )}
+              ) : (
+                /* ================= REGISTER ================= */
+                <div className="space-y-3">
+                  <div>
+                    <label className="text-[11px] font-bold text-slate-700 block mb-1">
+                      Full Name *
+                    </label>
+                    <input
+                      type="text"
+                      required
+                      value={regName}
+                      onChange={(e) => setRegName(e.target.value)}
+                      placeholder="e.g. Rohan Sharma"
+                      className="input-3d w-full rounded-xl px-3 py-2 text-xs text-[#111827]"
+                    />
+                  </div>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+                    <div>
+                      <label className="text-[11px] font-bold text-slate-700 block mb-1">
+                        Hostel Room No. *
+                      </label>
+                      <input
+                        type="text"
+                        required
+                        value={regRoom}
+                        onChange={(e) => setRegRoom(e.target.value)}
+                        placeholder="e.g. B-204"
+                        className="input-3d w-full rounded-xl px-3 py-2 text-xs text-[#111827]"
+                      />
+                    </div>
+                    <div>
+                      <label className="text-[11px] font-bold text-slate-700 block mb-1">
+                        Mobile Number *
+                      </label>
+                      <input
+                        type="tel"
+                        required
+                        value={regMobile}
+                        onChange={(e) => setRegMobile(e.target.value)}
+                        placeholder="10-digit mobile"
+                        maxLength={10}
+                        className="input-3d w-full rounded-xl px-3 py-2 text-xs text-[#111827]"
+                      />
+                    </div>
+                  </div>
+                  <p className="text-[10px] text-blue-700 bg-blue-50 border border-blue-200 rounded-lg p-2">
+                    🔒 Your mobile number will be your private password to sign in to your passbook.
+                  </p>
+                </div>
+              )}
 
-            {/* Self-Sign In / New Student Form */}
-            <form
-              onSubmit={handleSelfLogin}
-              className="space-y-3 pt-3 border-t border-slate-200 text-xs"
-            >
-              <div className="font-bold text-slate-700 flex items-center gap-1.5">
-                <UserPlus className="h-3.5 w-3.5 text-[#2563EB]" />
-                <span>Or Enter Your Name &amp; Room Number:</span>
-              </div>
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
-                <div>
-                  <label className="text-[11px] font-bold text-slate-600 block mb-1">
-                    Student Name *
-                  </label>
-                  <input
-                    type="text"
-                    required
-                    value={loginName}
-                    onChange={(e) => setLoginName(e.target.value)}
-                    placeholder="e.g. Rohan Sharma"
-                    className="input-3d w-full rounded-xl px-3 py-2 text-xs"
-                  />
-                </div>
-                <div>
-                  <label className="text-[11px] font-bold text-slate-600 block mb-1">
-                    Hostel Room No.
-                  </label>
-                  <input
-                    type="text"
-                    value={loginRoom}
-                    onChange={(e) => setLoginRoom(e.target.value)}
-                    placeholder="e.g. B-204"
-                    className="input-3d w-full rounded-xl px-3 py-2 text-xs"
-                  />
-                </div>
-              </div>
               <button
                 type="submit"
                 disabled={submittingLogin}
                 className="btn-3d-primary w-full rounded-xl py-2.5 text-xs font-bold cursor-pointer"
               >
                 {submittingLogin
-                  ? "Opening Student Passbook..."
-                  : "Sign In to My Passbook"}
+                  ? "Verifying..."
+                  : authMode === "signin"
+                  ? "Sign In to My Passbook"
+                  : "Register & Open Passbook"}
               </button>
             </form>
           </div>
