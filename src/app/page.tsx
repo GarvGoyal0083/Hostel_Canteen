@@ -146,6 +146,7 @@ export default function HostelCanteenPosApp() {
   const [appData, setAppData] = useState<{
     environment_mode: "development_sample" | "production_clean";
     supabase_configured: boolean;
+    supabase_cloud_synced?: boolean;
     kpis: {
       today_sales: number;
       weekly_sales: number;
@@ -742,6 +743,7 @@ export default function HostelCanteenPosApp() {
                 <SettingsView
                   admin={admin}
                   supabaseConfigured={appData.supabase_configured}
+                  supabaseCloudSynced={appData.supabase_cloud_synced}
                   environmentMode={appData.environment_mode}
                   auditLogs={appData.audit_logs}
                   canteenStatus={canteenStatus}

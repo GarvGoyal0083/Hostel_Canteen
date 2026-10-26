@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { requireAdminAuth } from "@/lib/auth";
 import {
   createCustomer,
+  ensureDatabaseSync,
   listCustomers,
   recordCustomerDuesRepayment,
 } from "@/lib/db/store";
@@ -10,6 +11,7 @@ export async function GET(req: NextRequest) {
   const auth = await requireAdminAuth();
   if (!auth.authorized) return auth.response;
 
+  await ensureDatabaseSync();
   const { searchParams } = new URL(req.url);
   const search = searchParams.get("search") || undefined;
   const customers = listCustomers(search);

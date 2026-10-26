@@ -20,6 +20,7 @@ import { downloadCSV, formatIST } from "@/lib/format";
 interface SettingsViewProps {
   admin: AdminUser;
   supabaseConfigured: boolean;
+  supabaseCloudSynced?: boolean;
   environmentMode: "development_sample" | "production_clean";
   auditLogs: AuditLogRecord[];
   canteenStatus?: CanteenStatus;
@@ -30,6 +31,7 @@ interface SettingsViewProps {
 export function SettingsView({
   admin,
   supabaseConfigured,
+  supabaseCloudSynced,
   environmentMode,
   auditLogs,
   canteenStatus,
@@ -263,6 +265,47 @@ export function SettingsView({
                   : "Local Persistent ACID Store"}
               </span>
             </div>
+
+            <div className="flex items-center justify-between">
+              <span className="text-gray-500">Multi-Device Sync:</span>
+              <span
+                className={`rounded-full px-2 py-0.5 text-[10px] font-black ${
+                  supabaseCloudSynced
+                    ? "bg-emerald-100 text-emerald-800 border border-emerald-300"
+                    : supabaseConfigured
+                    ? "bg-amber-100 text-amber-900 border border-amber-300"
+                    : "bg-slate-100 text-slate-700 border border-slate-300"
+                }`}
+              >
+                {supabaseCloudSynced
+                  ? "ACTIVE (ALL BROWSERS SYNCED)"
+                  : supabaseConfigured
+                  ? "RUN SQL TABLE MIGRATION"
+                  : "LOCAL ONLY"}
+              </span>
+            </div>
+
+            {supabaseConfigured && !supabaseCloudSynced && (
+              <div className="rounded-lg bg-amber-50 border border-amber-200 p-2.5 text-[11px] text-amber-900 space-y-1.5">
+                <div className="font-bold flex items-center gap-1.5">
+                  <AlertTriangle className="h-3.5 w-3.5 text-amber-600 shrink-0" />
+                  <span>Enable Multi-Browser Cloud Persistence</span>
+                </div>
+                <p className="text-[10px] leading-relaxed text-amber-800">
+                  To keep registered students and orders permanently synced across all devices and prevent Vercel serverless cache resets, open your <strong>Supabase Dashboard &rarr; SQL Editor</strong> and run:
+                </p>
+                <pre className="rounded bg-white p-2 font-mono text-[10px] text-slate-800 border border-amber-200 overflow-x-auto select-all">
+{`CREATE TABLE IF NOT EXISTS public.canteen_store (
+  id TEXT PRIMARY KEY DEFAULT 'main',
+  data JSONB NOT NULL,
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+ALTER TABLE public.canteen_store ENABLE ROW LEVEL SECURITY;
+CREATE POLICY "Allow all access to canteen_store"
+ON public.canteen_store FOR ALL USING (true) WITH CHECK (true);`}
+                </pre>
+              </div>
+            )}
 
             <div className="rounded-lg bg-[#F3F4F6] p-2.5 text-[11px] text-gray-700">
               <AlertTriangle className="inline h-3.5 w-3.5 text-amber-600 mr-1" />

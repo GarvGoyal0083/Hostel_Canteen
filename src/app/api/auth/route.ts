@@ -4,16 +4,23 @@ import {
   SESSION_COOKIE_NAME,
   signSessionToken,
 } from "@/lib/auth";
-import { readDatabase, withTransactionLock, writeDatabase } from "@/lib/db/store";
+import {
+  ensureDatabaseSync,
+  getCloudPersistenceStatus,
+  readDatabase,
+  withTransactionLock,
+  writeDatabase,
+} from "@/lib/db/store";
 import { createSupabaseServerClient, isSupabaseConfigured } from "@/lib/supabase/server";
 
 export async function GET() {
   const admin = await getAuthenticatedAdmin();
-  const db = readDatabase();
+  const db = await ensureDatabaseSync();
   return NextResponse.json({
     authenticated: Boolean(admin),
     admin,
     supabase_configured: isSupabaseConfigured(),
+    supabase_cloud_synced: getCloudPersistenceStatus(),
     environment_mode: db.meta.environment_mode,
     available_admins: db.users
       .filter((u) => u.is_active)
@@ -79,7 +86,7 @@ export async function POST(req: NextRequest) {
     // 2. Local / Server Admin Credential Verification
     const expectedPass =
       process.env.ADMIN_DEFAULT_PASSWORD || "ChangeThisStrongPassword!2026";
-    const db = readDatabase();
+    const db = await ensureDatabaseSync();
     const matchingUser = db.users.find(
       (u) => u.email.toLowerCase() === email && u.is_active
     );

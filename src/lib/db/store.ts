@@ -27,6 +27,13 @@ import {
   DatabaseSchema,
 } from "@/lib/db/seed";
 import { getISTCompactDateKey, getISTDateString, round2 } from "@/lib/format";
+import {
+  fetchRemoteDatabase,
+  getCloudPersistenceStatus,
+  pushRemoteDatabase,
+} from "@/lib/db/supabaseSync";
+
+export { getCloudPersistenceStatus };
 
 const isServerless = Boolean(
   process.env.VERCEL ||
@@ -42,9 +49,48 @@ const DB_FILE_PATH =
 let lockChain: Promise<unknown> = Promise.resolve();
 
 export async function withTransactionLock<T>(fn: () => Promise<T> | T): Promise<T> {
-  const next = lockChain.then(() => fn());
+  const next = lockChain.then(async () => {
+    // 1. Sync latest changes from Supabase Cloud before executing mutation
+    try {
+      const remote = await fetchRemoteDatabase();
+      if (remote) {
+        writeDatabaseLocal(remote);
+      }
+    } catch {
+      // ignore
+    }
+
+    const result = await fn();
+
+    // 2. Broadcast updated database state to Supabase Cloud
+    try {
+      const current = readDatabase();
+      await pushRemoteDatabase(current);
+    } catch {
+      // ignore
+    }
+
+    return result;
+  });
   lockChain = next.catch(() => undefined);
   return next;
+}
+
+/**
+ * Ensures the database has pulled the latest centralized state from Supabase Cloud.
+ * Call this in API GET routes before listing or calculating data.
+ */
+export async function ensureDatabaseSync(): Promise<DatabaseSchema> {
+  try {
+    const remote = await fetchRemoteDatabase();
+    if (remote) {
+      writeDatabaseLocal(remote);
+      return remote;
+    }
+  } catch {
+    // ignore
+  }
+  return readDatabase();
 }
 
 function ensureDataDir(): void {
@@ -106,7 +152,7 @@ export function readDatabase(): DatabaseSchema {
   }
 }
 
-export function writeDatabase(db: DatabaseSchema): void {
+function writeDatabaseLocal(db: DatabaseSchema): void {
   ensureDataDir();
   db.meta.updated_at = new Date().toISOString();
   const tempPath = `${DB_FILE_PATH}.tmp`;
@@ -117,6 +163,11 @@ export function writeDatabase(db: DatabaseSchema): void {
     console.error(`[store] Failed to write database to ${DB_FILE_PATH}:`, err);
     if (!isServerless) throw err;
   }
+}
+
+export function writeDatabase(db: DatabaseSchema): void {
+  writeDatabaseLocal(db);
+  pushRemoteDatabase(db).catch(() => undefined);
 }
 
 function appendAudit(

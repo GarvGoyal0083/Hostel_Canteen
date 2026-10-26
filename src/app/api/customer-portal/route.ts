@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import {
   createCustomer,
+  ensureDatabaseSync,
   getCanteenStatus,
   getCustomerDetailsWithLedger,
   listCustomers,
@@ -9,6 +10,7 @@ import {
 
 export async function GET(req: NextRequest) {
   try {
+    await ensureDatabaseSync();
     const { searchParams } = new URL(req.url);
     const customerId = searchParams.get("customerId");
 
@@ -81,6 +83,7 @@ export async function GET(req: NextRequest) {
 
 export async function POST(req: NextRequest) {
   try {
+    await ensureDatabaseSync();
     const body = await req.json();
     const customerId = (body.customerId || "").trim();
     const name = (body.name || "").trim();

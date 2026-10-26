@@ -2,6 +2,8 @@ import { NextRequest, NextResponse } from "next/server";
 import { requireAdminAuth } from "@/lib/auth";
 import {
   computeFinancialMetrics,
+  ensureDatabaseSync,
+  getCloudPersistenceStatus,
   getProductStockSummaries,
   listCustomers,
   listExpenses,
@@ -17,6 +19,8 @@ import { isSupabaseConfigured } from "@/lib/supabase/server";
 export async function GET(req: NextRequest) {
   const auth = await requireAdminAuth();
   if (!auth.authorized) return auth.response;
+
+  await ensureDatabaseSync();
 
   const { searchParams } = new URL(req.url);
   const startDate = searchParams.get("startDate") || undefined;
@@ -41,6 +45,7 @@ export async function GET(req: NextRequest) {
   return NextResponse.json({
     ...metrics,
     supabase_configured: isSupabaseConfigured(),
+    supabase_cloud_synced: getCloudPersistenceStatus(),
     stock_summaries: stockSummaries,
     customers,
     sales,
