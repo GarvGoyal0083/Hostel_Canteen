@@ -1,11 +1,12 @@
 # Hostel Canteen POS — Complete Canteen Management System
 
-> 🌐 **Official Project & Repository URL:**  
-> ### **[https://github.com/GarvGoyal0083/Hostel_Canteen](https://github.com/GarvGoyal0083/Hostel_Canteen)**  
+> 🚀 **Live Production Application:**  
+> ### **[https://hostel-canteen.vercel.app/](https://hostel-canteen.vercel.app/)**  
 > 
-> 📍 **Admin POS Web Portal:** [`http://localhost:3000`](http://localhost:3000)  
-> 🎓 **Student / Customer Portal:** [`http://localhost:3000/customer`](http://localhost:3000/customer)
+> 🎓 **Student / Customer Self-Service Portal:** [`https://hostel-canteen.vercel.app/customer`](https://hostel-canteen.vercel.app/customer)  
+> 📂 **GitHub Repository:** [`https://github.com/GarvGoyal0083/Hostel_Canteen`](https://github.com/GarvGoyal0083/Hostel_Canteen)
 
+[![Live Web App](https://img.shields.io/badge/Live_App-hostel--canteen.vercel.app-0070F3?style=for-the-badge&logo=vercel)](https://hostel-canteen.vercel.app/)
 [![GitHub Repository](https://img.shields.io/badge/GitHub-Hostel__Canteen-2563EB?style=for-the-badge&logo=github)](https://github.com/GarvGoyal0083/Hostel_Canteen)
 [![Next.js](https://img.shields.io/badge/Next.js-15-black?style=for-the-badge&logo=next.js)](https://nextjs.org/)
 [![TypeScript](https://img.shields.io/badge/TypeScript-5-3178C6?style=for-the-badge&logo=typescript)](https://www.typescriptlang.org/)
