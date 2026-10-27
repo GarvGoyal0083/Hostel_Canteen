@@ -765,7 +765,7 @@ export function CustomersView({
                 </div>
                 <div>
                   <label className="font-bold text-[#111827] block mb-1">
-                    Mobile Number (Phone)
+                    Mobile Number (Optional)
                   </label>
                   <input
                     type="text"

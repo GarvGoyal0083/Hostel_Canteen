@@ -1088,14 +1088,13 @@ export function CustomerPortalView({
                     </div>
                     <div>
                       <label className="text-[11px] font-bold text-slate-700 block mb-1">
-                        Mobile Number *
+                        Mobile Number (Optional)
                       </label>
                       <input
                         type="tel"
-                        required
                         value={regMobile}
                         onChange={(e) => setRegMobile(e.target.value)}
-                        placeholder="10-digit mobile"
+                        placeholder="10-digit mobile (optional)"
                         maxLength={10}
                         className="input-3d w-full rounded-xl px-3 py-2 text-xs text-[#111827]"
                       />

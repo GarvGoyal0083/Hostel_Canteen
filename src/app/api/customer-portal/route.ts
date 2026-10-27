@@ -106,9 +106,9 @@ export async function POST(req: NextRequest) {
           { status: 400 }
         );
       }
-      if (!mobileDigits || mobileDigits.length < 10) {
+      if (phone && mobileDigits.length > 0 && mobileDigits.length < 10) {
         return NextResponse.json(
-          { error: "A valid 10-digit mobile number is required." },
+          { error: "If providing a mobile number, please enter a valid 10-digit number." },
           { status: 400 }
         );
       }
@@ -119,17 +119,19 @@ export async function POST(req: NextRequest) {
         );
       }
 
-      // Check if student with this mobile number already exists
-      const existingPhone = customers.find(
-        (c) => normalizePhone(c.phone) === mobileDigits
-      );
-      if (existingPhone) {
-        return NextResponse.json(
-          {
-            error: `An account with this mobile number already exists for "${existingPhone.name}". Please Sign In using your Name and Password.`,
-          },
-          { status: 400 }
+      // Check if student with this mobile number already exists (if provided)
+      if (mobileDigits && mobileDigits.length >= 10) {
+        const existingPhone = customers.find(
+          (c) => normalizePhone(c.phone) === mobileDigits
         );
+        if (existingPhone) {
+          return NextResponse.json(
+            {
+              error: `An account with this mobile number already exists for "${existingPhone.name}". Please Sign In using your Name and Password.`,
+            },
+            { status: 400 }
+          );
+        }
       }
 
       // Check if student with same Name + Room already exists
@@ -151,7 +153,7 @@ export async function POST(req: NextRequest) {
         {
           name,
           room_number: roomNumber,
-          phone: mobileDigits,
+          phone: mobileDigits && mobileDigits.length >= 10 ? mobileDigits : undefined,
           password: password,
           notes: "Self-registered via Student Portal",
         },

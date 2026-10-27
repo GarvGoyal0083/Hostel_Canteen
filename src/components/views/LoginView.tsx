@@ -538,14 +538,13 @@ export function LoginView({
 
                       <div>
                         <label className="font-bold text-[#111827] block mb-1">
-                          Mobile Number *
+                          Mobile Number (Optional)
                         </label>
                         <input
                           type="tel"
-                          required
                           value={regMobile}
                           onChange={(e) => setRegMobile(e.target.value)}
-                          placeholder="10-digit mobile"
+                          placeholder="10-digit mobile (optional)"
                           maxLength={10}
                           className="input-3d w-full rounded-xl px-3.5 py-2.5 text-xs text-[#111827]"
                         />
@@ -625,7 +624,7 @@ export function LoginView({
                       }}
                       className="text-[11px] font-bold text-[#2563EB] hover:underline cursor-pointer"
                     >
-                      Already have an account? Sign in with Mobile &rarr;
+                      Already have an account? Sign In &rarr;
                     </button>
                   )}
                 </div>
