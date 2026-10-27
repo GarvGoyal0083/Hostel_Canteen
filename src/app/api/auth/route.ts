@@ -16,6 +16,9 @@ import { createSupabaseServerClient, isSupabaseConfigured } from "@/lib/supabase
 
 export async function GET() {
   const admin = await getAuthenticatedAdmin();
+  if (admin && admin.email.toLowerCase() === "garvgoyal927@gmail.com") {
+    admin.full_name = "Garv Goyal (Founder)";
+  }
   const db = await ensureDatabaseSync();
   return NextResponse.json({
     authenticated: Boolean(admin),
@@ -100,7 +103,7 @@ export async function POST(req: NextRequest) {
         role: "admin",
       },
       "garvgoyal927@gmail.com": {
-        name: "Garv Goyal",
+        name: "Garv Goyal (Founder)",
         password: process.env.ADMIN_GARV_PASSWORD || "8306370383",
         role: "admin",
       },

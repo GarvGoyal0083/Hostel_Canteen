@@ -38,7 +38,7 @@ export function createDefaultAdminUsers(): AdminUser[] {
     {
       id: "admin-garv",
       email: "garvgoyal927@gmail.com",
-      full_name: "Garv Goyal",
+      full_name: "Garv Goyal (Founder)",
       role: "admin",
       is_active: true,
       created_at: now,
