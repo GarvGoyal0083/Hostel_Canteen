@@ -508,9 +508,14 @@ export function DashboardView({
             <span className="text-xl font-black text-[#111827] mt-1 block">
               {formatPrivateINR(kpis.period_discounts)}
             </span>
-            <span className="text-[11px] text-gray-500 font-medium">
-              Gross Sales: {formatPrivateINR(kpis.period_gross_sales)}
-            </span>
+            <div className="text-[11px] text-gray-500 font-medium space-y-0.5 mt-0.5">
+              <span>Gross Sales: {formatPrivateINR(kpis.period_gross_sales)}</span>
+              {kpis.period_refunds > 0 && (
+                <span className="text-rose-600 font-semibold block">
+                  Refunds: -{formatPrivateINR(kpis.period_refunds)}
+                </span>
+              )}
+            </div>
           </div>
           <div className="rounded-xl bg-gradient-to-br from-slate-600 to-slate-800 text-white p-2.5 shadow-md">
             <Tag className="h-4 w-4" />

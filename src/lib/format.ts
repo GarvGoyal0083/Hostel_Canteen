@@ -1,3 +1,5 @@
+import { SaleRecord } from "@/types/pos";
+
 /**
  * Formatting, Timezone (IST / Asia/Kolkata), and CSV Utilities
  */
@@ -168,4 +170,103 @@ export function downloadCSV(
   if (typeof window === "undefined") return;
   const csvContent = objectsToCSV(rows, fallbackHeaders);
   downloadRawCSV(filename, csvContent);
+}
+
+/**
+ * Compute active financial metrics of a sale accounting for full or partial refunds
+ */
+export function getSaleActiveFinancials(s: SaleRecord): {
+  activeGross: number;
+  activeDiscounts: number;
+  activeNet: number;
+  activeCogs: number;
+  activeProfit: number;
+  isFullyRefunded: boolean;
+} {
+  const isFullyRefunded =
+    s.sale_status === "Cancelled" ||
+    s.sale_status === "Refunded" ||
+    (s.payable_amount > 0 && s.refunded_amount >= s.payable_amount);
+
+  if (isFullyRefunded) {
+    return {
+      activeGross: 0,
+      activeDiscounts: 0,
+      activeNet: 0,
+      activeCogs: 0,
+      activeProfit: 0,
+      isFullyRefunded: true,
+    };
+  }
+
+  if (!s.refunded_amount || s.refunded_amount === 0) {
+    const net = round2(s.payable_amount);
+    const cogs = round2(s.cogs_amount);
+    return {
+      activeGross: round2(s.subtotal_amount),
+      activeDiscounts: round2(s.total_discount_amount),
+      activeNet: net,
+      activeCogs: cogs,
+      activeProfit: round2(net - cogs),
+      isFullyRefunded: false,
+    };
+  }
+
+  // Partially refunded sale: compute from remaining item quantities
+  if (s.items && s.items.length > 0) {
+    const billDiscFactor =
+      s.subtotal_amount - s.item_discount_total > 0
+        ? 1 - s.bill_discount_amount / (s.subtotal_amount - s.item_discount_total)
+        : 1;
+
+    let activeGross = 0;
+    let activeDiscounts = 0;
+    let activeNet = 0;
+    let activeCogs = 0;
+
+    for (const item of s.items) {
+      const netQty = item.quantity - (item.refunded_quantity || 0);
+      if (netQty <= 0) continue;
+
+      const ratio = netQty / item.quantity;
+      const itemNetRev = round2(item.final_line_total * ratio * billDiscFactor);
+      const itemCogs = round2(item.purchase_price_at_sale * netQty);
+      const itemGross = round2(item.original_line_total * ratio);
+      const itemDisc = round2(itemGross - itemNetRev);
+
+      activeGross = round2(activeGross + itemGross);
+      activeDiscounts = round2(activeDiscounts + itemDisc);
+      activeNet = round2(activeNet + itemNetRev);
+      activeCogs = round2(activeCogs + itemCogs);
+    }
+
+    return {
+      activeGross,
+      activeDiscounts,
+      activeNet,
+      activeCogs,
+      activeProfit: round2(activeNet - activeCogs),
+      isFullyRefunded: false,
+    };
+  }
+
+  // Fallback ratio if items array not populated
+  const activeRatio =
+    s.payable_amount > 0
+      ? Math.max(0, s.payable_amount - s.refunded_amount) / s.payable_amount
+      : 0;
+
+  const activeGross = round2(s.subtotal_amount * activeRatio);
+  const activeDiscounts = round2(s.total_discount_amount * activeRatio);
+  const activeNet = round2(Math.max(0, s.payable_amount - s.refunded_amount));
+  const activeCogs = round2(s.cogs_amount * activeRatio);
+
+  return {
+    activeGross,
+    activeDiscounts,
+    activeNet,
+    activeCogs,
+    activeProfit: round2(activeNet - activeCogs),
+    isFullyRefunded: false,
+  };
 }

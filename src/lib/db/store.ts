@@ -26,7 +26,12 @@ import {
   createDevelopmentSampleDatabase,
   DatabaseSchema,
 } from "@/lib/db/seed";
-import { getISTCompactDateKey, getISTDateString, round2 } from "@/lib/format";
+import {
+  getISTCompactDateKey,
+  getISTDateString,
+  getSaleActiveFinancials,
+  round2,
+} from "@/lib/format";
 import {
   fetchRemoteDatabase,
   getCloudPersistenceStatus,
@@ -2309,16 +2314,20 @@ export function computeFinancialMetrics(filters?: {
   let totalRefundedAmount = 0;
   let netSalesRevenue = 0;
   let costOfGoodsSold = 0;
+  let activeCompletedBillsCount = 0;
 
   for (const s of salesInPeriod) {
+    const fin = getSaleActiveFinancials(s);
     grossSalesBeforeDiscounts = round2(
-      grossSalesBeforeDiscounts + s.subtotal_amount
+      grossSalesBeforeDiscounts + fin.activeGross
     );
-    totalDiscountsGiven = round2(totalDiscountsGiven + s.total_discount_amount);
+    totalDiscountsGiven = round2(totalDiscountsGiven + fin.activeDiscounts);
     totalRefundedAmount = round2(totalRefundedAmount + s.refunded_amount);
-    const netSale = round2(Math.max(0, s.payable_amount - s.refunded_amount));
-    netSalesRevenue = round2(netSalesRevenue + netSale);
-    costOfGoodsSold = round2(costOfGoodsSold + s.cogs_amount);
+    netSalesRevenue = round2(netSalesRevenue + fin.activeNet);
+    costOfGoodsSold = round2(costOfGoodsSold + fin.activeCogs);
+    if (!fin.isFullyRefunded) {
+      activeCompletedBillsCount += 1;
+    }
   }
 
   const estimatedGrossProfit = round2(netSalesRevenue - costOfGoodsSold);
@@ -2350,7 +2359,7 @@ export function computeFinancialMetrics(filters?: {
     round2(
       activeSalesAllTime
         .filter((s) => pred(getISTDateString(s.created_at)))
-        .reduce((acc, s) => acc + Math.max(0, s.payable_amount - s.refunded_amount), 0)
+        .reduce((acc, s) => acc + getSaleActiveFinancials(s).activeNet, 0)
     );
 
   const todaySales = calcNetSalesForCondition((d) => d === todayStr);
@@ -2511,13 +2520,15 @@ export function computeFinancialMetrics(filters?: {
   for (const s of salesInPeriod) {
     const d = getISTDateString(s.created_at);
     const entry = ensureDay(d);
-    const netSale = round2(Math.max(0, s.payable_amount - s.refunded_amount));
-    entry.sales = round2(entry.sales + netSale);
-    entry.cogs = round2(entry.cogs + s.cogs_amount);
+    const fin = getSaleActiveFinancials(s);
+    entry.sales = round2(entry.sales + fin.activeNet);
+    entry.cogs = round2(entry.cogs + fin.activeCogs);
     entry.gross_profit = round2(entry.sales - entry.cogs);
     entry.net_profit = round2(entry.gross_profit - entry.expenses);
-    entry.discounts = round2(entry.discounts + s.total_discount_amount);
-    entry.transactions_count += 1;
+    entry.discounts = round2(entry.discounts + fin.activeDiscounts);
+    if (!fin.isFullyRefunded) {
+      entry.transactions_count += 1;
+    }
   }
 
   for (const p of paymentsInPeriod) {
@@ -2554,7 +2565,7 @@ export function computeFinancialMetrics(filters?: {
       period_gross_profit: estimatedGrossProfit,
       period_expenses: operatingExpenses,
       period_net_profit: estimatedNetProfit,
-      total_transactions: salesInPeriod.length,
+      total_transactions: activeCompletedBillsCount,
       cash_collected: cashCollected,
       upi_collected: upiCollected,
       other_collected: otherCollected,

@@ -24,6 +24,7 @@ import {
   formatINR,
   formatIST,
   getISTDateString,
+  getSaleActiveFinancials,
   round2,
 } from "@/lib/format";
 
@@ -261,6 +262,8 @@ export function ReportsView({
       }
     >();
     for (const s of sales.filter((x) => x.sale_status !== "Cancelled")) {
+      const fin = getSaleActiveFinancials(s);
+      if (fin.isFullyRefunded) continue;
       const d = new Date(s.created_at);
       const day = d.getDay();
       const diff = d.getDate() - day + (day === 0 ? -6 : 1);
@@ -276,12 +279,11 @@ export function ReportsView({
         cogs: 0,
         gross_profit: 0,
       };
-      const netSale = round2(Math.max(0, s.payable_amount - s.refunded_amount));
       row.transactions += 1;
-      row.gross_sales = round2(row.gross_sales + s.subtotal_amount);
-      row.discounts = round2(row.discounts + s.total_discount_amount);
-      row.net_sales = round2(row.net_sales + netSale);
-      row.cogs = round2(row.cogs + s.cogs_amount);
+      row.gross_sales = round2(row.gross_sales + fin.activeGross);
+      row.discounts = round2(row.discounts + fin.activeDiscounts);
+      row.net_sales = round2(row.net_sales + fin.activeNet);
+      row.cogs = round2(row.cogs + fin.activeCogs);
       row.gross_profit = round2(row.net_sales - row.cogs);
       map.set(weekKey, row);
     }
@@ -303,6 +305,8 @@ export function ReportsView({
       }
     >();
     for (const s of sales.filter((x) => x.sale_status !== "Cancelled")) {
+      const fin = getSaleActiveFinancials(s);
+      if (fin.isFullyRefunded) continue;
       const monthKey = getISTDateString(s.created_at).slice(0, 7);
       const row = map.get(monthKey) || {
         month: monthKey,
@@ -313,12 +317,11 @@ export function ReportsView({
         cogs: 0,
         gross_profit: 0,
       };
-      const netSale = round2(Math.max(0, s.payable_amount - s.refunded_amount));
       row.transactions += 1;
-      row.gross_sales = round2(row.gross_sales + s.subtotal_amount);
-      row.discounts = round2(row.discounts + s.total_discount_amount);
-      row.net_sales = round2(row.net_sales + netSale);
-      row.cogs = round2(row.cogs + s.cogs_amount);
+      row.gross_sales = round2(row.gross_sales + fin.activeGross);
+      row.discounts = round2(row.discounts + fin.activeDiscounts);
+      row.net_sales = round2(row.net_sales + fin.activeNet);
+      row.cogs = round2(row.cogs + fin.activeCogs);
       row.gross_profit = round2(row.net_sales - row.cogs);
       map.set(monthKey, row);
     }
