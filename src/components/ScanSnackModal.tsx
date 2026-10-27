@@ -22,6 +22,7 @@ import type { Customer, Product } from "@/types/pos";
 import { formatINR } from "@/lib/format";
 import {
   captureToJpeg,
+  isDeepModelReady,
   loadRecognitionModel,
   matchProducts,
   warmUpCatalog,
@@ -44,7 +45,7 @@ interface ScanSnackModalProps {
 }
 
 type Step = "scan" | "matching" | "results" | "customer";
-type ModelState = "loading" | "ready" | "error";
+type ModelState = "fast_ready" | "loading" | "deep_ready";
 
 const MAX_CAPTURE_SIDE = 720;
 
@@ -64,7 +65,7 @@ export function ScanSnackModal({
   const captureRef = useRef<HTMLCanvasElement | null>(null);
 
   const [step, setStep] = useState<Step>("scan");
-  const [modelState, setModelState] = useState<ModelState>("loading");
+  const [modelState, setModelState] = useState<ModelState>("fast_ready");
   const [cameraError, setCameraError] = useState<string | null>(null);
   const [cameraOn, setCameraOn] = useState(false);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
@@ -144,13 +145,28 @@ export function ScanSnackModal({
     setScannedCount(0);
     setCustomerError(null);
 
-    setModelState("loading");
-    loadRecognitionModel()
-      .then(() => {
-        setModelState("ready");
-        return warmUpCatalog(productsWithPhotos);
-      })
-      .catch(() => setModelState("error"));
+    // 1. Fast visual recognition is ready immediately (0 wait time)
+    setModelState("fast_ready");
+    warmUpCatalog(productsWithPhotos).catch(() => {});
+
+    // 2. Background-load deep AI model (non-blocking)
+    if (!isDeepModelReady()) {
+      setModelState("loading");
+      loadRecognitionModel()
+        .then((model) => {
+          if (model) {
+            setModelState("deep_ready");
+            warmUpCatalog(productsWithPhotos).catch(() => {});
+          } else {
+            setModelState("fast_ready");
+          }
+        })
+        .catch(() => {
+          setModelState("fast_ready");
+        });
+    } else {
+      setModelState("deep_ready");
+    }
 
     return () => stopCamera();
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -357,16 +373,6 @@ export function ScanSnackModal({
         </div>
 
         <div className="flex-1 overflow-y-auto p-5 space-y-4">
-          {modelState === "error" && step !== "customer" && (
-            <div className="rounded-xl bg-amber-50 border border-amber-200 p-3 flex items-start gap-2 text-xs text-amber-900">
-              <AlertTriangle className="h-4 w-4 text-amber-600 shrink-0 mt-0.5" />
-              <span>
-                The offline vision model could not be loaded. Run <code className="font-mono">npm run setup:vision</code> once,
-                then reopen the scanner. You can still add items from the product grid.
-              </span>
-            </div>
-          )}
-
           {errorMsg && (
             <div className="rounded-xl bg-red-50 border border-red-200 p-3 flex items-start gap-2 text-xs text-red-800">
               <AlertTriangle className="h-4 w-4 text-red-600 shrink-0 mt-0.5" />
@@ -402,10 +408,20 @@ export function ScanSnackModal({
                     </span>
                   </div>
                 )}
-                {modelState === "loading" && (
-                  <div className="absolute top-3 left-3 rounded-full bg-black/60 px-3 py-1 text-[11px] font-medium text-white flex items-center gap-1.5">
-                    <Loader2 className="h-3 w-3 animate-spin" />
-                    Loading recognition model…
+                {modelState === "loading" ? (
+                  <div className="absolute top-3 left-3 rounded-full bg-slate-900/85 px-3 py-1 text-[11px] font-medium text-slate-200 flex items-center gap-1.5 backdrop-blur-xs border border-white/10 shadow-sm">
+                    <Loader2 className="h-3 w-3 animate-spin text-amber-400" />
+                    <span>Scanner Ready • Loading AI…</span>
+                  </div>
+                ) : modelState === "deep_ready" ? (
+                  <div className="absolute top-3 left-3 rounded-full bg-emerald-950/85 px-3 py-1 text-[11px] font-medium text-emerald-200 flex items-center gap-1.5 backdrop-blur-xs border border-emerald-500/30 shadow-sm">
+                    <Sparkles className="h-3 w-3 text-emerald-400" />
+                    <span>AI Vision Enhanced</span>
+                  </div>
+                ) : (
+                  <div className="absolute top-3 left-3 rounded-full bg-slate-900/85 px-3 py-1 text-[11px] font-medium text-slate-200 flex items-center gap-1.5 backdrop-blur-xs border border-white/10 shadow-sm">
+                    <span className="h-2 w-2 rounded-full bg-emerald-400 animate-pulse" />
+                    <span>Fast Visual Scanner Ready</span>
                   </div>
                 )}
               </div>
@@ -417,7 +433,7 @@ export function ScanSnackModal({
               <div className="grid grid-cols-2 gap-2.5">
                 <button
                   onClick={handleCapture}
-                  disabled={!cameraOn || modelState !== "ready"}
+                  disabled={!cameraOn}
                   className="btn-3d-primary rounded-xl py-3 text-sm font-bold flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   <Camera className="h-4 w-4" />
@@ -425,8 +441,7 @@ export function ScanSnackModal({
                 </button>
                 <button
                   onClick={() => fileInputRef.current?.click()}
-                  disabled={modelState !== "ready"}
-                  className="btn-3d-secondary rounded-xl py-3 text-sm font-bold flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
+                  className="btn-3d-secondary rounded-xl py-3 text-sm font-bold flex items-center justify-center gap-2 cursor-pointer"
                 >
                   <Upload className="h-4 w-4 text-blue-600" />
                   Upload Image
