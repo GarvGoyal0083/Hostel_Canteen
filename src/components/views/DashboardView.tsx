@@ -20,6 +20,9 @@ import {
   CheckCircle2,
   Store,
   SunMedium,
+  QrCode,
+  X,
+  Download,
 } from "lucide-react";
 import { formatDateIST, formatINR, formatIST } from "@/lib/format";
 import { PaymentStatusBadge } from "@/components/StatusBadge";
@@ -118,6 +121,7 @@ export function DashboardView({
     canteen_status,
   } = data;
 
+  const [qrModalOpen, setQrModalOpen] = useState(false);
   const [internalPrivacyMode, setInternalPrivacyMode] = useState<boolean>(
     () => {
       if (typeof window !== "undefined") {
@@ -247,6 +251,17 @@ export function DashboardView({
           >
             <RefreshCw className="h-3.5 w-3.5 text-gray-600" />
             Refresh
+          </button>
+
+          {/* Highlighted UPI QR Code Option */}
+          <button
+            type="button"
+            onClick={() => setQrModalOpen(true)}
+            className="btn-3d-primary inline-flex items-center gap-2 px-4 py-2 text-xs font-black cursor-pointer shadow-md shadow-blue-500/25 hover:scale-[1.03] active:scale-95 transition-all ring-2 ring-blue-500/20"
+            title="Show UPI Payment QR Code for customers to scan"
+          >
+            <QrCode className="h-4 w-4 text-white" />
+            <span>UPI QR Code</span>
           </button>
         </div>
       </div>
@@ -997,6 +1012,72 @@ export function DashboardView({
           </div>
         </div>
       </div>
+
+      {/* Canteen UPI QR Code Modal */}
+      {qrModalOpen && (
+        <div className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-4">
+          <div className="card-3d bg-white rounded-3xl max-w-sm w-full p-6 shadow-2xl border border-slate-200 text-center relative animate-in fade-in zoom-in-95 duration-200">
+            <button
+              type="button"
+              onClick={() => setQrModalOpen(false)}
+              className="absolute top-4 right-4 p-2 rounded-full text-slate-400 hover:text-slate-700 hover:bg-slate-100 transition cursor-pointer"
+              title="Close"
+            >
+              <X className="h-5 w-5" />
+            </button>
+
+            <div className="inline-flex items-center justify-center h-12 w-12 rounded-2xl bg-blue-50 text-blue-600 mb-3 border border-blue-200 shadow-xs">
+              <QrCode className="h-6 w-6" />
+            </div>
+
+            <h3 className="text-lg font-black text-slate-900">
+              Hostel Canteen UPI QR
+            </h3>
+            <p className="text-xs text-slate-500 mt-1 mb-4">
+              Scan with any UPI app to pay directly at the counter
+            </p>
+
+            {/* QR Code Container */}
+            <div className="bg-slate-50 p-3.5 rounded-2xl border border-slate-200/90 shadow-inner inline-block">
+              <img
+                src="/canteen-upi-qr.jpg"
+                alt="Hostel Canteen UPI QR Code"
+                className="w-60 h-60 mx-auto rounded-xl object-contain shadow-xs bg-white p-1"
+              />
+            </div>
+
+            {/* Accepted UPI Apps Banner */}
+            <div className="mt-4 flex items-center justify-center gap-1.5 text-[11px] font-black text-slate-600 bg-slate-100/90 rounded-xl py-1.5 px-3">
+              <span>PhonePe</span>
+              <span>•</span>
+              <span>GPay</span>
+              <span>•</span>
+              <span>Paytm</span>
+              <span>•</span>
+              <span>BHIM UPI</span>
+            </div>
+
+            {/* Actions: Download / Done */}
+            <div className="mt-5 flex items-center gap-2.5">
+              <a
+                href="/canteen-upi-qr.jpg"
+                download="Hostel_Canteen_UPI_QR.jpg"
+                className="btn-3d-secondary flex-1 inline-flex items-center justify-center gap-2 py-2 text-xs font-bold text-slate-700 hover:bg-slate-50 cursor-pointer"
+              >
+                <Download className="h-3.5 w-3.5 text-blue-600" />
+                <span>Download</span>
+              </a>
+              <button
+                type="button"
+                onClick={() => setQrModalOpen(false)}
+                className="btn-3d-primary flex-1 py-2 text-xs font-black cursor-pointer shadow-sm hover:scale-[1.02] active:scale-95 transition-all"
+              >
+                Done
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
