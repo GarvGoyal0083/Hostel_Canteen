@@ -15,9 +15,7 @@ import {
   PlusCircle,
   Eye,
   RefreshCw,
-  Sparkles,
   Layers,
-  ArrowRight,
   CheckCircle2,
   Store,
   SunMedium,
@@ -117,8 +115,6 @@ export function DashboardView({
   const [chartMetric, setChartMetric] = useState<"sales_profit" | "collections">(
     "sales_profit"
   );
-  const [switchingMode, setSwitchingMode] = useState(false);
-
   const maxChartVal = Math.max(
     100,
     ...daily_series.map((d) =>
@@ -130,25 +126,6 @@ export function DashboardView({
       )
     )
   );
-
-  const handleToggleDemoData = async () => {
-    const target = environment_mode === "production_clean" ? "development_sample" : "production_clean";
-    setSwitchingMode(true);
-    try {
-      const res = await fetch("/api/analytics", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ action: "switch_mode", mode: target }),
-      });
-      if (res.ok) {
-        onRefresh();
-      }
-    } finally {
-      setSwitchingMode(false);
-    }
-  };
-
-  const isZeroRecords = kpis.total_transactions === 0 && kpis.total_products === 0;
 
   return (
     <div className="space-y-6">
@@ -318,46 +295,6 @@ export function DashboardView({
           </button>
         )}
       </div>
-
-      {/* 3D Demo / Clean Production Banner */}
-      {isZeroRecords && (
-        <div className="relative overflow-hidden rounded-2xl bg-gradient-to-r from-blue-900 via-indigo-900 to-slate-900 p-5 text-white shadow-[0_12px_28px_rgba(15,23,42,0.18)] border border-white/10">
-          <div className="absolute right-0 top-0 -mr-10 -mt-10 h-48 w-48 rounded-full bg-blue-500/20 blur-2xl pointer-events-none" />
-          <div className="relative z-10 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-            <div className="space-y-1">
-              <div className="flex items-center gap-2">
-                <span className="rounded-full bg-blue-500/30 border border-blue-400/40 px-2.5 py-0.5 text-[10px] font-extrabold uppercase tracking-wider text-blue-200">
-                  Clean Production State
-                </span>
-                <span className="text-xs text-gray-300">0 Sample Records</span>
-              </div>
-              <h3 className="text-base font-bold text-white">
-                Ready for live canteen transactions or instant sample preview!
-              </h3>
-              <p className="text-xs text-gray-300 max-w-2xl">
-                Start recording fresh hostel orders, or click below to populate realistic Kurkure, Lay&apos;s, cold drinks, student udhaar, and 3D charts for testing.
-              </p>
-            </div>
-            <div className="flex items-center gap-2 shrink-0">
-              <button
-                disabled={switchingMode}
-                onClick={handleToggleDemoData}
-                className="btn-3d-primary px-4 py-2 text-xs font-bold flex items-center gap-1.5 cursor-pointer"
-              >
-                <Sparkles className="h-3.5 w-3.5 text-yellow-300" />
-                {switchingMode ? "Loading..." : "Load Demo Snacks & Data"}
-              </button>
-              <button
-                onClick={() => onNavigate("pos")}
-                className="btn-3d-secondary px-3.5 py-2 text-xs font-bold text-[#111827] flex items-center gap-1 cursor-pointer"
-              >
-                Start POS Billing
-                <ArrowRight className="h-3.5 w-3.5 text-[#2563EB]" />
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
 
       {/* Primary 3D KPI Cards (Row 1) */}
       <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-4">
