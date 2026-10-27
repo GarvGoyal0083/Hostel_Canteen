@@ -13,6 +13,8 @@ import {
   Pencil,
   XCircle,
   Wallet,
+  UserPlus,
+  X,
 } from "lucide-react";
 import { AdminUser } from "@/types/pos";
 import { formatINR, formatIST } from "@/lib/format";
@@ -197,6 +199,7 @@ function ExecutiveBilling({
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
   const [idempotencyKey, setIdempotencyKey] = useState(newIdempotencyKey);
+  const [addStudentOpen, setAddStudentOpen] = useState(false);
 
   const loadCatalog = useCallback(async () => {
     try {
@@ -275,6 +278,17 @@ function ExecutiveBilling({
         (c.room_number && c.room_number.toLowerCase().includes(q))
     );
   }, [customers, customerSearch]);
+
+  // A student just added (or an existing duplicate the user picked) becomes the bill's student.
+  const handleStudentChosen = (student: BillingCustomer) => {
+    setCustomers((prev) =>
+      prev.some((c) => c.id === student.id) ? prev : [...prev, student]
+    );
+    setCustomerId(student.id);
+    setCustomerSearch("");
+    setAddStudentOpen(false);
+    setError(null);
+  };
 
   const cartLines = useMemo(
     () =>
@@ -526,7 +540,17 @@ function ExecutiveBilling({
         </div>
 
         <div className="card-3d-static rounded-2xl p-4 space-y-2.5">
-          <h3 className="text-xs font-bold text-slate-900">Assign to Student</h3>
+          <div className="flex items-center justify-between gap-2">
+            <h3 className="text-xs font-bold text-slate-900">Assign to Student</h3>
+            <button
+              type="button"
+              onClick={() => setAddStudentOpen(true)}
+              className="btn-3d-secondary rounded-lg px-2.5 py-1 text-[11px] font-bold text-[#1D4ED8] flex items-center gap-1 cursor-pointer"
+            >
+              <UserPlus className="h-3 w-3" />
+              Add Student
+            </button>
+          </div>
           <input
             value={customerSearch}
             onChange={(e) => setCustomerSearch(e.target.value)}
@@ -578,6 +602,163 @@ function ExecutiveBilling({
             {submitting ? "Saving..." : editingSale ? "Save Changes" : "Create Bill"}
           </button>
         </div>
+      </div>
+
+      {addStudentOpen && (
+        <AddStudentModal
+          students={customers}
+          onClose={() => setAddStudentOpen(false)}
+          onChosen={handleStudentChosen}
+        />
+      )}
+    </div>
+  );
+}
+
+// ---------------------------------------------------------------------------
+// Add Student (executives can only register; no edit / dues / history)
+// ---------------------------------------------------------------------------
+
+const sameKey = (v?: string | null) => (v || "").trim().toLowerCase().replace(/\s+/g, " ");
+
+function AddStudentModal({
+  students,
+  onClose,
+  onChosen,
+}: {
+  students: BillingCustomer[];
+  onClose: () => void;
+  onChosen: (student: BillingCustomer) => void;
+}) {
+  const [form, setForm] = useState({ name: "", room_number: "", phone: "" });
+  const [submitting, setSubmitting] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [duplicate, setDuplicate] = useState<BillingCustomer | null>(null);
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setError(null);
+    setDuplicate(null);
+
+    const existing = students.find(
+      (c) =>
+        sameKey(c.name) === sameKey(form.name) &&
+        sameKey(c.room_number) === sameKey(form.room_number)
+    );
+    if (existing) {
+      setDuplicate(existing);
+      return;
+    }
+
+    setSubmitting(true);
+    try {
+      const res = await fetch("/api/billing/students", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(form),
+      });
+      const json = await res.json();
+      if (res.status === 409 && json.duplicate) {
+        setDuplicate(json.duplicate as BillingCustomer);
+        return;
+      }
+      if (!res.ok) throw new Error(json.error || "Failed to add student.");
+      onChosen(json.student as BillingCustomer);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Failed to add student.");
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4 overflow-y-auto">
+      <div className="card-3d-static rounded-2xl bg-white p-5 w-full max-w-sm space-y-3">
+        <div className="flex items-center justify-between">
+          <h3 className="text-sm font-bold text-slate-900">Add Student</h3>
+          <button
+            type="button"
+            onClick={onClose}
+            className="rounded-lg p-1 text-slate-500 hover:bg-slate-100 cursor-pointer"
+          >
+            <X className="h-4 w-4" />
+          </button>
+        </div>
+        <form onSubmit={handleSubmit} className="space-y-3 text-xs">
+          <div>
+            <label className="font-semibold text-slate-900 block mb-1">Student Name *</label>
+            <input
+              type="text"
+              required
+              value={form.name}
+              onChange={(e) => setForm((p) => ({ ...p, name: e.target.value }))}
+              placeholder="e.g. Siddharth Roy"
+              className="w-full rounded-lg border border-gray-300 px-3 py-2"
+            />
+          </div>
+          <div>
+            <label className="font-semibold text-slate-900 block mb-1">Hostel Room Number *</label>
+            <input
+              type="text"
+              required
+              value={form.room_number}
+              onChange={(e) => setForm((p) => ({ ...p, room_number: e.target.value }))}
+              placeholder="e.g. B-204"
+              className="w-full rounded-lg border border-gray-300 px-3 py-2"
+            />
+          </div>
+          <div>
+            <label className="font-semibold text-slate-900 block mb-1">
+              Mobile Number (Optional)
+            </label>
+            <input
+              type="tel"
+              inputMode="tel"
+              value={form.phone}
+              onChange={(e) => setForm((p) => ({ ...p, phone: e.target.value }))}
+              placeholder="e.g. 9876543210"
+              className="w-full rounded-lg border border-gray-300 px-3 py-2"
+            />
+          </div>
+
+          {duplicate && (
+            <div className="rounded-lg bg-amber-50 border border-amber-200 px-3 py-2 text-amber-900 space-y-2">
+              <p className="font-semibold">
+                {duplicate.name}
+                {duplicate.room_number ? ` (Room ${duplicate.room_number})` : ""} already exists.
+              </p>
+              <button
+                type="button"
+                onClick={() => onChosen(duplicate)}
+                className="btn-3d-primary rounded-lg px-3 py-1.5 text-[11px] font-bold cursor-pointer"
+              >
+                Use existing student
+              </button>
+            </div>
+          )}
+          {error && (
+            <div className="rounded-lg bg-red-50 border border-red-200 px-3 py-2 font-semibold text-red-700">
+              {error}
+            </div>
+          )}
+
+          <div className="flex justify-end gap-2 pt-1">
+            <button
+              type="button"
+              onClick={onClose}
+              className="btn-3d-secondary rounded-lg px-3 py-1.5 font-bold text-slate-700 cursor-pointer"
+            >
+              Cancel
+            </button>
+            <button
+              type="submit"
+              disabled={submitting}
+              className="btn-3d-primary rounded-lg px-3 py-1.5 font-bold disabled:opacity-50 cursor-pointer"
+            >
+              {submitting ? "Adding..." : "Add Student"}
+            </button>
+          </div>
+        </form>
       </div>
     </div>
   );

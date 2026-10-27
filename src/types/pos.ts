@@ -113,6 +113,9 @@ export interface Customer {
   outstanding_dues: number;
   notes?: string | null;
   is_active: boolean;
+  /** Set when a sales executive registered the student. */
+  created_by_user_id?: string | null;
+  created_by_name?: string | null;
   created_at: string;
   updated_at: string;
 }

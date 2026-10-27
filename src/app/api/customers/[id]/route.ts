@@ -40,3 +40,14 @@ export async function PATCH(
     );
   }
 }
+
+// Customers are never hard-deleted. The admin guard runs first so a sales executive
+// gets a 403 here, and an admin gets an explicit 405 instead of a silent no-op.
+export async function DELETE() {
+  const auth = await requireAdminAuth();
+  if (!auth.authorized) return auth.response;
+  return NextResponse.json(
+    { error: "Customers cannot be deleted. Deactivate the student instead." },
+    { status: 405 }
+  );
+}

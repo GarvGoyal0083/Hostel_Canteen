@@ -877,6 +877,27 @@ export function getCustomerDetailsWithLedger(customerId: string): {
   };
 }
 
+const normalizeKey = (v?: string | null) => (v || "").trim().toLowerCase().replace(/\s+/g, " ");
+
+export class DuplicateCustomerError extends Error {
+  constructor(public existing: { id: string; name: string; room_number?: string | null }) {
+    super("A student with this name and room already exists.");
+  }
+}
+
+/** Student with the same name and room (case/space-insensitive), if any. */
+export function findDuplicateCustomer(
+  name: string,
+  room?: string | null
+): { id: string; name: string; room_number?: string | null } | null {
+  const n = normalizeKey(name);
+  const r = normalizeKey(room);
+  const hit = readDatabase().customers.find(
+    (c) => normalizeKey(c.name) === n && normalizeKey(c.room_number) === r
+  );
+  return hit ? { id: hit.id, name: hit.name, room_number: hit.room_number } : null;
+}
+
 export async function createCustomer(
   input: {
     name: string;
@@ -885,12 +906,19 @@ export async function createCustomer(
     password?: string;
     notes?: string;
   },
-  adminName: string
+  adminName: string,
+  createdBy?: { id: string; full_name: string }
 ): Promise<Customer> {
   return withTransactionLock(() => {
     const db = readDatabase();
     const name = (input.name || "").trim();
     if (!name) throw new Error("Customer name is required.");
+
+    // Executive-created students are checked for duplicates under the same lock as the insert.
+    if (createdBy) {
+      const dup = findDuplicateCustomer(name, input.room_number);
+      if (dup) throw new DuplicateCustomerError(dup);
+    }
 
     const now = new Date().toISOString();
     const customer: Customer = {
@@ -905,6 +933,9 @@ export async function createCustomer(
       outstanding_dues: 0,
       notes: input.notes?.trim() || null,
       is_active: true,
+      ...(createdBy
+        ? { created_by_user_id: createdBy.id, created_by_name: createdBy.full_name }
+        : {}),
       created_at: now,
       updated_at: now,
     };

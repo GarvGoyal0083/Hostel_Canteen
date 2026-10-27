@@ -484,6 +484,11 @@ export function CustomersView({
                           {c.notes}
                         </div>
                       )}
+                      {c.created_by_name && (
+                        <div className="text-[11px] text-slate-500 mt-0.5">
+                          Added by {c.created_by_name}
+                        </div>
+                      )}
                     </td>
                     <td className="px-4 py-3">
                       {c.room_number ? (
