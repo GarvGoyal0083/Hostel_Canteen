@@ -10,6 +10,8 @@ import {
   AlertTriangle,
   CheckCircle2,
   Filter,
+  ChevronDown,
+  ChevronUp,
 } from "lucide-react";
 import { PaymentMethod, SaleRecord } from "@/types/pos";
 import {
@@ -46,6 +48,7 @@ export function TransactionsView({
   const [sortBy, setSortBy] = useState<
     "newest" | "oldest" | "highest" | "lowest"
   >("newest");
+  const [mobileFiltersOpen, setMobileFiltersOpen] = useState(false);
 
   // Record Payment Modal for Pending/Partially Paid Bill
   const [payingSale, setPayingSale] = useState<SaleRecord | null>(null);
@@ -450,18 +453,49 @@ export function TransactionsView({
         <div className="flex items-center justify-between">
           <span className="text-xs font-extrabold text-[#111827] flex items-center gap-1.5">
             <Filter className="h-3.5 w-3.5 text-[#2563EB]" />
-            Filter &amp; Sort Transactions ({filteredSales.length} of {sales.length}{" "}
-            Bills)
+            <span>Filter &amp; Sort</span>
+            <span className="text-gray-400 font-normal">
+              ({filteredSales.length}/{sales.length} Bills)
+            </span>
           </span>
-          <button
-            onClick={clearFilters}
-            className="text-xs font-extrabold text-[#2563EB] hover:text-[#1D4ED8] cursor-pointer"
-          >
-            Reset All Filters
-          </button>
+          <div className="flex items-center gap-2">
+            <button
+              type="button"
+              onClick={() => setMobileFiltersOpen((prev) => !prev)}
+              className="md:hidden text-xs font-bold text-blue-700 bg-blue-50 border border-blue-200 rounded-lg px-2.5 py-1 flex items-center gap-1 cursor-pointer"
+            >
+              <span>{mobileFiltersOpen ? "Less" : "Filters"}</span>
+              {mobileFiltersOpen ? (
+                <ChevronUp className="h-3.5 w-3.5" />
+              ) : (
+                <ChevronDown className="h-3.5 w-3.5" />
+              )}
+            </button>
+            <button
+              onClick={clearFilters}
+              className="text-xs font-extrabold text-[#2563EB] hover:text-[#1D4ED8] cursor-pointer"
+            >
+              Reset
+            </button>
+          </div>
         </div>
 
-        <div className="grid grid-cols-1 gap-2.5 sm:grid-cols-2 md:grid-cols-4 lg:grid-cols-5 text-xs">
+        {/* Quick Search visible immediately on mobile */}
+        <div className="grid grid-cols-1 md:hidden gap-2">
+          <input
+            type="text"
+            value={customerNameFilter}
+            onChange={(e) => setCustomerNameFilter(e.target.value)}
+            placeholder="Quick search student name..."
+            className="input-3d rounded-xl px-3 py-2 text-xs text-[#111827]"
+          />
+        </div>
+
+        <div
+          className={`${
+            mobileFiltersOpen ? "grid" : "hidden md:grid"
+          } grid-cols-1 gap-2.5 sm:grid-cols-2 md:grid-cols-4 lg:grid-cols-5 text-xs`}
+        >
           <input
             type="text"
             value={billIdFilter}
@@ -559,8 +593,186 @@ export function TransactionsView({
         </div>
       </div>
 
-      {/* Transactions Table */}
-      <div className="rounded-xl bg-white border border-gray-200 shadow-xs overflow-hidden">
+      {/* Mobile Transactions Card View (< md) */}
+      <div className="block md:hidden space-y-3">
+        {filteredSales.length === 0 ? (
+          <div className="card-3d p-8 text-center text-xs text-gray-500 rounded-2xl bg-white border border-gray-200">
+            No transactions match the selected filters.
+          </div>
+        ) : (
+          filteredSales.map((sale) => (
+            <div
+              key={sale.id}
+              className="card-3d rounded-2xl p-4 bg-white border border-slate-200 shadow-xs space-y-3"
+            >
+              {/* Card Header: Bill ID, Date & Status Badges */}
+              <div className="flex items-start justify-between gap-2 border-b border-slate-100 pb-2.5">
+                <div>
+                  <div className="flex items-center gap-2">
+                    <span className="font-black text-sm text-[#2563EB]">
+                      {sale.bill_number}
+                    </span>
+                    {sale.room_number_snapshot && (
+                      <span className="rounded bg-blue-50 border border-blue-200 px-1.5 py-0.5 text-[10px] font-bold text-blue-700">
+                        Room {sale.room_number_snapshot}
+                      </span>
+                    )}
+                  </div>
+                  <div className="text-[11px] text-slate-500 font-medium mt-0.5">
+                    {formatIST(sale.created_at)}
+                  </div>
+                </div>
+                <div className="flex flex-col items-end gap-1">
+                  <PaymentStatusBadge status={sale.payment_status} />
+                  <SaleStatusBadge status={sale.sale_status} />
+                </div>
+              </div>
+
+              {/* Customer Name & Cashier info */}
+              <div className="flex items-center justify-between text-xs">
+                <div>
+                  <span className="text-slate-400 font-medium">Customer: </span>
+                  <span className="font-extrabold text-slate-900">
+                    {sale.customer_name_snapshot}
+                  </span>
+                </div>
+                <div className="text-[10px] text-slate-400">
+                  By {sale.created_by}
+                </div>
+              </div>
+
+              {/* Items Purchased List */}
+              <div className="bg-slate-50/90 rounded-xl p-2.5 border border-slate-200/70 space-y-1">
+                <div className="text-[10px] font-extrabold text-slate-400 uppercase tracking-wider flex items-center justify-between">
+                  <span>Items Purchased</span>
+                  <span>
+                    {sale.items.reduce((acc, i) => acc + i.quantity, 0)} pcs
+                  </span>
+                </div>
+                <div className="space-y-1 divide-y divide-slate-100/80 pt-0.5">
+                  {sale.items.map((item) => (
+                    <div
+                      key={item.id}
+                      className="flex items-center justify-between text-xs pt-1 first:pt-0"
+                    >
+                      <div className="truncate pr-2">
+                        <span className="font-bold text-slate-800">
+                          {item.product_name_snapshot}
+                        </span>{" "}
+                        <span className="text-slate-500 font-semibold">
+                          × {item.quantity}
+                        </span>
+                        {item.refunded_quantity > 0 && (
+                          <span className="ml-1 text-red-600 font-bold text-[10px] bg-red-50 rounded px-1">
+                            Refunded: {item.refunded_quantity}
+                          </span>
+                        )}
+                      </div>
+                      <div className="text-slate-700 font-bold text-[11px] shrink-0">
+                        {formatINR(item.selling_price_at_sale * item.quantity)}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              {/* Pricing, Due & Payment Method */}
+              <div className="grid grid-cols-2 gap-2 text-xs pt-1">
+                <div className="space-y-0.5">
+                  <div className="text-slate-500 text-[11px]">
+                    Subtotal:{" "}
+                    <span className="font-semibold text-slate-800">
+                      {formatINR(sale.subtotal_amount)}
+                    </span>
+                  </div>
+                  {sale.total_discount_amount > 0 && (
+                    <div className="text-blue-600 text-[11px] font-semibold">
+                      Disc: -{formatINR(sale.total_discount_amount)}
+                      {sale.discount_reason && ` (${sale.discount_reason})`}
+                    </div>
+                  )}
+                  <div className="text-slate-500 text-[11px] font-medium pt-0.5">
+                    Method:{" "}
+                    <span className="font-bold text-slate-700">
+                      {sale.payment_methods_summary}
+                    </span>
+                  </div>
+                  {sale.upi_references_summary && (
+                    <div className="text-[10px] font-mono text-blue-700 truncate">
+                      UTR: {sale.upi_references_summary}
+                    </div>
+                  )}
+                  {sale.payments.some((p) => p.is_duplicate_upi_warning) && (
+                    <div className="inline-flex items-center gap-1 rounded bg-amber-50 px-1.5 py-0.5 text-[9px] font-bold text-amber-900 border border-amber-300">
+                      <AlertTriangle className="h-2.5 w-2.5 text-amber-600" />
+                      Duplicate UTR
+                    </div>
+                  )}
+                </div>
+
+                <div className="text-right space-y-0.5">
+                  <div className="font-black text-slate-900 text-sm">
+                    Payable: {formatINR(sale.payable_amount)}
+                  </div>
+                  <div className="text-emerald-700 font-bold text-[11px]">
+                    Paid: {formatINR(sale.paid_amount)}
+                  </div>
+                  {sale.outstanding_amount > 0 && (
+                    <div className="text-amber-800 font-black text-[11px] bg-amber-50 border border-amber-200 rounded px-1.5 py-0.5 inline-block">
+                      Due: {formatINR(sale.outstanding_amount)}
+                    </div>
+                  )}
+                  {sale.refunded_amount > 0 && (
+                    <div className="text-rose-600 font-bold text-[11px]">
+                      Refunded: {formatINR(sale.refunded_amount)}
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              {/* Action Buttons Row */}
+              <div className="flex items-center gap-2 pt-2.5 border-t border-slate-100">
+                <button
+                  type="button"
+                  onClick={() => onSelectReceipt(sale)}
+                  className="btn-3d-secondary flex-1 inline-flex items-center justify-center gap-1.5 py-2 text-xs font-bold text-slate-800 cursor-pointer"
+                >
+                  <Eye className="h-3.5 w-3.5 text-blue-600" />
+                  <span>Receipt</span>
+                </button>
+
+                {sale.outstanding_amount > 0 &&
+                  sale.sale_status !== "Cancelled" &&
+                  sale.sale_status !== "Refunded" && (
+                    <button
+                      type="button"
+                      onClick={() => openPayModal(sale)}
+                      className="btn-3d-primary flex-1 inline-flex items-center justify-center gap-1.5 py-2 text-xs font-black text-white cursor-pointer shadow-xs"
+                    >
+                      <CreditCard className="h-3.5 w-3.5" />
+                      <span>Record Payment</span>
+                    </button>
+                  )}
+
+                {sale.sale_status !== "Cancelled" &&
+                  sale.sale_status !== "Refunded" && (
+                    <button
+                      type="button"
+                      onClick={() => openRefundModal(sale)}
+                      className="inline-flex items-center justify-center gap-1 py-2 px-3 text-xs font-bold text-red-700 bg-red-50 border border-red-200 rounded-xl hover:bg-red-100 cursor-pointer transition shrink-0"
+                    >
+                      <RotateCcw className="h-3 w-3" />
+                      <span>Refund</span>
+                    </button>
+                  )}
+              </div>
+            </div>
+          ))
+        )}
+      </div>
+
+      {/* Desktop Transactions Table (>= md) */}
+      <div className="hidden md:block rounded-xl bg-white border border-gray-200 shadow-xs overflow-hidden">
         <div className="overflow-x-auto">
           <table className="w-full text-xs">
             <thead>
