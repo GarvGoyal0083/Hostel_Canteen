@@ -7,22 +7,22 @@
   },
   "users": [
     {
-      "id": "admin-001",
-      "email": "admin@hostelcanteen.local",
-      "full_name": "Garv (Canteen Owner)",
+      "id": "admin-garv",
+      "email": "garvgoyal927@gmail.com",
+      "full_name": "Garv Goyal",
       "role": "admin",
       "is_active": true,
-      "created_at": "2026-10-26T21:07:17.502Z",
-      "updated_at": "2026-10-26T21:07:17.502Z"
+      "created_at": "2026-10-27T18:00:00.000Z",
+      "updated_at": "2026-10-27T18:00:00.000Z"
     },
     {
-      "id": "admin-002",
-      "email": "nightshift@hostelcanteen.local",
-      "full_name": "Rohan (Night Manager)",
-      "role": "manager",
+      "id": "admin-nidhish",
+      "email": "nidhishmathur2007@gmail.com",
+      "full_name": "Nidhish Mathur",
+      "role": "admin",
       "is_active": true,
-      "created_at": "2026-10-26T21:07:17.502Z",
-      "updated_at": "2026-10-26T21:07:17.502Z"
+      "created_at": "2026-10-27T18:00:00.000Z",
+      "updated_at": "2026-10-27T18:00:00.000Z"
     }
   ],
   "products": [

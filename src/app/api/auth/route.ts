@@ -24,9 +24,11 @@ export async function GET() {
     supabase_cloud_synced: getCloudPersistenceStatus(),
     supabase_sync_error: getLastSyncError(),
     environment_mode: db.meta.environment_mode,
-    available_admins: db.users
-      .filter((u) => u.is_active)
-      .map((u) => ({ email: u.email, full_name: u.full_name, role: u.role })),
+    available_admins: admin
+      ? db.users
+          .filter((u) => u.is_active)
+          .map((u) => ({ email: u.email, full_name: u.full_name, role: u.role }))
+      : [],
     available_customers: admin
       ? db.customers
           .filter((c) => c.is_active)
@@ -87,25 +89,66 @@ export async function POST(req: NextRequest) {
       }
     }
 
-    // 2. Local / Server Admin Credential Verification
-    const expectedPass =
-      process.env.ADMIN_DEFAULT_PASSWORD || "ChangeThisStrongPassword!2026";
-    const db = await ensureDatabaseSync();
-    const matchingUser = db.users.find(
-      (u) => u.email.toLowerCase() === email && u.is_active
-    );
+    // 2. Specific Authorized Admin Credentials Verification
+    const AUTHORIZED_ADMINS: Record<
+      string,
+      { name: string; password: string; role: "admin" | "manager" }
+    > = {
+      "nidhishmathur2007@gmail.com": {
+        name: "Nidhish Mathur",
+        password: process.env.ADMIN_NIDHISH_PASSWORD || "9772672641",
+        role: "admin",
+      },
+      "garvgoyal927@gmail.com": {
+        name: "Garv Goyal",
+        password: process.env.ADMIN_GARV_PASSWORD || "8306370383",
+        role: "admin",
+      },
+    };
 
-    if (
-      !matchingUser ||
-      (password !== expectedPass && password !== "admin123" && password !== "canteen2026")
-    ) {
+    const authConfig = AUTHORIZED_ADMINS[email];
+    if (!authConfig) {
       return NextResponse.json(
         {
           error:
-            "Invalid admin credentials. Please check your email and password.",
+            "Invalid admin email address. Access restricted to authorized canteen administrators.",
         },
         { status: 401 }
       );
+    }
+
+    if (password !== authConfig.password) {
+      return NextResponse.json(
+        {
+          error:
+            "Incorrect password for admin account. Access denied.",
+        },
+        { status: 401 }
+      );
+    }
+
+    const db = await ensureDatabaseSync();
+    let matchingUser = db.users.find(
+      (u) => u.email.toLowerCase() === email && u.is_active
+    );
+
+    if (!matchingUser) {
+      matchingUser = {
+        id: `admin-${email.split("@")[0]}`,
+        email,
+        full_name: authConfig.name,
+        role: authConfig.role,
+        is_active: true,
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString(),
+      };
+      await withTransactionLock(() => {
+        const currentDb = readDatabase();
+        if (!currentDb.users.some((u) => u.email.toLowerCase() === email)) {
+          currentDb.users.push(matchingUser!);
+          writeDatabase(currentDb);
+        }
+      });
     }
 
     await withTransactionLock(() => {

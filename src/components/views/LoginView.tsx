@@ -46,10 +46,8 @@ export function LoginView({
   const [portalMode, setPortalMode] = useState<"admin" | "customer">("admin");
 
   // Admin state
-  const [email, setEmail] = useState(
-    availableAdmins[0]?.email || "admin@hostelcanteen.local"
-  );
-  const [password, setPassword] = useState("ChangeThisStrongPassword!2026");
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
 
   // Student / Customer state
@@ -333,48 +331,6 @@ export function LoginView({
                 </p>
               </div>
 
-              {/* Quick 1-Click Account Switcher */}
-              {availableAdmins.length > 0 && (
-                <div className="rounded-xl bg-slate-100 p-3 border border-slate-200 space-y-2">
-                  <div className="flex items-center justify-between text-[11px] font-bold text-slate-600">
-                    <span>1-Click Admin Account:</span>
-                    <span className="text-[10px] text-slate-400">Autofill</span>
-                  </div>
-                  <div className="flex flex-wrap gap-2">
-                    {availableAdmins.map((u) => {
-                      const isSelected = email === u.email;
-                      return (
-                        <button
-                          key={u.email}
-                          type="button"
-                          onClick={() => {
-                            setEmail(u.email);
-                            setPassword("ChangeThisStrongPassword!2026");
-                            setErrorMsg(null);
-                          }}
-                          className={`rounded-xl px-3 py-1.5 text-xs font-bold transition cursor-pointer flex items-center gap-1.5 ${
-                            isSelected
-                              ? "btn-3d-primary"
-                              : "btn-3d-secondary text-[#111827]"
-                          }`}
-                        >
-                          <span>{u.full_name}</span>
-                          <span
-                            className={`rounded px-1.5 py-0.5 text-[10px] uppercase font-extrabold ${
-                              isSelected
-                                ? "bg-white/20 text-white"
-                                : "bg-slate-200 text-slate-700"
-                            }`}
-                          >
-                            {u.role}
-                          </span>
-                        </button>
-                      );
-                    })}
-                  </div>
-                </div>
-              )}
-
               <form onSubmit={handleAdminSubmit} className="space-y-4 text-xs">
                 <div className="space-y-1.5">
                   <label className="font-extrabold text-[#111827] block">
@@ -387,7 +343,7 @@ export function LoginView({
                       required
                       value={email}
                       onChange={(e) => setEmail(e.target.value)}
-                      placeholder="admin@hostelcanteen.local"
+                      placeholder="e.g. garvgoyal927@gmail.com"
                       className="input-3d w-full rounded-xl pl-10 pr-3.5 py-2.5 text-xs sm:text-sm text-[#111827]"
                     />
                   </div>
@@ -398,9 +354,6 @@ export function LoginView({
                     <label className="font-extrabold text-[#111827]">
                       Password
                     </label>
-                    <span className="text-[10px] text-slate-500 font-mono">
-                      Default: ChangeThisStrongPassword!2026
-                    </span>
                   </div>
                   <div className="relative">
                     <Lock className="absolute left-3.5 top-3 h-4 w-4 text-slate-400" />
@@ -409,7 +362,7 @@ export function LoginView({
                       required
                       value={password}
                       onChange={(e) => setPassword(e.target.value)}
-                      placeholder="••••••••••••"
+                      placeholder="Enter admin password"
                       className="input-3d w-full rounded-xl pl-10 pr-10 py-2.5 text-xs sm:text-sm text-[#111827]"
                     />
                     <button

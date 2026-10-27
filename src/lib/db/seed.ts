@@ -36,19 +36,19 @@ export function createDefaultAdminUsers(): AdminUser[] {
   const now = new Date().toISOString();
   return [
     {
-      id: "admin-001",
-      email: process.env.ADMIN_DEFAULT_EMAIL || "admin@hostelcanteen.local",
-      full_name: process.env.ADMIN_DEFAULT_NAME || "Garv (Canteen Owner)",
+      id: "admin-garv",
+      email: "garvgoyal927@gmail.com",
+      full_name: "Garv Goyal",
       role: "admin",
       is_active: true,
       created_at: now,
       updated_at: now,
     },
     {
-      id: "admin-002",
-      email: "nightshift@hostelcanteen.local",
-      full_name: "Rohan (Night Manager)",
-      role: "manager",
+      id: "admin-nidhish",
+      email: "nidhishmathur2007@gmail.com",
+      full_name: "Nidhish Mathur",
+      role: "admin",
       is_active: true,
       created_at: now,
       updated_at: now,
