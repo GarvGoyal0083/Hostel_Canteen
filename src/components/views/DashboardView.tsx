@@ -241,30 +241,6 @@ export function DashboardView({
             </button>
           )}
 
-          {/* Customer Privacy / Hide Analytics Toggle */}
-          <button
-            type="button"
-            onClick={handleTogglePrivacy}
-            className={`inline-flex items-center gap-1.5 px-3.5 py-2 text-xs font-extrabold rounded-xl transition cursor-pointer shadow-xs border ${
-              privacyMode
-                ? "bg-amber-100 border-amber-300 text-amber-950 hover:bg-amber-200"
-                : "btn-3d-secondary text-[#111827]"
-            }`}
-            title="Customer at counter? Hide all financial statistics, profits & collections with one click"
-          >
-            {privacyMode ? (
-              <>
-                <Eye className="h-3.5 w-3.5 text-amber-800" />
-                <span>Show Analytics</span>
-              </>
-            ) : (
-              <>
-                <EyeOff className="h-3.5 w-3.5 text-slate-500" />
-                <span>Hide Analytics</span>
-              </>
-            )}
-          </button>
-
           <button
             onClick={onRefresh}
             className="btn-3d-secondary inline-flex items-center gap-1.5 px-3.5 py-2 text-xs font-bold text-[#111827] cursor-pointer"
@@ -325,6 +301,30 @@ export function DashboardView({
                   Reopening: {canteen_status.reopen_at}
                 </span>
               )}
+
+              {/* Hide Analytics option next to Open For Orders option with gap */}
+              <button
+                type="button"
+                onClick={handleTogglePrivacy}
+                className={`ml-3.5 inline-flex items-center gap-1.5 px-3 py-1 text-xs font-extrabold rounded-xl transition cursor-pointer shadow-xs border ${
+                  privacyMode
+                    ? "bg-amber-100 border-amber-300 text-amber-950 hover:bg-amber-200"
+                    : "bg-white border-slate-300 text-slate-700 hover:bg-slate-50 hover:text-slate-900"
+                }`}
+                title="Customer at counter? Hide or show all financial analytics with one click"
+              >
+                {privacyMode ? (
+                  <>
+                    <Eye className="h-3.5 w-3.5 text-amber-800" />
+                    <span>Show Analytics</span>
+                  </>
+                ) : (
+                  <>
+                    <EyeOff className="h-3.5 w-3.5 text-slate-500" />
+                    <span>Hide Analytics</span>
+                  </>
+                )}
+              </button>
             </div>
             <p className="text-xs text-slate-600 mt-1">
               {canteen_status?.is_open === false
