@@ -1132,6 +1132,31 @@ function recalculateSalePaymentSummary(db: DatabaseSchema, sale: SaleRecord): vo
   sale.upi_references_summary = upiRefs.length > 0 ? upiRefs.join(", ") : null;
 }
 
+export const DELIVERY_PRODUCT_ID = "prod-room-delivery";
+
+export function ensureDeliveryProduct(db: DatabaseSchema): Product {
+  const existing = db.products.find((p) => p.id === DELIVERY_PRODUCT_ID);
+  if (existing) return existing;
+
+  const nowIso = new Date().toISOString();
+  const prod: Product = {
+    id: DELIVERY_PRODUCT_ID,
+    name: "Room Delivery Charge",
+    sku: "SRV-DELIVERY",
+    category: "Delivery Service",
+    selling_price: 20,
+    purchase_price: 0,
+    estimated_unit_profit: 20,
+    stock_quantity: 999999,
+    min_stock_level: 0,
+    is_active: true,
+    created_at: nowIso,
+    updated_at: nowIso,
+  };
+  db.products.push(prod);
+  return prod;
+}
+
 export async function createSaleTransaction(
   input: CreateSaleInput,
   adminName: string,
@@ -1143,6 +1168,7 @@ export async function createSaleTransaction(
 }> {
   return withTransactionLock(() => {
     const db = readDatabase();
+    ensureDeliveryProduct(db);
 
     // 1. Idempotency check to prevent duplicate submissions and duplicate stock deductions
     if (input.idempotency_key) {

@@ -1,12 +1,15 @@
 import { NextRequest, NextResponse } from "next/server";
 import {
   createCustomer,
+  createSaleTransaction,
+  DELIVERY_PRODUCT_ID,
   ensureDatabaseSync,
   getCanteenStatus,
   getCustomerDetailsWithLedger,
   listCustomers,
   listProducts,
 } from "@/lib/db/store";
+import { PaymentMethod, PaymentStatus } from "@/types/pos";
 
 function normalizePhone(p?: string | null): string {
   if (!p) return "";
@@ -22,7 +25,9 @@ export async function GET(req: NextRequest) {
     const customerId = searchParams.get("customerId");
 
     // Public-safe product catalog (hides private purchase_price & unit profit margin)
-    const activeProducts = listProducts({ includeInactive: false }).map((p) => ({
+    const activeProducts = listProducts({ includeInactive: false })
+      .filter((p) => p.id !== DELIVERY_PRODUCT_ID)
+      .map((p) => ({
       id: p.id,
       name: p.name,
       sku: p.sku,
@@ -89,6 +94,144 @@ export async function POST(req: NextRequest) {
     const mobileDigits = normalizePhone(phone);
 
     const customers = listCustomers();
+
+    // =========================================================================
+    // ACTION: PLACE STUDENT ORDER (Self-Service with Room Delivery option)
+    // =========================================================================
+    if (action === "order") {
+      const customerId = String(body.customer_id || "").trim();
+      const items = Array.isArray(body.items) ? body.items : [];
+      const roomDelivery = Boolean(body.room_delivery);
+      const deliveryRoom = String(body.room_number || "").trim();
+      const deliveryNotes = String(body.notes || "").trim();
+      const paymentMethod = String(body.payment_method || "Unpaid");
+      const upiRef = String(body.upi_reference || "").trim();
+
+      if (!customerId) {
+        return NextResponse.json(
+          { error: "Please log in with your name or room to place an order." },
+          { status: 401 }
+        );
+      }
+
+      if (!items || items.length === 0) {
+        return NextResponse.json(
+          { error: "Your cart is empty. Please add snacks to place an order." },
+          { status: 400 }
+        );
+      }
+
+      if (roomDelivery && !deliveryRoom) {
+        return NextResponse.json(
+          { error: "Please provide your hostel room number for room delivery." },
+          { status: 400 }
+        );
+      }
+
+      const canteenStatus = getCanteenStatus();
+      if (!canteenStatus.is_open) {
+        return NextResponse.json(
+          {
+            error: `Canteen is currently closed (${canteenStatus.closure_reason || "Not accepting orders right now"}). Orders cannot be placed at this time.`,
+          },
+          { status: 400 }
+        );
+      }
+
+      const saleItems = items.map(
+        (i: { product_id: string; quantity: number }) => ({
+          product_id: i.product_id,
+          quantity: Math.max(1, Math.floor(Number(i.quantity) || 1)),
+        })
+      );
+
+      if (roomDelivery) {
+        saleItems.push({
+          product_id: DELIVERY_PRODUCT_ID,
+          quantity: 1,
+        });
+      }
+
+      // Calculate total payable
+      const dbProducts = listProducts({ includeInactive: false });
+      let itemsTotal = 0;
+      for (const reqItem of items) {
+        const prod = dbProducts.find((p) => p.id === reqItem.product_id);
+        if (prod) {
+          itemsTotal +=
+            prod.selling_price *
+            Math.max(1, Math.floor(Number(reqItem.quantity) || 1));
+        }
+      }
+      const deliveryFee = roomDelivery ? 20 : 0;
+      const totalAmount = itemsTotal + deliveryFee;
+
+      let paymentRecord: Array<{
+        payment_method: PaymentMethod;
+        amount_received: number;
+        upi_reference?: string;
+        payment_status?: PaymentStatus;
+        notes?: string;
+      }> = [];
+
+      if (paymentMethod === "UPI") {
+        paymentRecord = [
+          {
+            payment_method: "UPI",
+            amount_received: totalAmount,
+            upi_reference: upiRef || undefined,
+            payment_status: "Paid",
+            notes: "UPI payment via Student Portal",
+          },
+        ];
+      } else if (paymentMethod === "Cash") {
+        paymentRecord = [
+          {
+            payment_method: "Cash",
+            amount_received: 0,
+            payment_status: "Pending",
+            notes: "Cash on delivery / pay at room",
+          },
+        ];
+      } else {
+        paymentRecord = [
+          {
+            payment_method: "Other",
+            amount_received: 0,
+            payment_status: "Pending",
+            notes: "Charged to Student Room Udhaar Account",
+          },
+        ];
+      }
+
+      const saleNotes = [
+        roomDelivery
+          ? `[ROOM DELIVERY: Room ${deliveryRoom}]`
+          : `[SELF PICKUP AT CANTEEN]`,
+        deliveryNotes ? `Note: ${deliveryNotes}` : null,
+      ]
+        .filter(Boolean)
+        .join(" | ");
+
+      const { sale } = await createSaleTransaction(
+        {
+          customer_id: customerId,
+          items: saleItems,
+          payments: paymentRecord,
+          notes: saleNotes,
+        },
+        "Student Self-Portal",
+        { id: "customer-portal" }
+      );
+
+      return NextResponse.json({
+        success: true,
+        sale,
+        message: roomDelivery
+          ? `Order placed successfully! Delivery to Room ${deliveryRoom} will arrive shortly.`
+          : `Order placed successfully! Your snacks are ready for pickup at the canteen.`,
+      });
+    }
 
     // =========================================================================
     // ACTION: REGISTER NEW STUDENT

@@ -23,6 +23,14 @@ import {
   Lock,
   Eye,
   EyeOff,
+  Plus,
+  Minus,
+  Trash2,
+  Truck,
+  ArrowRight,
+  ShoppingCart,
+  QrCode,
+  X,
 } from "lucide-react";
 import {
   Customer,
@@ -114,6 +122,131 @@ export function CustomerPortalView({
 
   const [loginError, setLoginError] = useState<string | null>(null);
   const [submittingLogin, setSubmittingLogin] = useState(false);
+
+  // Shopping Cart & Room Delivery State
+  const [cart, setCart] = useState<Array<{ product: PublicProduct; quantity: number }>>([]);
+  const [isCartOpen, setIsCartOpen] = useState(false);
+  const [roomDelivery, setRoomDelivery] = useState(true);
+  const [deliveryRoom, setDeliveryRoom] = useState("");
+  const [deliveryNotes, setDeliveryNotes] = useState("");
+  const [orderPaymentMethod, setOrderPaymentMethod] = useState<
+    "Unpaid" | "Cash" | "UPI"
+  >("Unpaid");
+  const [orderUpiRef, setOrderUpiRef] = useState("");
+  const [placingOrder, setPlacingOrder] = useState(false);
+  const [orderError, setOrderError] = useState<string | null>(null);
+  const [orderSuccessSale, setOrderSuccessSale] = useState<SaleRecord | null>(
+    null
+  );
+
+  useEffect(() => {
+    if (currentCustomer?.room_number && !deliveryRoom) {
+      setDeliveryRoom(currentCustomer.room_number);
+    }
+  }, [currentCustomer, deliveryRoom]);
+
+  const cartSubtotal = useMemo(() => {
+    return cart.reduce(
+      (acc, item) => acc + item.product.selling_price * item.quantity,
+      0
+    );
+  }, [cart]);
+
+  const deliveryFee = roomDelivery ? 20 : 0;
+  const cartGrandTotal = cartSubtotal + deliveryFee;
+  const totalCartItems = useMemo(() => {
+    return cart.reduce((acc, item) => acc + item.quantity, 0);
+  }, [cart]);
+
+  const addToCart = (product: PublicProduct) => {
+    if (product.stock_quantity <= 0) return;
+    setCart((prev) => {
+      const idx = prev.findIndex((item) => item.product.id === product.id);
+      if (idx >= 0) {
+        const next = [...prev];
+        const nextQty = Math.min(
+          product.stock_quantity,
+          next[idx].quantity + 1
+        );
+        next[idx] = { ...next[idx], quantity: nextQty };
+        return next;
+      }
+      return [...prev, { product, quantity: 1 }];
+    });
+  };
+
+  const updateCartQuantity = (productId: string, quantity: number) => {
+    setCart((prev) => {
+      if (quantity <= 0) {
+        return prev.filter((item) => item.product.id !== productId);
+      }
+      return prev.map((item) => {
+        if (item.product.id === productId) {
+          const validQty = Math.min(item.product.stock_quantity, quantity);
+          return { ...item, quantity: validQty };
+        }
+        return item;
+      });
+    });
+  };
+
+  const clearCart = () => setCart([]);
+
+  const handlePlaceOrder = async () => {
+    if (cart.length === 0) return;
+    if (!currentCustomer) {
+      setShowSwitchModal(true);
+      return;
+    }
+    if (roomDelivery && !deliveryRoom.trim()) {
+      setOrderError("Please enter your hostel room number for room delivery.");
+      return;
+    }
+    if (orderPaymentMethod === "UPI" && !orderUpiRef.trim()) {
+      setOrderError(
+        "Please enter the 12-digit UPI reference (UTR) after completing payment."
+      );
+      return;
+    }
+
+    setOrderError(null);
+    setPlacingOrder(true);
+
+    try {
+      const res = await fetch("/api/customer-portal", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          action: "order",
+          customer_id: currentCustomer.id,
+          items: cart.map((item) => ({
+            product_id: item.product.id,
+            quantity: item.quantity,
+          })),
+          room_delivery: roomDelivery,
+          room_number: deliveryRoom.trim(),
+          notes: deliveryNotes.trim() || undefined,
+          payment_method: orderPaymentMethod,
+          upi_reference:
+            orderPaymentMethod === "UPI" ? orderUpiRef.trim() : undefined,
+        }),
+      });
+
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || "Failed to place order.");
+
+      setCart([]);
+      setIsCartOpen(false);
+      setOrderSuccessSale(data.sale);
+      fetchPortalData(currentCustomer.id);
+    } catch (err) {
+      setOrderError(
+        err instanceof Error ? err.message : "Failed to place order."
+      );
+    } finally {
+      setPlacingOrder(false);
+    }
+  };
 
   const fetchPortalData = useCallback(async (custId?: string) => {
     setLoading(true);
@@ -281,6 +414,22 @@ export function CustomerPortalView({
                 </div>
               ) : (
                 <span>Select Room / Student Login</span>
+              )}
+            </button>
+
+            {/* Shopping Cart Pill Button */}
+            <button
+              type="button"
+              onClick={() => setIsCartOpen(true)}
+              className="relative btn-3d-primary rounded-xl px-3.5 py-2 text-xs font-bold text-white flex items-center gap-2 cursor-pointer shadow-md hover:scale-105 active:scale-95 transition"
+              title="View Cart & Checkout"
+            >
+              <ShoppingCart className="h-4 w-4" />
+              <span>Cart</span>
+              {totalCartItems > 0 && (
+                <span className="rounded-full bg-white text-[#2563EB] px-1.5 py-0.5 text-[10px] font-black">
+                  {totalCartItems}
+                </span>
               )}
             </button>
 
@@ -641,6 +790,11 @@ export function CustomerPortalView({
                     )
                   );
 
+                  const cartItem = cart.find(
+                    (i) => i.product.id === product.id
+                  );
+                  const cartQty = cartItem ? cartItem.quantity : 0;
+
                   return (
                     <div
                       key={product.id}
@@ -726,6 +880,59 @@ export function CustomerPortalView({
                             style={{ width: `${isOut ? 0 : Math.max(12, stockPercent)}%` }}
                           />
                         </div>
+                      </div>
+
+                      {/* Add to Cart / Quantity Stepper Action */}
+                      <div className="pt-2 border-t border-slate-100">
+                        {isOut ? (
+                          <button
+                            type="button"
+                            disabled
+                            className="w-full py-2 px-3 rounded-xl bg-slate-100 text-slate-400 font-bold text-xs cursor-not-allowed border border-slate-200 text-center"
+                          >
+                            Out of Stock
+                          </button>
+                        ) : cartQty > 0 ? (
+                          <div className="flex items-center justify-between bg-blue-50/90 border border-blue-200 rounded-xl p-1">
+                            <button
+                              type="button"
+                              onClick={() =>
+                                updateCartQuantity(product.id, cartQty - 1)
+                              }
+                              className="h-8 w-8 rounded-lg bg-white border border-blue-200 text-blue-700 font-black flex items-center justify-center hover:bg-blue-100 transition active:scale-95 cursor-pointer text-sm shadow-2xs"
+                              aria-label="Decrease quantity"
+                            >
+                              <Minus className="h-3.5 w-3.5" />
+                            </button>
+                            <span className="font-black text-xs text-blue-900">
+                              {cartQty} in cart
+                            </span>
+                            <button
+                              type="button"
+                              disabled={cartQty >= product.stock_quantity}
+                              onClick={() =>
+                                updateCartQuantity(product.id, cartQty + 1)
+                              }
+                              className={`h-8 w-8 rounded-lg bg-[#2563EB] text-white font-black flex items-center justify-center hover:bg-blue-700 transition active:scale-95 text-sm shadow-2xs ${
+                                cartQty >= product.stock_quantity
+                                  ? "opacity-50 cursor-not-allowed"
+                                  : "cursor-pointer"
+                              }`}
+                              aria-label="Increase quantity"
+                            >
+                              <Plus className="h-3.5 w-3.5" />
+                            </button>
+                          </div>
+                        ) : (
+                          <button
+                            type="button"
+                            onClick={() => addToCart(product)}
+                            className="btn-3d-primary w-full py-2.5 px-3 rounded-xl text-white font-extrabold text-xs flex items-center justify-center gap-1.5 shadow-md shadow-blue-500/20 active:scale-95 transition cursor-pointer"
+                          >
+                            <Plus className="h-3.5 w-3.5" />
+                            <span>Add to Cart</span>
+                          </button>
+                        )}
                       </div>
                     </div>
                   );
@@ -1145,6 +1352,522 @@ export function CustomerPortalView({
                   : "Register & Open Passbook"}
               </button>
             </form>
+          </div>
+        </div>
+      )}
+
+      {/* Floating Bottom Cart Bar */}
+      {cart.length > 0 && !isCartOpen && (
+        <div className="fixed bottom-4 inset-x-4 max-w-xl mx-auto z-40 animate-in slide-in-from-bottom duration-200">
+          <div className="card-3d bg-slate-900 text-white p-3.5 sm:p-4 rounded-2xl shadow-2xl border border-slate-700 flex items-center justify-between gap-3">
+            <div className="flex items-center gap-3 min-w-0">
+              <div className="h-10 w-10 rounded-xl bg-blue-600 flex items-center justify-center text-white shrink-0 shadow-md">
+                <ShoppingBag className="h-5 w-5" />
+              </div>
+              <div className="truncate">
+                <div className="font-extrabold text-sm flex items-center gap-2">
+                  <span>
+                    {totalCartItems} {totalCartItems === 1 ? "Item" : "Items"}
+                  </span>
+                  <span className="text-slate-400 font-normal">•</span>
+                  <span className="text-emerald-400 font-black">
+                    {formatINR(cartGrandTotal)}
+                  </span>
+                </div>
+                <div className="text-[11px] text-slate-300 truncate">
+                  {roomDelivery
+                    ? `Room Delivery to ${deliveryRoom ? `Room ${deliveryRoom}` : "Room"} (+₹20)`
+                    : "Self Pickup at Canteen (FREE)"}
+                </div>
+              </div>
+            </div>
+
+            <button
+              type="button"
+              onClick={() => setIsCartOpen(true)}
+              className="btn-3d-primary py-2.5 px-4 rounded-xl text-xs sm:text-sm font-black text-white shrink-0 shadow-lg flex items-center gap-1.5 cursor-pointer hover:scale-105 active:scale-95 transition"
+            >
+              <span>View Cart</span>
+              <ArrowRight className="h-4 w-4" />
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* Shopping Cart & Room Delivery Drawer Modal */}
+      {isCartOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-xs p-3 sm:p-4 overflow-y-auto">
+          <div className="w-full max-w-lg rounded-2xl bg-white border border-slate-200 shadow-2xl overflow-hidden my-6 animate-in fade-in zoom-in-95 duration-150">
+            {/* Modal Header */}
+            <div className="flex items-center justify-between border-b border-slate-100 bg-[#F8FAFC] px-5 py-4">
+              <div className="flex items-center gap-2.5">
+                <div className="h-9 w-9 rounded-xl bg-blue-600 text-white flex items-center justify-center shadow-xs">
+                  <ShoppingCart className="h-5 w-5" />
+                </div>
+                <div>
+                  <h3 className="text-base font-extrabold text-slate-900 leading-tight">
+                    My Snack Cart
+                  </h3>
+                  <p className="text-xs text-slate-500 font-medium">
+                    {totalCartItems}{" "}
+                    {totalCartItems === 1 ? "snack item" : "snack items"} selected
+                  </p>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => setIsCartOpen(false)}
+                className="rounded-xl p-2 text-slate-400 hover:text-slate-700 hover:bg-slate-100 transition cursor-pointer"
+              >
+                <X className="h-5 w-5" />
+              </button>
+            </div>
+
+            <div className="p-5 space-y-5 max-h-[75vh] overflow-y-auto">
+              {cart.length === 0 ? (
+                <div className="py-10 text-center space-y-3">
+                  <div className="h-16 w-16 rounded-2xl bg-blue-50 text-[#2563EB] flex items-center justify-center mx-auto">
+                    <ShoppingBag className="h-8 w-8" />
+                  </div>
+                  <div>
+                    <h4 className="text-sm font-bold text-slate-800">
+                      Your cart is empty
+                    </h4>
+                    <p className="text-xs text-slate-500 mt-1">
+                      Browse our live snack catalog and click &quot;Add to Cart&quot; to order!
+                    </p>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => setIsCartOpen(false)}
+                    className="btn-3d-primary py-2 px-4 rounded-xl text-xs font-bold text-white cursor-pointer"
+                  >
+                    Browse Snacks
+                  </button>
+                </div>
+              ) : (
+                <>
+                  {/* Cart Items List */}
+                  <div className="space-y-2.5">
+                    <div className="flex items-center justify-between text-xs font-bold text-slate-500 uppercase tracking-wider">
+                      <span>Selected Items</span>
+                      <button
+                        type="button"
+                        onClick={clearCart}
+                        className="text-red-600 hover:text-red-700 cursor-pointer font-bold lowercase text-xs"
+                      >
+                        clear cart
+                      </button>
+                    </div>
+
+                    <div className="divide-y divide-slate-100 border border-slate-200/80 rounded-xl bg-slate-50/50 overflow-hidden">
+                      {cart.map((item) => (
+                        <div
+                          key={item.product.id}
+                          className="p-3 flex items-center justify-between gap-3 bg-white first:border-t-0"
+                        >
+                          <div className="flex items-center gap-3 min-w-0">
+                            <div className="h-10 w-10 rounded-lg bg-slate-50 border border-slate-100 flex items-center justify-center shrink-0 p-1">
+                              {item.product.image_url ? (
+                                <img
+                                  src={item.product.image_url}
+                                  alt={item.product.name}
+                                  className="h-full w-full object-contain"
+                                />
+                              ) : (
+                                <Package className="h-5 w-5 text-slate-400" />
+                              )}
+                            </div>
+                            <div className="truncate">
+                              <div className="font-bold text-xs text-slate-900 truncate">
+                                {item.product.name}
+                              </div>
+                              <div className="text-[11px] text-slate-500">
+                                {formatINR(item.product.selling_price)} each
+                              </div>
+                            </div>
+                          </div>
+
+                          <div className="flex items-center gap-3 shrink-0">
+                            {/* Stepper */}
+                            <div className="flex items-center gap-1.5 bg-slate-100 rounded-lg p-0.5 border border-slate-200">
+                              <button
+                                type="button"
+                                onClick={() =>
+                                  updateCartQuantity(
+                                    item.product.id,
+                                    item.quantity - 1
+                                  )
+                                }
+                                className="h-6 w-6 rounded bg-white text-slate-700 flex items-center justify-center font-bold text-xs hover:bg-slate-200 cursor-pointer shadow-2xs"
+                              >
+                                -
+                              </button>
+                              <span className="w-5 text-center font-black text-xs text-slate-900">
+                                {item.quantity}
+                              </span>
+                              <button
+                                type="button"
+                                disabled={
+                                  item.quantity >= item.product.stock_quantity
+                                }
+                                onClick={() =>
+                                  updateCartQuantity(
+                                    item.product.id,
+                                    item.quantity + 1
+                                  )
+                                }
+                                className={`h-6 w-6 rounded bg-white text-slate-700 flex items-center justify-center font-bold text-xs hover:bg-slate-200 shadow-2xs ${
+                                  item.quantity >= item.product.stock_quantity
+                                    ? "opacity-40 cursor-not-allowed"
+                                    : "cursor-pointer"
+                                }`}
+                              >
+                                +
+                              </button>
+                            </div>
+
+                            <span className="font-black text-xs text-slate-900 w-14 text-right">
+                              {formatINR(
+                                item.product.selling_price * item.quantity
+                              )}
+                            </span>
+
+                            <button
+                              type="button"
+                              onClick={() =>
+                                updateCartQuantity(item.product.id, 0)
+                              }
+                              className="text-slate-400 hover:text-red-600 transition cursor-pointer p-1"
+                              title="Remove item"
+                            >
+                              <Trash2 className="h-3.5 w-3.5" />
+                            </button>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+
+                  {/* ROOM DELIVERY OPTION - 20 RUPEES CHARGE */}
+                  <div className="space-y-3 pt-2 border-t border-slate-100">
+                    <span className="text-xs font-bold text-slate-500 uppercase tracking-wider block">
+                      Delivery Option
+                    </span>
+
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+                      {/* Room Delivery Card */}
+                      <button
+                        type="button"
+                        onClick={() => setRoomDelivery(true)}
+                        className={`text-left p-3.5 rounded-xl border-2 transition cursor-pointer relative ${
+                          roomDelivery
+                            ? "border-blue-600 bg-blue-50/70 shadow-sm ring-2 ring-blue-500/20"
+                            : "border-slate-200 bg-white hover:border-slate-300"
+                        }`}
+                      >
+                        <div className="flex items-center justify-between">
+                          <div className="flex items-center gap-2">
+                            <Truck
+                              className={`h-4 w-4 ${
+                                roomDelivery
+                                  ? "text-blue-600"
+                                  : "text-slate-500"
+                              }`}
+                            />
+                            <span className="font-extrabold text-xs text-slate-900">
+                              Room Delivery
+                            </span>
+                          </div>
+                          <span className="rounded-full bg-blue-600 text-white px-2 py-0.5 text-[10px] font-black shadow-xs">
+                            +₹20
+                          </span>
+                        </div>
+                        <p className="text-[11px] text-slate-500 mt-1.5 leading-snug">
+                          Delivered straight to your hostel room door (+₹20 fee).
+                        </p>
+                      </button>
+
+                      {/* Self Pickup Card */}
+                      <button
+                        type="button"
+                        onClick={() => setRoomDelivery(false)}
+                        className={`text-left p-3.5 rounded-xl border-2 transition cursor-pointer relative ${
+                          !roomDelivery
+                            ? "border-emerald-600 bg-emerald-50/70 shadow-sm ring-2 ring-emerald-500/20"
+                            : "border-slate-200 bg-white hover:border-slate-300"
+                        }`}
+                      >
+                        <div className="flex items-center justify-between">
+                          <div className="flex items-center gap-2">
+                            <DoorOpen
+                              className={`h-4 w-4 ${
+                                !roomDelivery
+                                  ? "text-emerald-600"
+                                  : "text-slate-500"
+                              }`}
+                            />
+                            <span className="font-extrabold text-xs text-slate-900">
+                              Self Pickup
+                            </span>
+                          </div>
+                          <span className="rounded-full bg-emerald-100 text-emerald-800 border border-emerald-300 px-2 py-0.5 text-[10px] font-bold">
+                            FREE
+                          </span>
+                        </div>
+                        <p className="text-[11px] text-slate-500 mt-1.5 leading-snug">
+                          Collect in person directly from the canteen counter.
+                        </p>
+                      </button>
+                    </div>
+
+                    {/* Room Number & Delivery Notes (if Room Delivery selected) */}
+                    {roomDelivery && (
+                      <div className="rounded-xl bg-blue-50/80 border border-blue-200/80 p-3.5 space-y-2.5 animate-in fade-in duration-150">
+                        <div>
+                          <label className="text-[11px] font-extrabold text-blue-950 block mb-1">
+                            Hostel Room Number *
+                          </label>
+                          <input
+                            type="text"
+                            required
+                            value={deliveryRoom}
+                            onChange={(e) => setDeliveryRoom(e.target.value)}
+                            placeholder="e.g. Room 110, B-204"
+                            className="w-full rounded-lg border border-blue-300 bg-white px-3 py-2 text-xs font-bold text-slate-900 focus:outline-none focus:ring-2 focus:ring-blue-500 shadow-xs"
+                          />
+                        </div>
+
+                        <div>
+                          <label className="text-[11px] font-medium text-slate-600 block mb-1">
+                            Delivery Instructions (Optional)
+                          </label>
+                          <input
+                            type="text"
+                            value={deliveryNotes}
+                            onChange={(e) => setDeliveryNotes(e.target.value)}
+                            placeholder="e.g. Call upon arrival / knock on door"
+                            className="w-full rounded-lg border border-slate-300 bg-white px-3 py-1.5 text-xs text-slate-900 focus:outline-none"
+                          />
+                        </div>
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Payment Method Selection */}
+                  <div className="space-y-2 pt-2 border-t border-slate-100">
+                    <span className="text-xs font-bold text-slate-500 uppercase tracking-wider block">
+                      Payment Mode
+                    </span>
+
+                    <div className="grid grid-cols-3 gap-2 text-xs font-semibold">
+                      <button
+                        type="button"
+                        onClick={() => setOrderPaymentMethod("Unpaid")}
+                        className={`p-2.5 rounded-xl border text-center transition cursor-pointer ${
+                          orderPaymentMethod === "Unpaid"
+                            ? "bg-amber-50 border-amber-400 text-amber-950 font-extrabold ring-2 ring-amber-400/30"
+                            : "bg-white border-slate-200 text-slate-700 hover:bg-slate-50"
+                        }`}
+                      >
+                        <Wallet className="h-4 w-4 mx-auto mb-1 text-amber-700" />
+                        <span>Room Udhaar</span>
+                        <div className="text-[9px] text-amber-800 font-normal mt-0.5">
+                          Pay Later
+                        </div>
+                      </button>
+
+                      <button
+                        type="button"
+                        onClick={() => setOrderPaymentMethod("Cash")}
+                        className={`p-2.5 rounded-xl border text-center transition cursor-pointer ${
+                          orderPaymentMethod === "Cash"
+                            ? "bg-emerald-50 border-emerald-400 text-emerald-950 font-extrabold ring-2 ring-emerald-400/30"
+                            : "bg-white border-slate-200 text-slate-700 hover:bg-slate-50"
+                        }`}
+                      >
+                        <CreditCard className="h-4 w-4 mx-auto mb-1 text-emerald-700" />
+                        <span>Cash (COD)</span>
+                        <div className="text-[9px] text-emerald-800 font-normal mt-0.5">
+                          Pay at Room
+                        </div>
+                      </button>
+
+                      <button
+                        type="button"
+                        onClick={() => setOrderPaymentMethod("UPI")}
+                        className={`p-2.5 rounded-xl border text-center transition cursor-pointer ${
+                          orderPaymentMethod === "UPI"
+                            ? "bg-blue-50 border-blue-400 text-blue-950 font-extrabold ring-2 ring-blue-400/30"
+                            : "bg-white border-slate-200 text-slate-700 hover:bg-slate-50"
+                        }`}
+                      >
+                        <QrCode className="h-4 w-4 mx-auto mb-1 text-blue-700" />
+                        <span>UPI Payment</span>
+                        <div className="text-[9px] text-blue-800 font-normal mt-0.5">
+                          Pay via QR
+                        </div>
+                      </button>
+                    </div>
+
+                    {orderPaymentMethod === "UPI" && (
+                      <div className="p-3 bg-blue-50 border border-blue-200 rounded-xl space-y-2 animate-in fade-in duration-150">
+                        <div className="flex items-center justify-between text-xs">
+                          <span className="font-bold text-blue-950">
+                            Scan UPI QR &amp; Enter UTR
+                          </span>
+                          <span className="font-mono text-blue-800 text-[11px]">
+                            Amount: {formatINR(cartGrandTotal)}
+                          </span>
+                        </div>
+                        <input
+                          type="text"
+                          required
+                          value={orderUpiRef}
+                          onChange={(e) => setOrderUpiRef(e.target.value)}
+                          placeholder="Enter 12-digit UPI Reference (UTR) *"
+                          className="w-full rounded-lg border border-blue-300 bg-white px-3 py-1.5 text-xs font-mono text-slate-900 focus:outline-none"
+                        />
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Bill Summary */}
+                  <div className="rounded-xl bg-slate-50 border border-slate-200/80 p-3.5 space-y-1.5 text-xs">
+                    <div className="flex items-center justify-between text-slate-600">
+                      <span>Items Subtotal</span>
+                      <span className="font-bold text-slate-800">
+                        {formatINR(cartSubtotal)}
+                      </span>
+                    </div>
+
+                    <div className="flex items-center justify-between text-slate-600">
+                      <span>Room Delivery Fee</span>
+                      {roomDelivery ? (
+                        <span className="font-bold text-blue-700">+₹20.00</span>
+                      ) : (
+                        <span className="font-bold text-emerald-700">FREE</span>
+                      )}
+                    </div>
+
+                    <div className="pt-2 border-t border-slate-200 flex items-center justify-between text-sm">
+                      <span className="font-black text-slate-900">
+                        Total Payable
+                      </span>
+                      <span className="font-black text-base text-[#2563EB]">
+                        {formatINR(cartGrandTotal)}
+                      </span>
+                    </div>
+                  </div>
+
+                  {orderError && (
+                    <div className="rounded-xl bg-red-50 border border-red-200 p-3 text-xs text-red-700 font-semibold flex items-center gap-2">
+                      <AlertTriangle className="h-4 w-4 shrink-0 text-red-600" />
+                      <span>{orderError}</span>
+                    </div>
+                  )}
+
+                  {/* Place Order CTA */}
+                  <div className="pt-1">
+                    <button
+                      type="button"
+                      disabled={placingOrder}
+                      onClick={handlePlaceOrder}
+                      className="btn-3d-primary w-full py-3 px-4 rounded-xl text-white font-black text-sm flex items-center justify-center gap-2 shadow-lg shadow-blue-500/25 active:scale-95 transition cursor-pointer"
+                    >
+                      {placingOrder ? (
+                        <>
+                          <RefreshCw className="h-4 w-4 animate-spin" />
+                          <span>Placing Your Order...</span>
+                        </>
+                      ) : (
+                        <>
+                          <CheckCircle2 className="h-4 w-4" />
+                          <span>
+                            Place Order • {formatINR(cartGrandTotal)}
+                          </span>
+                        </>
+                      )}
+                    </button>
+                  </div>
+                </>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Order Confirmation Modal */}
+      {orderSuccessSale && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-xs p-4 overflow-y-auto">
+          <div className="w-full max-w-md rounded-2xl bg-white border border-slate-200 shadow-2xl p-6 text-center space-y-4 animate-in zoom-in-95 duration-150">
+            <div className="h-16 w-16 rounded-full bg-emerald-100 text-emerald-600 flex items-center justify-center mx-auto shadow-sm">
+              <CheckCircle2 className="h-9 w-9" />
+            </div>
+
+            <div>
+              <span className="rounded-full bg-emerald-50 border border-emerald-200 px-3 py-1 text-xs font-bold text-emerald-800 uppercase tracking-wider">
+                Order Confirmed
+              </span>
+              <h3 className="text-xl font-black text-slate-900 mt-2">
+                Order #{orderSuccessSale.bill_number}
+              </h3>
+              <p className="text-xs text-slate-600 mt-1">
+                {orderSuccessSale.notes?.includes("ROOM DELIVERY")
+                  ? "Your snacks are being prepared and will be delivered to your room shortly!"
+                  : "Your order is confirmed! Please collect your snacks from the canteen counter."}
+              </p>
+            </div>
+
+            <div className="rounded-xl bg-slate-50 border border-slate-200 p-3.5 text-xs text-left space-y-1.5">
+              <div className="flex justify-between text-slate-600">
+                <span>Student:</span>
+                <span className="font-bold text-slate-900">
+                  {orderSuccessSale.customer_name_snapshot}
+                </span>
+              </div>
+              {orderSuccessSale.room_number_snapshot && (
+                <div className="flex justify-between text-slate-600">
+                  <span>Room:</span>
+                  <span className="font-bold text-blue-700">
+                    Room {orderSuccessSale.room_number_snapshot}
+                  </span>
+                </div>
+              )}
+              <div className="flex justify-between text-slate-600">
+                <span>Total Amount:</span>
+                <span className="font-black text-slate-900">
+                  {formatINR(orderSuccessSale.payable_amount)}
+                </span>
+              </div>
+              <div className="flex justify-between text-slate-600">
+                <span>Payment:</span>
+                <span className="font-semibold text-slate-800">
+                  {orderSuccessSale.payment_methods_summary}
+                </span>
+              </div>
+            </div>
+
+            <div className="flex gap-2 pt-1">
+              <button
+                type="button"
+                onClick={() => {
+                  setReceiptSale(orderSuccessSale);
+                  setOrderSuccessSale(null);
+                }}
+                className="btn-3d-secondary flex-1 py-2.5 px-3 rounded-xl text-xs font-bold text-slate-800 flex items-center justify-center gap-1.5 cursor-pointer"
+              >
+                <ReceiptText className="h-4 w-4 text-blue-600" />
+                <span>View Receipt</span>
+              </button>
+              <button
+                type="button"
+                onClick={() => setOrderSuccessSale(null)}
+                className="btn-3d-primary flex-1 py-2.5 px-3 rounded-xl text-xs font-black text-white cursor-pointer"
+              >
+                Done
+              </button>
+            </div>
           </div>
         </div>
       )}
