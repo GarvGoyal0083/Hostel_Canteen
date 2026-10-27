@@ -30,6 +30,8 @@ import {
   ArrowRight,
   ShoppingCart,
   QrCode,
+  Download,
+  Maximize2,
   X,
 } from "lucide-react";
 import {
@@ -138,6 +140,7 @@ export function CustomerPortalView({
   const [orderSuccessSale, setOrderSuccessSale] = useState<SaleRecord | null>(
     null
   );
+  const [showPortalQrModal, setShowPortalQrModal] = useState(false);
 
   useEffect(() => {
     if (currentCustomer?.room_number && !deliveryRoom) {
@@ -1655,7 +1658,7 @@ export function CustomerPortalView({
                   </div>
 
                   {/* Payment Method Selection */}
-                  <div className="space-y-2 pt-2 border-t border-slate-100">
+                  <div className="space-y-3 pt-2 border-t border-slate-100">
                     <span className="text-xs font-bold text-slate-500 uppercase tracking-wider block">
                       Payment Mode
                     </span>
@@ -1680,38 +1683,105 @@ export function CustomerPortalView({
                       <button
                         type="button"
                         onClick={() => setOrderPaymentMethod("UPI")}
-                        className={`p-3 rounded-xl border text-center transition cursor-pointer ${
+                        className={`p-3 rounded-xl border text-center transition cursor-pointer relative ${
                           orderPaymentMethod === "UPI"
-                            ? "bg-blue-50 border-blue-400 text-blue-950 font-extrabold ring-2 ring-blue-400/30 shadow-xs"
+                            ? "bg-gradient-to-br from-blue-50 to-indigo-50 border-blue-500 text-blue-950 font-extrabold ring-2 ring-blue-500/40 shadow-sm"
                             : "bg-white border-slate-200 text-slate-700 hover:bg-slate-50"
                         }`}
                       >
+                        <span className="absolute -top-2 right-2 rounded-full bg-blue-600 text-white text-[9px] font-black px-2 py-0.5 shadow-xs uppercase tracking-wider animate-pulse">
+                          QR Available
+                        </span>
                         <QrCode className="h-5 w-5 mx-auto mb-1 text-blue-700" />
                         <span className="text-xs font-extrabold">UPI Payment</span>
-                        <div className="text-[10px] text-blue-800 font-medium mt-0.5">
+                        <div className="text-[10px] text-blue-700 font-bold mt-0.5">
                           Pay now via QR Code
                         </div>
                       </button>
                     </div>
 
+                    {/* HIGHLY HIGHLIGHTED UPI QR CODE CARD */}
                     {orderPaymentMethod === "UPI" && (
-                      <div className="p-3 bg-blue-50 border border-blue-200 rounded-xl space-y-2 animate-in fade-in duration-150">
-                        <div className="flex items-center justify-between text-xs">
-                          <span className="font-bold text-blue-950">
-                            Scan UPI QR &amp; Enter UTR
-                          </span>
-                          <span className="font-mono text-blue-800 text-[11px]">
-                            Amount: {formatINR(cartGrandTotal)}
+                      <div className="rounded-2xl bg-gradient-to-br from-blue-600 via-indigo-600 to-blue-700 p-4 text-white shadow-xl space-y-3.5 animate-in fade-in zoom-in-95 duration-200 border border-blue-400/40">
+                        {/* Header & QR Badge */}
+                        <div className="flex items-center justify-between">
+                          <div className="flex items-center gap-2">
+                            <div className="h-8 w-8 rounded-xl bg-white/20 flex items-center justify-center shadow-xs">
+                              <QrCode className="h-4 w-4 text-white" />
+                            </div>
+                            <div>
+                              <div className="font-black text-xs tracking-tight">
+                                Canteen UPI Payment QR
+                              </div>
+                              <div className="text-[10px] text-blue-100">
+                                Scan &amp; Pay Instantly
+                              </div>
+                            </div>
+                          </div>
+                          <span className="rounded-full bg-emerald-400 text-emerald-950 font-black text-xs px-3 py-1 shadow-xs">
+                            Pay {formatINR(cartGrandTotal)}
                           </span>
                         </div>
-                        <input
-                          type="text"
-                          required
-                          value={orderUpiRef}
-                          onChange={(e) => setOrderUpiRef(e.target.value)}
-                          placeholder="Enter 12-digit UPI Reference (UTR) *"
-                          className="w-full rounded-lg border border-blue-300 bg-white px-3 py-1.5 text-xs font-mono text-slate-900 focus:outline-none"
-                        />
+
+                        {/* High Visibility Framed QR Image Container */}
+                        <div className="bg-white rounded-2xl p-3 text-center shadow-md">
+                          <div
+                            className="relative group cursor-pointer inline-block"
+                            onClick={() => setShowPortalQrModal(true)}
+                            title="Click to view full size QR code"
+                          >
+                            <img
+                              src="/canteen-upi-qr.jpg"
+                              alt="Hostel Canteen UPI QR Code"
+                              className="w-48 h-48 mx-auto rounded-xl object-contain shadow-xs bg-white p-1 transition-transform group-hover:scale-102"
+                            />
+                            <div className="absolute inset-0 bg-black/40 rounded-xl opacity-0 group-hover:opacity-100 flex items-center justify-center text-white transition-opacity font-bold text-xs gap-1.5 backdrop-blur-2xs">
+                              <Maximize2 className="h-4 w-4" />
+                              <span>Tap to Enlarge</span>
+                            </div>
+                          </div>
+
+                          <div className="mt-2.5 flex items-center justify-center gap-2">
+                            <button
+                              type="button"
+                              onClick={() => setShowPortalQrModal(true)}
+                              className="btn-3d-primary inline-flex items-center gap-1.5 text-xs font-black text-white py-1.5 px-3 rounded-xl cursor-pointer shadow-sm hover:scale-105 active:scale-95 transition"
+                            >
+                              <Maximize2 className="h-3.5 w-3.5" />
+                              <span>View Full Size QR</span>
+                            </button>
+                            <a
+                              href="/canteen-upi-qr.jpg"
+                              download="Hostel_Canteen_UPI_QR.jpg"
+                              className="btn-3d-secondary inline-flex items-center gap-1.5 text-xs font-bold text-slate-800 py-1.5 px-3 rounded-xl cursor-pointer transition shadow-2xs"
+                            >
+                              <Download className="h-3.5 w-3.5 text-blue-600" />
+                              <span>Download</span>
+                            </a>
+                          </div>
+
+                          <div className="mt-2 text-[10px] text-slate-500 font-bold flex items-center justify-center gap-1">
+                            <span>PhonePe</span> • <span>GPay</span> • <span>Paytm</span> • <span>BHIM UPI</span>
+                          </div>
+                        </div>
+
+                        {/* 12-Digit UTR Input Form */}
+                        <div className="space-y-1.5 pt-1">
+                          <label className="text-[11px] font-black text-white block">
+                            Enter 12-Digit UPI Reference (UTR) *
+                          </label>
+                          <input
+                            type="text"
+                            required
+                            value={orderUpiRef}
+                            onChange={(e) => setOrderUpiRef(e.target.value)}
+                            placeholder="e.g. 331298457610 (from payment receipt)"
+                            className="w-full rounded-xl border border-white/40 bg-white px-3 py-2 text-xs font-mono font-bold text-slate-900 focus:outline-none focus:ring-2 focus:ring-white shadow-sm placeholder:font-sans placeholder:font-normal placeholder:text-slate-400"
+                          />
+                          <p className="text-[10px] text-blue-100 font-medium">
+                            ✓ Open GPay/PhonePe/Paytm &rarr; scan QR &rarr; pay {formatINR(cartGrandTotal)} &rarr; copy UTR number here.
+                          </p>
+                        </div>
                       </div>
                     )}
                   </div>
@@ -1850,6 +1920,56 @@ export function CustomerPortalView({
                 className="btn-3d-primary flex-1 py-2.5 px-3 rounded-xl text-xs font-black text-white cursor-pointer"
               >
                 Done
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Full-Screen High-Visibility UPI QR Modal */}
+      {showPortalQrModal && (
+        <div className="fixed inset-0 z-60 bg-black/75 backdrop-blur-sm flex items-center justify-center p-4">
+          <div className="card-3d bg-white rounded-3xl max-w-sm w-full p-6 shadow-2xl border border-slate-200 text-center relative animate-in fade-in zoom-in-95 duration-200">
+            <button
+              type="button"
+              onClick={() => setShowPortalQrModal(false)}
+              className="absolute top-4 right-4 p-2 rounded-full text-slate-400 hover:text-slate-700 hover:bg-slate-100 transition cursor-pointer"
+              title="Close"
+            >
+              <X className="h-5 w-5" />
+            </button>
+            <div className="inline-flex items-center justify-center h-12 w-12 rounded-2xl bg-blue-50 text-blue-600 mb-3 border border-blue-200 shadow-xs">
+              <QrCode className="h-6 w-6" />
+            </div>
+            <h3 className="text-lg font-black text-slate-900">Hostel Canteen UPI QR</h3>
+            <div className="mt-1 inline-block rounded-full bg-emerald-100 border border-emerald-300 text-emerald-800 text-xs font-black px-3 py-1">
+              Amount to Pay: {formatINR(cartGrandTotal)}
+            </div>
+            <div className="mt-4 bg-slate-50 p-3.5 rounded-2xl border border-slate-200/90 shadow-inner inline-block">
+              <img
+                src="/canteen-upi-qr.jpg"
+                alt="Hostel Canteen UPI QR Code"
+                className="w-64 h-64 mx-auto rounded-xl object-contain shadow-xs bg-white p-1"
+              />
+            </div>
+            <div className="mt-3 text-[11px] font-black text-slate-600 bg-slate-100 rounded-xl py-1.5 px-3">
+              PhonePe • Google Pay • Paytm • BHIM UPI
+            </div>
+            <div className="mt-4 flex gap-2">
+              <a
+                href="/canteen-upi-qr.jpg"
+                download="Hostel_Canteen_UPI_QR.jpg"
+                className="btn-3d-secondary flex-1 inline-flex items-center justify-center gap-1.5 py-2.5 text-xs font-bold text-slate-800 cursor-pointer"
+              >
+                <Download className="h-3.5 w-3.5 text-blue-600" />
+                <span>Save Image</span>
+              </a>
+              <button
+                type="button"
+                onClick={() => setShowPortalQrModal(false)}
+                className="btn-3d-primary flex-1 py-2.5 text-xs font-black text-white cursor-pointer"
+              >
+                Back to Cart
               </button>
             </div>
           </div>
