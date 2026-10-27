@@ -43,7 +43,7 @@ export function LoginView({
   onLoginSuccess,
   onCustomerLoginSuccess,
 }: LoginViewProps) {
-  const [portalMode, setPortalMode] = useState<"admin" | "customer">("admin");
+  const [portalMode, setPortalMode] = useState<"admin" | "customer">("customer");
 
   // Admin state
   const [email, setEmail] = useState("");
@@ -279,21 +279,6 @@ export function LoginView({
             <button
               type="button"
               onClick={() => {
-                setPortalMode("admin");
-                setErrorMsg(null);
-              }}
-              className={`rounded-lg py-2.5 px-3 text-xs font-semibold flex items-center justify-center gap-2 transition cursor-pointer ${
-                portalMode === "admin"
-                  ? "bg-white text-slate-900 shadow-xs"
-                  : "text-slate-600 hover:text-slate-900"
-              }`}
-            >
-              <ShieldCheck className="h-4 w-4 text-blue-600" />
-              <span>Admin Terminal</span>
-            </button>
-            <button
-              type="button"
-              onClick={() => {
                 setPortalMode("customer");
                 setErrorMsg(null);
               }}
@@ -305,6 +290,21 @@ export function LoginView({
             >
               <GraduationCap className="h-4 w-4 text-emerald-600" />
               <span>Student Portal</span>
+            </button>
+            <button
+              type="button"
+              onClick={() => {
+                setPortalMode("admin");
+                setErrorMsg(null);
+              }}
+              className={`rounded-lg py-2.5 px-3 text-xs font-semibold flex items-center justify-center gap-2 transition cursor-pointer ${
+                portalMode === "admin"
+                  ? "bg-white text-slate-900 shadow-xs"
+                  : "text-slate-600 hover:text-slate-900"
+              }`}
+            >
+              <ShieldCheck className="h-4 w-4 text-blue-600" />
+              <span>Admin Terminal</span>
             </button>
           </div>
 
