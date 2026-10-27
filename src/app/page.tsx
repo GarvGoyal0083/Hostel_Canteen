@@ -630,34 +630,6 @@ export default function HostelCanteenPosApp() {
             </div>
 
             <div className="flex items-center gap-2.5">
-              {/* Customer Privacy Mode Quick Toggle */}
-              <button
-                type="button"
-                onClick={togglePrivacyMode}
-                className={`rounded-xl px-3 py-1.5 text-xs font-bold flex items-center gap-1.5 cursor-pointer border transition shadow-xs ${
-                  privacyMode
-                    ? "bg-amber-500 text-white border-amber-600 hover:bg-amber-600 shadow-amber-500/20"
-                    : "bg-white text-slate-700 border-slate-300 hover:bg-slate-50"
-                }`}
-                title={
-                  privacyMode
-                    ? "Privacy Mode Active (Financial numbers concealed). Click to reveal."
-                    : "Customer Privacy Mode: Click to conceal sensitive revenue and profits when customers are at counter."
-                }
-              >
-                {privacyMode ? (
-                  <>
-                    <Eye className="h-3.5 w-3.5" />
-                    <span>Show Stats</span>
-                  </>
-                ) : (
-                  <>
-                    <EyeOff className="h-3.5 w-3.5 text-slate-500" />
-                    <span>Hide Analytics</span>
-                  </>
-                )}
-              </button>
-
               {/* Scan Snack Button - Highly Accessible at Top of Page */}
               <button
                 type="button"
