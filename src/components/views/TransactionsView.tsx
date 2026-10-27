@@ -12,6 +12,7 @@ import {
   Filter,
   ChevronDown,
   ChevronUp,
+  TrendingUp,
 } from "lucide-react";
 import { PaymentMethod, SaleRecord } from "@/types/pos";
 import {
@@ -28,6 +29,50 @@ interface TransactionsViewProps {
   sales: SaleRecord[];
   onRefresh: () => void;
   onSelectReceipt: (sale: SaleRecord) => void;
+}
+
+export function getSaleProfitStats(sale: SaleRecord) {
+  if (sale.sale_status === "Cancelled" || sale.sale_status === "Refunded") {
+    return {
+      cogs: 0,
+      netRevenue: 0,
+      profit: 0,
+      marginPercent: 0,
+      isRefunded: sale.sale_status === "Refunded",
+      isCancelled: sale.sale_status === "Cancelled",
+    };
+  }
+
+  // Calculate COGS accurately summing only non-refunded items
+  let cogs = 0;
+  if (sale.items && sale.items.length > 0) {
+    cogs = sale.items.reduce((acc, item) => {
+      const netQty = Math.max(0, item.quantity - (item.refunded_quantity || 0));
+      return acc + Number(item.purchase_price_at_sale || 0) * netQty;
+    }, 0);
+  } else {
+    cogs = Number(sale.cogs_amount ?? 0);
+  }
+
+  const netRevenue = Math.max(
+    0,
+    Number(sale.payable_amount || 0) - Number(sale.refunded_amount || 0)
+  );
+
+  let profit = netRevenue - cogs;
+  profit = Math.round(profit * 100) / 100;
+
+  const marginPercent =
+    netRevenue > 0 ? Math.round((profit / netRevenue) * 1000) / 10 : 0;
+
+  return {
+    cogs: Math.round(cogs * 100) / 100,
+    netRevenue: Math.round(netRevenue * 100) / 100,
+    profit,
+    marginPercent,
+    isRefunded: false,
+    isCancelled: false,
+  };
 }
 
 export function TransactionsView({
@@ -182,6 +227,33 @@ export function TransactionsView({
     upiRefFilter,
     sortBy,
   ]);
+
+  const summaryStats = useMemo(() => {
+    let totalSales = 0;
+    let totalCogs = 0;
+    let totalProfit = 0;
+    let totalDue = 0;
+
+    for (const sale of filteredSales) {
+      if (sale.sale_status === "Cancelled") continue;
+      const stats = getSaleProfitStats(sale);
+      totalSales += stats.netRevenue;
+      totalCogs += stats.cogs;
+      totalProfit += stats.profit;
+      totalDue += sale.outstanding_amount || 0;
+    }
+
+    const marginPercent =
+      totalSales > 0 ? Math.round((totalProfit / totalSales) * 1000) / 10 : 0;
+
+    return {
+      totalSales: Math.round(totalSales * 100) / 100,
+      totalCogs: Math.round(totalCogs * 100) / 100,
+      totalProfit: Math.round(totalProfit * 100) / 100,
+      totalDue: Math.round(totalDue * 100) / 100,
+      marginPercent,
+    };
+  }, [filteredSales]);
 
   const clearFilters = () => {
     setBillIdFilter("");
@@ -373,6 +445,7 @@ export function TransactionsView({
 
     if (filteredSales.length > 0) {
       filteredSales.forEach((s) => {
+        const sStats = getSaleProfitStats(s);
         const row = [
           s.bill_number,
           formatIST(s.created_at),
@@ -394,8 +467,8 @@ export function TransactionsView({
           s.paid_amount,
           s.refunded_amount,
           s.outstanding_amount,
-          s.cogs_amount,
-          s.estimated_gross_profit,
+          sStats.cogs,
+          sStats.profit,
           s.payment_methods_summary,
           s.upi_references_summary || "",
           s.payments.length > 0 ? formatIST(s.payments[0].payment_date) : "",
@@ -445,6 +518,48 @@ export function TransactionsView({
             <Download className="h-4 w-4" />
             Export Report (CSV)
           </button>
+        </div>
+      </div>
+
+      {/* Financial Profit & Sales Summary Strip */}
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+        <div className="card-3d rounded-xl p-3.5 bg-white border border-slate-200">
+          <div className="text-[11px] font-bold text-gray-500 uppercase tracking-wider">
+            Net Sales ({filteredSales.length} Bills)
+          </div>
+          <div className="text-lg font-black text-slate-900 mt-1">
+            {formatINR(summaryStats.totalSales)}
+          </div>
+        </div>
+
+        <div className="card-3d rounded-xl p-3.5 bg-white border border-slate-200">
+          <div className="text-[11px] font-bold text-gray-500 uppercase tracking-wider">
+            Total Item Cost (COGS)
+          </div>
+          <div className="text-lg font-black text-slate-900 mt-1">
+            {formatINR(summaryStats.totalCogs)}
+          </div>
+        </div>
+
+        <div className="card-3d rounded-xl p-3.5 bg-gradient-to-br from-emerald-50 to-teal-50 border border-emerald-200 shadow-xs">
+          <div className="text-[11px] font-extrabold text-emerald-800 uppercase tracking-wider flex items-center justify-between">
+            <span>Net Profit</span>
+            <span className="text-[10px] bg-emerald-200/80 text-emerald-950 px-1.5 py-0.5 rounded font-black">
+              {summaryStats.marginPercent}% margin
+            </span>
+          </div>
+          <div className="text-lg font-black text-emerald-900 mt-1">
+            +{formatINR(summaryStats.totalProfit)}
+          </div>
+        </div>
+
+        <div className="card-3d rounded-xl p-3.5 bg-white border border-slate-200">
+          <div className="text-[11px] font-bold text-gray-500 uppercase tracking-wider">
+            Pending Udhaar Due
+          </div>
+          <div className="text-lg font-black text-amber-900 mt-1">
+            {formatINR(summaryStats.totalDue)}
+          </div>
         </div>
       </div>
 
@@ -600,7 +715,9 @@ export function TransactionsView({
             No transactions match the selected filters.
           </div>
         ) : (
-          filteredSales.map((sale) => (
+          filteredSales.map((sale) => {
+            const profitStats = getSaleProfitStats(sale);
+            return (
             <div
               key={sale.id}
               className="card-3d rounded-2xl p-4 bg-white border border-slate-200 shadow-xs space-y-3"
@@ -730,6 +847,38 @@ export function TransactionsView({
                 </div>
               </div>
 
+              {/* Profit According to Sale Section */}
+              <div className="rounded-xl bg-gradient-to-r from-emerald-50 to-teal-50/70 border border-emerald-200/90 p-2.5 flex items-center justify-between text-xs">
+                <div className="flex items-center gap-2">
+                  <div className="h-7 w-7 rounded-lg bg-emerald-600 text-white flex items-center justify-center shrink-0">
+                    <TrendingUp className="h-4 w-4" />
+                  </div>
+                  <div>
+                    <div className="text-[10px] font-black uppercase tracking-wider text-emerald-800">
+                      Sale Profit
+                    </div>
+                    <div className="font-black text-sm text-emerald-950">
+                      {profitStats.isRefunded ? (
+                        <span className="text-gray-400 font-bold">₹0.00 (Refunded)</span>
+                      ) : (
+                        `${profitStats.profit >= 0 ? "+" : ""}${formatINR(profitStats.profit)}`
+                      )}
+                    </div>
+                  </div>
+                </div>
+
+                {!profitStats.isRefunded && (
+                  <div className="text-right">
+                    <div className="text-[10px] text-emerald-800 font-semibold">
+                      Cost: {formatINR(profitStats.cogs)}
+                    </div>
+                    <div className="inline-block text-[10px] font-black px-1.5 py-0.5 rounded-md bg-emerald-200/80 text-emerald-950 mt-0.5">
+                      {profitStats.marginPercent}% margin
+                    </div>
+                  </div>
+                )}
+              </div>
+
               {/* Action Buttons Row */}
               <div className="flex items-center gap-2 pt-2.5 border-t border-slate-100">
                 <button
@@ -767,7 +916,8 @@ export function TransactionsView({
                   )}
               </div>
             </div>
-          ))
+            );
+          })
         )}
       </div>
 
@@ -788,6 +938,9 @@ export function TransactionsView({
                 <th className="px-4 py-3 text-right font-semibold">
                   Payable / Paid / Due
                 </th>
+                <th className="px-4 py-3 text-right font-semibold text-emerald-800">
+                  Profit & Margin
+                </th>
                 <th className="px-4 py-3 font-semibold">
                   Method & Manual UPI Ref
                 </th>
@@ -799,14 +952,16 @@ export function TransactionsView({
               {filteredSales.length === 0 ? (
                 <tr>
                   <td
-                    colSpan={8}
+                    colSpan={9}
                     className="py-8 text-center text-gray-500"
                   >
                     No transactions match the selected filters.
                   </td>
                 </tr>
               ) : (
-                filteredSales.map((sale) => (
+                filteredSales.map((sale) => {
+                  const profitStats = getSaleProfitStats(sale);
+                  return (
                   <tr key={sale.id} className="hover:bg-gray-50 align-top">
                     <td className="px-4 py-3">
                       <div className="font-bold text-[#2563EB]">
@@ -891,6 +1046,38 @@ export function TransactionsView({
                       )}
                     </td>
 
+                    <td className="px-4 py-3 text-right">
+                      {profitStats.isRefunded ? (
+                        <div className="text-gray-400 font-semibold text-[11px]">
+                          <span className="line-through">₹0.00</span>
+                          <div className="text-[10px] text-red-600 font-bold">
+                            Refunded
+                          </div>
+                        </div>
+                      ) : (
+                        <div>
+                          <div
+                            className={`font-black text-xs ${
+                              profitStats.profit > 0
+                                ? "text-emerald-700"
+                                : profitStats.profit < 0
+                                ? "text-red-700"
+                                : "text-gray-700"
+                            }`}
+                          >
+                            {profitStats.profit >= 0 ? "+" : ""}
+                            {formatINR(profitStats.profit)}
+                          </div>
+                          <div className="text-[10px] text-gray-500 font-medium mt-0.5">
+                            Cost: {formatINR(profitStats.cogs)}
+                          </div>
+                          <div className="mt-1 inline-block text-[10px] font-bold px-1.5 py-0.5 rounded bg-emerald-50 text-emerald-800 border border-emerald-200">
+                            {profitStats.marginPercent}% margin
+                          </div>
+                        </div>
+                      )}
+                    </td>
+
                     <td className="px-4 py-3">
                       <div className="font-semibold text-[#111827]">
                         {sale.payment_methods_summary}
@@ -952,7 +1139,8 @@ export function TransactionsView({
                       </div>
                     </td>
                   </tr>
-                ))
+                  );
+                })
               )}
             </tbody>
           </table>
