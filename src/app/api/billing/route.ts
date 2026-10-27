@@ -37,6 +37,7 @@ export async function POST(req: NextRequest) {
         customer_id: String(body.customer_id || ""),
         items: Array.isArray(body.items) ? body.items : [],
         notes: typeof body.notes === "string" ? body.notes : undefined,
+        discount: body.discount,
       },
       auth.user
     );

@@ -29,6 +29,7 @@ export async function PATCH(
           customer_id: typeof body.customer_id === "string" ? body.customer_id : undefined,
           items: Array.isArray(body.items) ? body.items : [],
           notes: typeof body.notes === "string" ? body.notes : undefined,
+          discount: body.discount,
         },
         auth.user
       );

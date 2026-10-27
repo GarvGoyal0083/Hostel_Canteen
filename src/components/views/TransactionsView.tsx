@@ -806,6 +806,9 @@ export function TransactionsView({
                     <div className="text-blue-600 text-[11px] font-semibold">
                       Disc: -{formatINR(sale.total_discount_amount)}
                       {sale.discount_reason && ` (${sale.discount_reason})`}
+                      {sale.discount_given_by_user_id && sale.discount_authorized_by && (
+                        <> by {sale.discount_authorized_by}</>
+                      )}
                     </div>
                   )}
                   <div className="text-slate-500 text-[11px] font-medium pt-0.5">
@@ -1021,6 +1024,11 @@ export function TransactionsView({
                           {sale.discount_reason && (
                             <div className="text-[10px] text-gray-500">
                               ({sale.discount_reason})
+                            </div>
+                          )}
+                          {sale.discount_given_by_user_id && sale.discount_authorized_by && (
+                            <div className="text-[10px] text-gray-500">
+                              by {sale.discount_authorized_by}
                             </div>
                           )}
                         </div>

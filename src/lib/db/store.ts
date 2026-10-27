@@ -1135,7 +1135,8 @@ function recalculateSalePaymentSummary(db: DatabaseSchema, sale: SaleRecord): vo
 export async function createSaleTransaction(
   input: CreateSaleInput,
   adminName: string,
-  creator?: { id: string }
+  // limitExecutiveDiscount: the bill discount is capped by executiveDiscountLimit (sales executives only).
+  creator?: { id: string; limitExecutiveDiscount?: boolean }
 ): Promise<{
   sale: SaleRecord;
   duplicateUpiWarnings: string[];
@@ -1298,6 +1299,10 @@ export async function createSaleTransaction(
       billDiscAmount = round2((subtotalAfterItemDiscounts * billDiscVal) / 100);
     }
 
+    if (creator?.limitExecutiveDiscount) {
+      assertExecutiveDiscountAllowed(billDiscAmount, subtotalAmount, totalCogs);
+    }
+
     const totalDiscountAmount = round2(itemDiscountTotal + billDiscAmount);
     const payableAmount = round2(subtotalAmount - totalDiscountAmount);
     if (payableAmount < 0) {
@@ -1436,6 +1441,8 @@ export async function createSaleTransaction(
         totalDiscountAmount > 0
           ? input.discount_authorized_by?.trim() || adminName
           : null,
+      discount_given_by_user_id:
+        creator?.limitExecutiveDiscount && totalDiscountAmount > 0 ? creator.id : null,
       payable_amount: payableAmount,
       paid_amount: 0,
       refunded_amount: 0,
@@ -2982,6 +2989,68 @@ export function toExecutiveSaleView(
   };
 }
 
+// ---- Executive discount limit ----
+// Business rule, deliberately never exposed to executives: a bill whose profit
+// (selling total - cost total, before discount) is above the threshold may carry a
+// small discount. Callers only ever send the resulting number to the browser.
+const EXEC_DISCOUNT_MIN_PROFIT = 40;
+const EXEC_DISCOUNT_MAX_AMOUNT = 20;
+
+function executiveDiscountLimit(subtotal: number, cogs: number): number {
+  return round2(subtotal - cogs) > EXEC_DISCOUNT_MIN_PROFIT
+    ? Math.min(EXEC_DISCOUNT_MAX_AMOUNT, subtotal)
+    : 0;
+}
+
+function assertExecutiveDiscountAllowed(discount: number, subtotal: number, cogs: number): void {
+  const limit = executiveDiscountLimit(subtotal, cogs);
+  if (discount > limit) {
+    throw new Error(
+      limit > 0
+        ? `Discount cannot be more than ₹${limit} on this bill.`
+        : "Discount is not available for this bill."
+    );
+  }
+}
+
+function parseExecutiveDiscount(value: unknown): number {
+  const n = Number(value ?? 0);
+  if (!Number.isFinite(n) || n < 0) throw new Error("Discount must be zero or more.");
+  return round2(n);
+}
+
+/**
+ * Largest discount an executive may give on this cart. Returns only the number.
+ * When editing a bill, products already on it keep the prices snapshotted on that bill,
+ * mirroring editExecutiveSale so the quote matches what the save will enforce.
+ */
+export function getExecutiveDiscountMax(
+  items: Array<{ product_id: string; quantity: number }>,
+  editingSaleId?: string
+): number {
+  const db = readDatabase();
+  const sale = editingSaleId
+    ? db.sales.find((s) => s.id === editingSaleId || s.bill_number === editingSaleId)
+    : undefined;
+  const oldByProduct = new Map((sale?.items || []).map((i) => [i.product_id, i]));
+  const qtyByProduct = new Map<string, number>();
+  for (const it of items) {
+    const qty = Math.floor(Number(it.quantity));
+    if (!Number.isFinite(qty) || qty <= 0) continue;
+    qtyByProduct.set(it.product_id, (qtyByProduct.get(it.product_id) || 0) + qty);
+  }
+  let subtotal = 0;
+  let cogs = 0;
+  for (const [productId, qty] of qtyByProduct.entries()) {
+    const product = db.products.find((p) => p.id === productId);
+    if (!product) continue;
+    const old = oldByProduct.get(productId);
+    subtotal = round2(subtotal + (old ? old.selling_price_at_sale : product.selling_price) * qty);
+    cogs = round2(cogs + (old ? old.purchase_price_at_sale : product.purchase_price) * qty);
+  }
+  return executiveDiscountLimit(subtotal, cogs);
+}
+
 // ---- Create / edit / cancel (own, unpaid bills only) ----
 
 export async function createExecutiveSale(
@@ -2990,6 +3059,7 @@ export async function createExecutiveSale(
     customer_id: string;
     items: Array<{ product_id: string; quantity: number }>;
     notes?: string;
+    discount?: number;
   },
   executive: AdminUser
 ): Promise<SaleRecord> {
@@ -3000,6 +3070,7 @@ export async function createExecutiveSale(
     (c) => c.id === input.customer_id && c.is_active
   );
   if (!customer) throw new Error("Selected student was not found.");
+  const discount = parseExecutiveDiscount(input.discount);
 
   const { sale } = await createSaleTransaction(
     {
@@ -3014,9 +3085,13 @@ export async function createExecutiveSale(
       })),
       payments: [], // executives never collect payment; the bill goes to the student's dues
       notes: input.notes,
+      bill_discount_type: discount > 0 ? "fixed" : "none",
+      bill_discount_value: discount,
+      discount_reason: discount > 0 ? "Sales executive discount" : undefined,
+      discount_authorized_by: executive.full_name,
     },
     executive.full_name,
-    { id: executive.id }
+    { id: executive.id, limitExecutiveDiscount: true }
   );
   return sale;
 }
@@ -3045,6 +3120,7 @@ export async function editExecutiveSale(
     customer_id?: string;
     items: Array<{ product_id: string; quantity: number }>;
     notes?: string;
+    discount?: number;
   },
   executive: AdminUser
 ): Promise<SaleRecord> {
@@ -3094,6 +3170,26 @@ export async function editExecutiveSale(
           `Insufficient stock for "${product.name}". Available: ${available}, Requested: ${qty}.`
         );
       }
+    }
+
+    // 3b. Recalculate the discount limit for the new cart (same prices step 5 will use),
+    //     still before any stock is touched, so a rejected edit changes nothing.
+    const discount = parseExecutiveDiscount(input.discount);
+    {
+      const oldLines = new Map(sale.items.map((i) => [i.product_id, i]));
+      let checkSubtotal = 0;
+      let checkCogs = 0;
+      for (const [productId, qty] of requested.entries()) {
+        const product = db.products.find((p) => p.id === productId)!;
+        const old = oldLines.get(productId);
+        checkSubtotal = round2(
+          checkSubtotal + (old ? old.selling_price_at_sale : product.selling_price) * qty
+        );
+        checkCogs = round2(
+          checkCogs + (old ? old.purchase_price_at_sale : product.purchase_price) * qty
+        );
+      }
+      assertExecutiveDiscountAllowed(discount, checkSubtotal, checkCogs);
     }
 
     const nowIso = new Date().toISOString();
@@ -3196,13 +3292,16 @@ export async function editExecutiveSale(
     sale.room_number_snapshot = newCustomer.room_number || null;
     sale.subtotal_amount = subtotal;
     sale.item_discount_total = 0;
-    sale.bill_discount_type = "none";
-    sale.bill_discount_value = 0;
-    sale.bill_discount_amount = 0;
-    sale.total_discount_amount = 0;
-    sale.payable_amount = subtotal;
+    sale.bill_discount_type = discount > 0 ? "fixed" : "none";
+    sale.bill_discount_value = discount;
+    sale.bill_discount_amount = discount;
+    sale.total_discount_amount = discount;
+    sale.discount_reason = discount > 0 ? "Sales executive discount" : null;
+    sale.discount_authorized_by = discount > 0 ? executive.full_name : null;
+    sale.discount_given_by_user_id = discount > 0 ? executive.id : null;
+    sale.payable_amount = round2(subtotal - discount);
     sale.cogs_amount = totalCogs;
-    sale.estimated_gross_profit = round2(subtotal - totalCogs);
+    sale.estimated_gross_profit = round2(sale.payable_amount - totalCogs);
     if (input.notes !== undefined) sale.notes = String(input.notes).trim() || null;
     sale.updated_by = executive.full_name;
     sale.updated_at = nowIso;
@@ -3299,8 +3398,10 @@ function totalsForSales(sales: SaleRecord[]): {
   total_sales: number;
   profit: number;
   commission: number;
+  discount: number;
 } {
   let totalSales = 0;
+  let discount = 0;
   let profit = 0;
   let commission = 0;
   let bills = 0;
@@ -3310,10 +3411,11 @@ function totalsForSales(sales: SaleRecord[]): {
     bills += 1;
     totalSales = round2(totalSales + fin.activeNet);
     profit = round2(profit + fin.activeProfit);
+    discount = round2(discount + fin.activeDiscounts);
     const rate = s.commission_rate_percent ?? DEFAULT_COMMISSION_RATE_PERCENT;
     commission = round2(commission + Math.max(0, fin.activeProfit) * (rate / 100));
   }
-  return { bills, total_sales: totalSales, profit, commission };
+  return { bills, total_sales: totalSales, profit, commission, discount };
 }
 
 /** Everything an executive may see about their own sales. Never includes cost or profit. */
@@ -3355,6 +3457,7 @@ export function getExecutivePerformance(period: ExecutivePeriod): {
     total_sales: number;
     profit_generated: number;
     commission_owed: number;
+    total_discount_given: number;
   }>;
 } {
   const db = readDatabase();
@@ -3372,6 +3475,7 @@ export function getExecutivePerformance(period: ExecutivePeriod): {
         total_sales: t.total_sales,
         profit_generated: t.profit,
         commission_owed: t.commission,
+        total_discount_given: t.discount,
       };
     })
     .sort((a, b) => b.total_sales - a.total_sales);

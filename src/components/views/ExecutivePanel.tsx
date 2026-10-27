@@ -57,6 +57,7 @@ interface MySale {
   payment_status: string;
   sale_status: string;
   notes?: string | null;
+  total_discount_amount?: number;
   created_at: string;
   items: MySaleItem[];
   can_modify: boolean;
@@ -200,6 +201,8 @@ function ExecutiveBilling({
   const [success, setSuccess] = useState<string | null>(null);
   const [idempotencyKey, setIdempotencyKey] = useState(newIdempotencyKey);
   const [addStudentOpen, setAddStudentOpen] = useState(false);
+  const [discount, setDiscount] = useState("");
+  const [maxDiscount, setMaxDiscount] = useState(0);
 
   const loadCatalog = useCallback(async () => {
     try {
@@ -228,10 +231,12 @@ function ExecutiveBilling({
       setCart(next);
       setCustomerId(editingSale.customer_id || "");
       setNotes(editingSale.notes || "");
+      setDiscount(editingSale.total_discount_amount ? String(editingSale.total_discount_amount) : "");
     } else {
       setCart({});
       setCustomerId("");
       setNotes("");
+      setDiscount("");
     }
     setError(null);
     setSuccess(null);
@@ -306,6 +311,39 @@ function ExecutiveBilling({
     0
   );
 
+  // Ask the server how much discount this cart allows (it sends back only the number).
+  useEffect(() => {
+    if (cartLines.length === 0) {
+      setMaxDiscount(0);
+      return;
+    }
+    let cancelled = false;
+    const items = cartLines.map((l) => ({ product_id: l.product.id, quantity: l.quantity }));
+    const timer = setTimeout(async () => {
+      try {
+        const res = await fetch("/api/billing/discount-limit", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ items, sale_id: editingSale?.id }),
+        });
+        if (!res.ok || cancelled) return;
+        const json = await res.json();
+        const max = Number(json.max_discount) || 0;
+        setMaxDiscount(max);
+        // Pull an already-typed discount down if the cart no longer allows it
+        setDiscount((d) => (Number(d) > max ? (max > 0 ? String(max) : "") : d));
+      } catch {
+        // The server still enforces the limit on save
+      }
+    }, 250);
+    return () => {
+      cancelled = true;
+      clearTimeout(timer);
+    };
+  }, [cartLines, editingSale]);
+
+  const discountAmount = Math.min(Math.max(Number(discount) || 0, 0), maxDiscount);
+
   const setQty = (p: BillingProduct, qty: number) => {
     const clamped = Math.max(0, Math.min(qty, availableStock(p)));
     setCart((prev) => {
@@ -342,6 +380,7 @@ function ExecutiveBilling({
               customer_id: customerId,
               items,
               notes,
+              discount: discountAmount,
             }),
           })
         : await fetch("/api/billing", {
@@ -352,6 +391,7 @@ function ExecutiveBilling({
               customer_id: customerId,
               items,
               notes,
+              discount: discountAmount,
             }),
           });
       const json = await res.json();
@@ -366,6 +406,7 @@ function ExecutiveBilling({
         setCart({});
         setCustomerId("");
         setNotes("");
+        setDiscount("");
         setIdempotencyKey(newIdempotencyKey());
         await loadCatalog();
       }
@@ -533,9 +574,42 @@ function ExecutiveBilling({
             </div>
           )}
 
+          {cartLines.length > 0 && (
+            <div className="space-y-1.5 pt-1">
+              <div className="flex items-center justify-between gap-3 text-xs">
+                <label htmlFor="exec-discount" className="font-semibold text-slate-700">
+                  Discount (₹)
+                </label>
+                <input
+                  id="exec-discount"
+                  type="number"
+                  inputMode="decimal"
+                  min={0}
+                  max={maxDiscount}
+                  step="1"
+                  value={discount}
+                  disabled={maxDiscount <= 0}
+                  onChange={(e) => setDiscount(e.target.value)}
+                  placeholder="0"
+                  className="w-24 rounded-lg border border-gray-300 px-2 py-1.5 text-right text-xs disabled:bg-slate-100"
+                />
+              </div>
+              <p className="text-[11px] text-slate-500 text-right">
+                {maxDiscount > 0
+                  ? `Max ${formatINR(maxDiscount)}`
+                  : "Discount not available for this bill"}
+              </p>
+              {discountAmount > 0 && (
+                <div className="flex items-center justify-between text-xs text-slate-600">
+                  <span>Subtotal</span>
+                  <span>{formatINR(total)}</span>
+                </div>
+              )}
+            </div>
+          )}
           <div className="flex items-center justify-between text-sm font-black text-slate-900 pt-1">
-            <span>Total</span>
-            <span>{formatINR(total)}</span>
+            <span>{discountAmount > 0 ? "Total after discount" : "Total"}</span>
+            <span>{formatINR(total - discountAmount)}</span>
           </div>
         </div>
 

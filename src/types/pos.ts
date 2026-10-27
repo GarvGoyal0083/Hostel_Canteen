@@ -210,6 +210,8 @@ export interface SaleRecord {
   total_discount_amount: number;
   discount_reason?: string | null;
   discount_authorized_by?: string | null;
+  /** Set only when a sales executive gave the discount (admin discounts leave it empty). */
+  discount_given_by_user_id?: string | null;
   payable_amount: number;
   paid_amount: number;
   refunded_amount: number;

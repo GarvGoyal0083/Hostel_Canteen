@@ -13,6 +13,7 @@ interface PerformanceRow {
   total_sales: number;
   profit_generated: number;
   commission_owed: number;
+  total_discount_given: number;
 }
 
 const PERIODS: Array<{ id: Period; label: string }> = [
@@ -192,6 +193,7 @@ export function TeamView() {
                   <th className="py-2 pr-3 text-right">Bills</th>
                   <th className="py-2 pr-3 text-right">Total Sales</th>
                   <th className="py-2 pr-3 text-right">Profit Generated</th>
+                  <th className="py-2 pr-3 text-right">Discount Given</th>
                   <th className="py-2 pr-3 text-right">Commission Owed</th>
                   <th className="py-2 pr-3">Status</th>
                   <th className="py-2 text-right">Actions</th>
@@ -210,6 +212,9 @@ export function TeamView() {
                     </td>
                     <td className="py-2.5 pr-3 text-right font-semibold">
                       {formatINR(row.profit_generated)}
+                    </td>
+                    <td className="py-2.5 pr-3 text-right font-semibold">
+                      {formatINR(row.total_discount_given)}
                     </td>
                     <td className="py-2.5 pr-3 text-right font-black text-[#1D4ED8]">
                       {formatINR(row.commission_owed)}
