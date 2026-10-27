@@ -84,8 +84,9 @@ export async function POST(req: NextRequest) {
     const action = String(body.action || "login").toLowerCase();
     const name = String(body.name || "").trim();
     const roomNumber = String(body.room_number || "").trim();
-    const rawMobile = String(body.password || body.phone || body.mobile || "").trim();
-    const mobileDigits = normalizePhone(rawMobile);
+    const phone = String(body.phone || body.mobile || "").trim();
+    const password = String(body.password || "").trim();
+    const mobileDigits = normalizePhone(phone);
 
     const customers = listCustomers();
 
@@ -107,7 +108,13 @@ export async function POST(req: NextRequest) {
       }
       if (!mobileDigits || mobileDigits.length < 10) {
         return NextResponse.json(
-          { error: "A valid 10-digit mobile number is required (this will be your password)." },
+          { error: "A valid 10-digit mobile number is required." },
+          { status: 400 }
+        );
+      }
+      if (!password || password.length < 3) {
+        return NextResponse.json(
+          { error: "Please create a custom password (at least 3 characters)." },
           { status: 400 }
         );
       }
@@ -119,7 +126,7 @@ export async function POST(req: NextRequest) {
       if (existingPhone) {
         return NextResponse.json(
           {
-            error: `An account with this mobile number already exists for "${existingPhone.name}". Please Sign In using your Name and Mobile Number.`,
+            error: `An account with this mobile number already exists for "${existingPhone.name}". Please Sign In using your Name and Password.`,
           },
           { status: 400 }
         );
@@ -134,7 +141,7 @@ export async function POST(req: NextRequest) {
       if (existingNameRoom) {
         return NextResponse.json(
           {
-            error: `An account for "${name}" in Room ${roomNumber} already exists. Please Sign In with your mobile number.`,
+            error: `An account for "${name}" in Room ${roomNumber} already exists. Please Sign In with your password.`,
           },
           { status: 400 }
         );
@@ -145,6 +152,7 @@ export async function POST(req: NextRequest) {
           name,
           room_number: roomNumber,
           phone: mobileDigits,
+          password: password,
           notes: "Self-registered via Student Portal",
         },
         "Student Self-Portal"
@@ -158,7 +166,7 @@ export async function POST(req: NextRequest) {
     }
 
     // =========================================================================
-    // ACTION: SIGN IN EXISTING STUDENT (Requires Name/Room + Mobile Number Password)
+    // ACTION: SIGN IN EXISTING STUDENT (Requires Name/Room + Custom Password)
     // =========================================================================
     if (!name && !roomNumber) {
       return NextResponse.json(
@@ -166,14 +174,14 @@ export async function POST(req: NextRequest) {
         { status: 400 }
       );
     }
-    if (!rawMobile) {
+    if (!password) {
       return NextResponse.json(
-        { error: "Please enter your password or 10-digit registered mobile number." },
+        { error: "Please enter your password." },
         { status: 400 }
       );
     }
 
-    // Match student: candidate match by Name or Room, then verify password / mobile number
+    // Match student: candidate match by Name or Room, then verify custom password
     const candidateMatches = customers.filter((c) => {
       const nameMatch = name && c.name.toLowerCase().includes(name.toLowerCase());
       const roomMatch =
@@ -182,22 +190,25 @@ export async function POST(req: NextRequest) {
       return nameMatch || roomMatch;
     });
 
-    const isPasswordOrPhoneMatch = (c: typeof customers[0]) => {
-      if (c.password && c.password.trim() === rawMobile) return true;
-      if (mobileDigits.length >= 4 && c.password && normalizePhone(c.password) === mobileDigits) return true;
-      if (mobileDigits.length >= 10 && normalizePhone(c.phone) === mobileDigits) return true;
+    const isPasswordMatch = (c: typeof customers[0]) => {
+      // 1. Primary check: Custom password match
+      if (c.password && c.password.trim() === password) return true;
+      // 2. Legacy fallback: if customer was created prior to custom passwords
+      if (!c.password && c.phone && normalizePhone(c.phone) === normalizePhone(password)) {
+        return true;
+      }
       return false;
     };
 
     const verifiedCustomer =
-      candidateMatches.find(isPasswordOrPhoneMatch) ||
-      customers.find(isPasswordOrPhoneMatch);
+      candidateMatches.find(isPasswordMatch) ||
+      customers.find(isPasswordMatch);
 
     if (!verifiedCustomer) {
       return NextResponse.json(
         {
           error:
-            "Invalid Name or Password / Mobile Number. If you are a new student, please click 'Register as New Student'.",
+            "Invalid Name or Password. Please check your password or register if you are a new student.",
         },
         { status: 401 }
       );

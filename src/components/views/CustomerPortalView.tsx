@@ -109,6 +109,8 @@ export function CustomerPortalView({
   const [regName, setRegName] = useState("");
   const [regRoom, setRegRoom] = useState("");
   const [regMobile, setRegMobile] = useState("");
+  const [regPassword, setRegPassword] = useState("");
+  const [showRegPassword, setShowRegPassword] = useState(false);
 
   const [loginError, setLoginError] = useState<string | null>(null);
   const [submittingLogin, setSubmittingLogin] = useState(false);
@@ -157,6 +159,7 @@ export function CustomerPortalView({
               name: regName.trim(),
               room_number: regRoom.trim(),
               phone: regMobile.trim(),
+              password: regPassword.trim(),
             }
           : {
               action: "login",
@@ -179,6 +182,7 @@ export function CustomerPortalView({
       setRegName("");
       setRegRoom("");
       setRegMobile("");
+      setRegPassword("");
       await fetchPortalData(data.customer.id);
     } catch (err) {
       setLoginError(err instanceof Error ? err.message : "Failed to sign in.");
@@ -1021,7 +1025,7 @@ export function CustomerPortalView({
                   <div>
                     <div className="flex items-center justify-between mb-1">
                       <label className="text-[11px] font-bold text-slate-700">
-                        Password (Mobile No. or Custom Password) *
+                        Password *
                       </label>
                       <span className="text-[10px] text-blue-600 font-semibold">
                         🔒 Portal password
@@ -1034,7 +1038,7 @@ export function CustomerPortalView({
                         required
                         value={loginPassword}
                         onChange={(e) => setLoginPassword(e.target.value)}
-                        placeholder="Enter password or mobile number"
+                        placeholder="Enter your custom password"
                         maxLength={30}
                         className="input-3d w-full rounded-xl pl-9 pr-9 py-2 text-xs text-[#111827]"
                       />
@@ -1097,8 +1101,35 @@ export function CustomerPortalView({
                       />
                     </div>
                   </div>
+                  <div>
+                    <div className="flex items-center justify-between mb-1">
+                      <label className="text-[11px] font-bold text-slate-700">
+                        Create Password *
+                      </label>
+                      <button
+                        type="button"
+                        onClick={() => setShowRegPassword(!showRegPassword)}
+                        className="text-[10px] text-blue-600 font-bold hover:underline cursor-pointer"
+                      >
+                        {showRegPassword ? "Hide" : "Show"}
+                      </button>
+                    </div>
+                    <div className="relative">
+                      <Lock className="absolute left-3 top-2.5 h-3.5 w-3.5 text-slate-400" />
+                      <input
+                        type={showRegPassword ? "text" : "password"}
+                        required
+                        value={regPassword}
+                        onChange={(e) => setRegPassword(e.target.value)}
+                        placeholder="Create a private password (min 3 chars)"
+                        minLength={3}
+                        maxLength={30}
+                        className="input-3d w-full rounded-xl pl-9 pr-9 py-2 text-xs text-[#111827]"
+                      />
+                    </div>
+                  </div>
                   <p className="text-[10px] text-blue-700 bg-blue-50 border border-blue-200 rounded-lg p-2">
-                    🔒 Your mobile number will be your private password to sign in to your passbook.
+                    🔒 You will use your Name/Room and this password to sign in. Keep it private.
                   </p>
                 </div>
               )}

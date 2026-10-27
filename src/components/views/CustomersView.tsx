@@ -621,7 +621,7 @@ export function CustomersView({
               <div>
                 <div className="flex items-center justify-between mb-1">
                   <label className="font-semibold text-[#111827]">
-                    Student Portal Password (Optional)
+                    Student Password *
                   </label>
                   <button
                     type="button"
@@ -633,15 +633,17 @@ export function CustomersView({
                 </div>
                 <input
                   type={showNewPassword ? "text" : "password"}
+                  required
                   value={newForm.password}
                   onChange={(e) =>
                     setNewForm((p) => ({ ...p, password: e.target.value }))
                   }
-                  placeholder="Defaults to mobile number if left empty"
+                  placeholder="Set custom password for this student"
+                  minLength={3}
                   className="w-full rounded-lg border border-gray-300 px-3 py-2 text-[#111827] text-xs font-mono"
                 />
                 <p className="text-[10px] text-gray-500 mt-1">
-                  If left blank, their registered mobile number acts as their password.
+                  Student will use their Name/Room and this password to sign in to their passbook.
                 </p>
               </div>
               <div>
@@ -782,7 +784,7 @@ export function CustomersView({
                 <div className="flex items-center justify-between">
                   <label className="font-extrabold text-[#111827] flex items-center gap-1.5">
                     <KeyRound className="h-3.5 w-3.5 text-[#2563EB]" />
-                    Student Portal Password
+                    Custom Password
                   </label>
                   <button
                     type="button"
@@ -810,7 +812,9 @@ export function CustomersView({
                     onChange={(e) =>
                       setEditForm((p) => ({ ...p, password: e.target.value }))
                     }
-                    placeholder="Enter new password or leave blank for mobile default"
+                    placeholder="Enter custom password (min 3 chars)"
+                    minLength={3}
+                    maxLength={30}
                     className="w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-xs font-mono text-[#111827] focus:ring-2 focus:ring-blue-500"
                   />
                 </div>
@@ -818,20 +822,18 @@ export function CustomersView({
                 <div className="text-[11px] text-slate-600 space-y-1">
                   <div className="flex items-center justify-between bg-white/80 rounded-md px-2.5 py-1 border border-blue-100">
                     <span className="text-slate-500">
-                      Active Login Password:
+                      Current Password:
                     </span>
                     <span className="font-mono font-bold text-[#111827]">
                       {editCustomer.password
                         ? showEditPassword
                           ? editCustomer.password
-                          : "•••••••• (Custom)"
-                        : editCustomer.phone
-                        ? `${editCustomer.phone} (Mobile Default)`
-                        : "None set"}
+                          : "••••••••"
+                        : "No password set"}
                     </span>
                   </div>
                   <p className="text-[10px] text-slate-500 leading-relaxed">
-                    Students sign in to their Passbook / Udhaar portal with their Name and this password. If no custom password is set, their registered mobile number acts as the password.
+                    Student uses their Name/Room and this custom password to sign in to their passbook.
                   </p>
                 </div>
               </div>

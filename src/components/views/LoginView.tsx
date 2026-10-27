@@ -53,13 +53,15 @@ export function LoginView({
   // Student / Customer state
   const [studentAuthMode, setStudentAuthMode] = useState<"signin" | "register">("signin");
   const [studentIdentifier, setStudentIdentifier] = useState("");
-  const [studentMobilePassword, setStudentMobilePassword] = useState("");
+  const [studentPassword, setStudentPassword] = useState("");
   const [showStudentPassword, setShowStudentPassword] = useState(false);
 
   // New Student Registration state
   const [regName, setRegName] = useState("");
   const [regRoom, setRegRoom] = useState("");
   const [regMobile, setRegMobile] = useState("");
+  const [regPassword, setRegPassword] = useState("");
+  const [showRegPassword, setShowRegPassword] = useState(false);
 
   const [loading, setLoading] = useState(false);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
@@ -100,11 +102,12 @@ export function LoginView({
               name: regName.trim(),
               room_number: regRoom.trim(),
               phone: regMobile.trim(),
+              password: regPassword.trim(),
             }
           : {
               action: "login",
               name: studentIdentifier.trim(),
-              password: studentMobilePassword.trim(),
+              password: studentPassword.trim(),
             };
 
       const res = await fetch("/api/customer-portal", {
@@ -467,7 +470,7 @@ export function LoginView({
                     <div>
                       <div className="flex items-center justify-between mb-1">
                         <label className="font-bold text-[#111827]">
-                          Password (Mobile No. or Custom Password) *
+                          Password *
                         </label>
                         <span className="text-[10px] text-blue-600 font-semibold">
                           🔒 Portal password
@@ -478,9 +481,9 @@ export function LoginView({
                         <input
                           type={showStudentPassword ? "text" : "password"}
                           required
-                          value={studentMobilePassword}
-                          onChange={(e) => setStudentMobilePassword(e.target.value)}
-                          placeholder="Enter your password or 10-digit mobile number"
+                          value={studentPassword}
+                          onChange={(e) => setStudentPassword(e.target.value)}
+                          placeholder="Enter your custom password"
                           maxLength={30}
                           className="input-3d w-full rounded-xl pl-10 pr-10 py-2.5 text-xs text-[#111827]"
                         />
@@ -549,8 +552,37 @@ export function LoginView({
                       </div>
                     </div>
 
+                    {/* Create Custom Password */}
+                    <div>
+                      <div className="flex items-center justify-between mb-1">
+                        <label className="font-bold text-[#111827]">
+                          Create Password *
+                        </label>
+                        <button
+                          type="button"
+                          onClick={() => setShowRegPassword(!showRegPassword)}
+                          className="text-[10px] text-blue-600 font-bold hover:underline cursor-pointer"
+                        >
+                          {showRegPassword ? "Hide Password" : "Show Password"}
+                        </button>
+                      </div>
+                      <div className="relative">
+                        <Lock className="absolute left-3.5 top-3 h-4 w-4 text-slate-400" />
+                        <input
+                          type={showRegPassword ? "text" : "password"}
+                          required
+                          value={regPassword}
+                          onChange={(e) => setRegPassword(e.target.value)}
+                          placeholder="Create a private password (min 3 chars)"
+                          minLength={3}
+                          maxLength={30}
+                          className="input-3d w-full rounded-xl pl-10 pr-10 py-2.5 text-xs text-[#111827]"
+                        />
+                      </div>
+                    </div>
+
                     <div className="rounded-xl bg-blue-50 border border-blue-200 p-2.5 text-[11px] text-blue-800">
-                      <strong>Security Note:</strong> Your 10-digit mobile number will be your private password to sign in to your passbook. Other students cannot access your account without it.
+                      <strong>Security Note:</strong> You will use your Name/Room and this custom password to sign in to your passbook. Other students cannot access your account without it.
                     </div>
                   </div>
                 )}
