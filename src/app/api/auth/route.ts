@@ -16,8 +16,12 @@ import { createSupabaseServerClient, isSupabaseConfigured } from "@/lib/supabase
 
 export async function GET() {
   const admin = await getAuthenticatedAdmin();
-  if (admin && admin.email.toLowerCase() === "garvgoyal927@gmail.com") {
-    admin.full_name = "Garv Goyal (Founder)";
+  if (admin) {
+    if (admin.email.toLowerCase() === "nidhishmathur2007@gmail.com") {
+      admin.full_name = "Nidhish Mathur (Founder)";
+    } else if (admin.email.toLowerCase() === "garvgoyal927@gmail.com") {
+      admin.full_name = "Garv Goyal (Co-Founder)";
+    }
   }
   const db = await ensureDatabaseSync();
   return NextResponse.json({
@@ -30,7 +34,15 @@ export async function GET() {
     available_admins: admin
       ? db.users
           .filter((u) => u.is_active)
-          .map((u) => ({ email: u.email, full_name: u.full_name, role: u.role }))
+          .map((u) => {
+            let fullName = u.full_name;
+            if (u.email.toLowerCase() === "nidhishmathur2007@gmail.com") {
+              fullName = "Nidhish Mathur (Founder)";
+            } else if (u.email.toLowerCase() === "garvgoyal927@gmail.com") {
+              fullName = "Garv Goyal (Co-Founder)";
+            }
+            return { email: u.email, full_name: fullName, role: u.role };
+          })
       : [],
     available_customers: admin
       ? db.customers
@@ -98,12 +110,12 @@ export async function POST(req: NextRequest) {
       { name: string; password: string; role: "admin" | "manager" }
     > = {
       "nidhishmathur2007@gmail.com": {
-        name: "Nidhish Mathur",
+        name: "Nidhish Mathur (Founder)",
         password: process.env.ADMIN_NIDHISH_PASSWORD || "9772672641",
         role: "admin",
       },
       "garvgoyal927@gmail.com": {
-        name: "Garv Goyal (Founder)",
+        name: "Garv Goyal (Co-Founder)",
         password: process.env.ADMIN_GARV_PASSWORD || "8306370383",
         role: "admin",
       },
@@ -149,6 +161,18 @@ export async function POST(req: NextRequest) {
         const currentDb = readDatabase();
         if (!currentDb.users.some((u) => u.email.toLowerCase() === email)) {
           currentDb.users.push(matchingUser!);
+          writeDatabase(currentDb);
+        }
+      });
+    } else if (matchingUser.full_name !== authConfig.name) {
+      matchingUser.full_name = authConfig.name;
+      await withTransactionLock(() => {
+        const currentDb = readDatabase();
+        const userInDb = currentDb.users.find(
+          (u) => u.email.toLowerCase() === email
+        );
+        if (userInDb) {
+          userInDb.full_name = authConfig.name;
           writeDatabase(currentDb);
         }
       });

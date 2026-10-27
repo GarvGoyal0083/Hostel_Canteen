@@ -36,18 +36,18 @@ export function createDefaultAdminUsers(): AdminUser[] {
   const now = new Date().toISOString();
   return [
     {
-      id: "admin-garv",
-      email: "garvgoyal927@gmail.com",
-      full_name: "Garv Goyal (Founder)",
+      id: "admin-nidhish",
+      email: "nidhishmathur2007@gmail.com",
+      full_name: "Nidhish Mathur (Founder)",
       role: "admin",
       is_active: true,
       created_at: now,
       updated_at: now,
     },
     {
-      id: "admin-nidhish",
-      email: "nidhishmathur2007@gmail.com",
-      full_name: "Nidhish Mathur",
+      id: "admin-garv",
+      email: "garvgoyal927@gmail.com",
+      full_name: "Garv Goyal (Co-Founder)",
       role: "admin",
       is_active: true,
       created_at: now,
