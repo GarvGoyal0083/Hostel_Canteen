@@ -1,5 +1,19 @@
 # Hostel Canteen POS — Complete Canteen Management System
 
+> 🌐 **Official Project & Repository URL:**  
+> ### **[https://github.com/GarvGoyal0083/Hostel_Canteen](https://github.com/GarvGoyal0083/Hostel_Canteen)**  
+> 
+> 📍 **Admin POS Web Portal:** [`http://localhost:3000`](http://localhost:3000)  
+> 🎓 **Student / Customer Portal:** [`http://localhost:3000/customer`](http://localhost:3000/customer)
+
+[![GitHub Repository](https://img.shields.io/badge/GitHub-Hostel__Canteen-2563EB?style=for-the-badge&logo=github)](https://github.com/GarvGoyal0083/Hostel_Canteen)
+[![Next.js](https://img.shields.io/badge/Next.js-15-black?style=for-the-badge&logo=next.js)](https://nextjs.org/)
+[![TypeScript](https://img.shields.io/badge/TypeScript-5-3178C6?style=for-the-badge&logo=typescript)](https://www.typescriptlang.org/)
+[![Tailwind CSS](https://img.shields.io/badge/Tailwind_CSS-4-38B2AC?style=for-the-badge&logo=tailwind-css)](https://tailwindcss.com/)
+[![Supabase](https://img.shields.io/badge/Supabase-PostgreSQL-3ECF8E?style=for-the-badge&logo=supabase)](https://supabase.com/)
+
+---
+
 A full-stack, modern, responsive Point-of-Sale (POS), Inventory, Customer Udhaar, Manual Cash/UPI Payment, Expense, and Profit Management web application built with **Next.js (App Router), React, TypeScript, Tailwind CSS, and Supabase PostgreSQL**.
 
 > **Zero Payment Gateways by Design:** No Razorpay, Cashfree, or PhonePe Payment Gateway API keys are required or integrated. All Cash and UPI payments (Google Pay, PhonePe, Paytm, etc.) and UTR / transaction reference numbers are entered manually by the admin, flagged clearly as manually recorded, and checked automatically for duplicate UTR warnings.
