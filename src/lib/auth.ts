@@ -7,10 +7,14 @@ import { createSupabaseServerClient, isSupabaseConfigured } from "@/lib/supabase
 export const SESSION_COOKIE_NAME = "hc_pos_admin_session";
 
 function getSessionSecret(): string {
-  return (
-    process.env.SESSION_SECRET ||
-    "hostel-canteen-pos-default-server-hmac-secret-2026-change-in-prod"
-  );
+  const secret = process.env.SESSION_SECRET;
+  if (secret) return secret;
+  if (process.env.NODE_ENV === "production") {
+    throw new Error(
+      "SESSION_SECRET environment variable is required in production. Set it to a long random string."
+    );
+  }
+  return "hostel-canteen-pos-dev-only-session-secret";
 }
 
 export interface SessionPayload {

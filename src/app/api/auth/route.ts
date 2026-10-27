@@ -107,16 +107,16 @@ export async function POST(req: NextRequest) {
     // 2. Specific Authorized Admin Credentials Verification
     const AUTHORIZED_ADMINS: Record<
       string,
-      { name: string; password: string; role: "admin" | "manager" }
+      { name: string; password: string | undefined; role: "admin" | "manager" }
     > = {
       "nidhishmathur2007@gmail.com": {
         name: "Nidhish Mathur (Founder)",
-        password: process.env.ADMIN_NIDHISH_PASSWORD || "9772672641",
+        password: process.env.ADMIN_NIDHISH_PASSWORD,
         role: "admin",
       },
       "garvgoyal927@gmail.com": {
         name: "Garv Goyal (Co-Founder)",
-        password: process.env.ADMIN_GARV_PASSWORD || "8306370383",
+        password: process.env.ADMIN_GARV_PASSWORD,
         role: "admin",
       },
     };
@@ -132,7 +132,7 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    if (password !== authConfig.password) {
+    if (!authConfig.password || password !== authConfig.password) {
       return NextResponse.json(
         {
           error:
