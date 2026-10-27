@@ -16,6 +16,8 @@ import {
 import { Product } from "@/types/pos";
 import {
   downloadCSV,
+  downloadRawCSV,
+  escapeCSVCell,
   formatDateIST,
   formatINR,
   formatIST,
@@ -232,26 +234,63 @@ export function ProductsView({
   };
 
   const handleExportCSV = () => {
-    const rows = filteredProducts.map((p) => ({
-      SKU: p.sku,
-      "Product Name": p.name,
-      Category: p.category,
-      "Purchase Price (INR)": p.purchase_price,
-      "Selling Price (INR)": p.selling_price,
-      "Estimated Unit Profit (INR)": p.estimated_unit_profit,
-      "Available Stock": p.stock_quantity,
-      "Min Alert Level": p.min_stock_level,
-      "Inventory Cost Value (INR)": round2(
-        p.stock_quantity * p.purchase_price
-      ),
-      Supplier: p.supplier_name || "",
-      "Expiry Date": p.expiry_date || "",
-      "Batch Info": p.batch_info || "",
-      Status: p.is_active ? "Active" : "Deactivated",
-      "Created At (IST)": formatIST(p.created_at),
-      "Updated At (IST)": formatIST(p.updated_at),
-    }));
-    downloadCSV("Hostel-Canteen-Products.csv", rows);
+    const timestamp = formatIST(new Date().toISOString());
+    const headers = [
+      "SKU",
+      "Product Name",
+      "Category",
+      "Purchase Price (INR)",
+      "Selling Price (INR)",
+      "Estimated Unit Profit (INR)",
+      "Available Stock",
+      "Min Alert Level",
+      "Inventory Cost Value (INR)",
+      "Supplier",
+      "Expiry Date",
+      "Batch Info",
+      "Status",
+      "Created At (IST)",
+      "Updated At (IST)",
+    ];
+
+    const lines: string[] = [
+      "HOSTEL CANTEEN - PRODUCTS & INVENTORY CATALOG REPORT",
+      `"Generated At (IST)",${escapeCSVCell(timestamp)}`,
+      `"Total Records Count",${filteredProducts.length}`,
+      "",
+      headers.map(escapeCSVCell).join(","),
+    ];
+
+    if (filteredProducts.length > 0) {
+      filteredProducts.forEach((p) => {
+        const row = [
+          p.sku,
+          p.name,
+          p.category,
+          p.purchase_price,
+          p.selling_price,
+          p.estimated_unit_profit,
+          p.stock_quantity,
+          p.min_stock_level,
+          round2(p.stock_quantity * p.purchase_price),
+          p.supplier_name || "",
+          p.expiry_date || "",
+          p.batch_info || "",
+          p.is_active ? "Active" : "Deactivated",
+          formatIST(p.created_at),
+          formatIST(p.updated_at),
+        ];
+        lines.push(row.map(escapeCSVCell).join(","));
+      });
+    } else {
+      lines.push(
+        headers
+          .map((_, i) => (i === 0 ? '"No product records found"' : '""'))
+          .join(",")
+      );
+    }
+
+    downloadRawCSV("Hostel-Canteen-Products.csv", lines.join("\r\n"));
   };
 
   return (

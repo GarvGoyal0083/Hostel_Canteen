@@ -467,10 +467,10 @@ export function LoginView({
                     <div>
                       <div className="flex items-center justify-between mb-1">
                         <label className="font-bold text-[#111827]">
-                          Password (Mobile Number) *
+                          Password (Mobile No. or Custom Password) *
                         </label>
                         <span className="text-[10px] text-blue-600 font-semibold">
-                          🔒 Registered mobile number
+                          🔒 Portal password
                         </span>
                       </div>
                       <div className="relative">
@@ -480,8 +480,8 @@ export function LoginView({
                           required
                           value={studentMobilePassword}
                           onChange={(e) => setStudentMobilePassword(e.target.value)}
-                          placeholder="Enter your 10-digit mobile number"
-                          maxLength={15}
+                          placeholder="Enter your password or 10-digit mobile number"
+                          maxLength={30}
                           className="input-3d w-full rounded-xl pl-10 pr-10 py-2.5 text-xs text-[#111827]"
                         />
                         <button

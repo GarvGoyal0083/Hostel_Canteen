@@ -13,8 +13,11 @@ import {
 import { ExpenseRecord } from "@/types/pos";
 import {
   downloadCSV,
+  downloadRawCSV,
+  escapeCSVCell,
   formatDateIST,
   formatINR,
+  formatIST,
   getISTDateString,
   round2,
 } from "@/lib/format";
@@ -151,17 +154,88 @@ export function ExpensesView({
   };
 
   const handleExportExpensesCSV = () => {
-    const rows = filteredExpenses.map((e) => ({
-      Date: e.expense_date,
-      Title: e.title,
-      Category: e.category,
-      "Amount (INR)": e.amount,
-      Description: e.description || "",
-      "Supplier / Receipt Ref": e.supplier_or_receipt_ref || "",
-      "Recorded By": e.recorded_by,
-      Status: e.is_voided ? `Voided (${e.void_reason || ""})` : "Active",
-    }));
-    downloadCSV("Hostel-Canteen-Expenses.csv", rows);
+    const timestampIST = formatIST(new Date().toISOString());
+    const filterLabel =
+      categoryFilter === "ALL" ? "All Categories" : categoryFilter;
+
+    const lines: string[] = [
+      "HOSTEL CANTEEN - EXPENSES & PROFIT TRACKING (P&L) REPORT",
+      `"Report Generated At (IST)",${escapeCSVCell(timestampIST)}`,
+      `"Category Filter",${escapeCSVCell(filterLabel)}`,
+      `"Include Voided Entries",${escapeCSVCell(showVoided ? "Yes" : "No")}`,
+      "",
+      "--- PROFIT & LOSS STATEMENT (ACCRUAL REVENUE VS COGS) ---",
+      "Financial Line Item,Amount (INR),Formula & Accounting Notes",
+      `"1. Gross Sales Before Discounts",${kpis.period_gross_sales.toFixed(2)},"Total retail selling value of all merchandise billed"`,
+      `"2. Less: Discounts Given (Item + Bill)",-${kpis.period_discounts.toFixed(2)},"Special promotions and bill-level discounts granted"`,
+    ];
+
+    if (kpis.period_refunds > 0) {
+      lines.push(
+        `"Less: Refunded Sales Value",-${kpis.period_refunds.toFixed(2)},"Value of returned / cancelled items restored or refunded"`
+      );
+    }
+
+    lines.push(
+      `"3. Net Sales Revenue (After Discounts & Adjustments)",${kpis.period_net_sales.toFixed(2)},"Gross Sales minus Total Discounts and Refunds"`,
+      `"4. Less: Cost of Goods Sold (COGS from Purchase Cost)",-${kpis.period_cogs.toFixed(2)},"Procurement/wholesale cost of goods sold"`,
+      `"5. Estimated Gross Profit (Net Sales - COGS)",${kpis.period_gross_profit.toFixed(2)},"Trading gross margin before operational expenses"`,
+      `"6. Less: Recorded Operating Expenses",-${kpis.period_expenses.toFixed(2)},"Total active operating expenses recorded"`,
+      `"7. Estimated Net Profit",${kpis.period_net_profit.toFixed(2)},"Gross Profit minus Recorded Operating Expenses"`,
+      "",
+      "--- ACTUAL COLLECTIONS VS CUSTOMER UDHAAR (CASH & UPI INFLOW) ---",
+      "Collection Metric,Amount (INR),Explanation",
+      `"8. Total Cash Collected",${kpis.cash_collected.toFixed(2)},"Physical currency payments collected"`,
+      `"9. Total UPI Payments Recorded (Manual)",${kpis.upi_collected.toFixed(2)},"Manually verified digital UPI payments"`
+    );
+
+    if (kpis.other_collected > 0) {
+      lines.push(
+        `"Other Payments Recorded",${kpis.other_collected.toFixed(2)},"Other payment modes collected"`
+      );
+    }
+
+    lines.push(
+      `"10. Outstanding Customer Dues (Pending Udhaar)",${kpis.pending_payments_amount.toFixed(2)},"Total credit balances owed by hostel students"`,
+      `"Total Actual Inflow (Cash + UPI + Other)",${kpis.total_collected.toFixed(2)},"Total actual revenue physically or digitally collected"`,
+      "",
+      "--- OPERATING EXPENSES LEDGER ---",
+      "Expense Date,Expense Title,Category,Amount (INR),Description,Supplier / Receipt Ref,Recorded By,Status"
+    );
+
+    if (filteredExpenses.length > 0) {
+      filteredExpenses.forEach((e) => {
+        lines.push(
+          [
+            escapeCSVCell(e.expense_date),
+            escapeCSVCell(e.title),
+            escapeCSVCell(e.category),
+            e.amount.toFixed(2),
+            escapeCSVCell(e.description || ""),
+            escapeCSVCell(e.supplier_or_receipt_ref || ""),
+            escapeCSVCell(e.recorded_by),
+            escapeCSVCell(
+              e.is_voided ? `Voided (${e.void_reason || ""})` : "Active"
+            ),
+          ].join(",")
+        );
+      });
+      lines.push(
+        `"Total Active Operating Expenses in Ledger",,"",${totalActiveExpenses.toFixed(2)},"","","",""`
+      );
+    } else {
+      lines.push(
+        `"No operating expenses recorded in this category/period",,"",0.00,"","","","Active"`
+      );
+      lines.push(
+        `"Total Active Operating Expenses in Ledger",,"",0.00,"","","",""`
+      );
+    }
+
+    downloadRawCSV(
+      "Hostel-Canteen-Expenses-PnL-Report.csv",
+      lines.join("\r\n")
+    );
   };
 
   return (

@@ -16,7 +16,12 @@ import {
   CheckCircle2,
 } from "lucide-react";
 import { AdminUser, AuditLogRecord, CanteenStatus } from "@/types/pos";
-import { downloadCSV, formatIST } from "@/lib/format";
+import {
+  downloadCSV,
+  downloadRawCSV,
+  escapeCSVCell,
+  formatIST,
+} from "@/lib/format";
 
 interface SettingsViewProps {
   admin: AdminUser;
@@ -148,15 +153,45 @@ ON public.canteen_store FOR ALL USING (true) WITH CHECK (true);`;
   };
 
   const handleExportAuditCSV = () => {
-    const rows = auditLogs.map((a) => ({
-      "Timestamp (IST)": formatIST(a.created_at, true),
-      Entity: a.entity_type,
-      "Entity ID": a.entity_id,
-      Action: a.action,
-      Summary: a.summary,
-      "Performed By Admin": a.performed_by,
-    }));
-    downloadCSV("Hostel-Canteen-Audit-Logs.csv", rows);
+    const timestamp = formatIST(new Date().toISOString());
+    const headers = [
+      "Audit Timestamp (IST)",
+      "Entity Affected",
+      "Entity ID",
+      "Action Type",
+      "Audit Summary & Diff",
+      "Performed By Admin",
+    ];
+
+    const lines: string[] = [
+      "HOSTEL CANTEEN - SYSTEM SECURITY AUDIT TRAIL REPORT",
+      `"Generated At (IST)",${escapeCSVCell(timestamp)}`,
+      `"Total Records Count",${auditLogs.length}`,
+      "",
+      headers.map(escapeCSVCell).join(","),
+    ];
+
+    if (auditLogs.length > 0) {
+      auditLogs.forEach((a) => {
+        const row = [
+          formatIST(a.created_at, true),
+          a.entity_type,
+          a.entity_id,
+          a.action,
+          a.summary,
+          a.performed_by,
+        ];
+        lines.push(row.map(escapeCSVCell).join(","));
+      });
+    } else {
+      lines.push(
+        headers
+          .map((_, i) => (i === 0 ? '"No security audit logs found"' : '""'))
+          .join(",")
+      );
+    }
+
+    downloadRawCSV("Hostel-Canteen-Audit-Logs.csv", lines.join("\r\n"));
   };
 
   return (

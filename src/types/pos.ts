@@ -105,6 +105,7 @@ export interface Customer {
   name: string;
   room_number?: string | null;
   phone?: string | null;
+  password?: string | null;
   registration_date: string;
   total_purchases: number;
   total_payments: number;

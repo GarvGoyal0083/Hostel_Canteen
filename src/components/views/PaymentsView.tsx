@@ -20,6 +20,8 @@ import {
 } from "@/types/pos";
 import {
   downloadCSV,
+  downloadRawCSV,
+  escapeCSVCell,
   formatDateIST,
   formatINR,
   formatIST,
@@ -327,25 +329,61 @@ export function PaymentsView({
   };
 
   const handleExportPaymentsCSV = () => {
-    const rows = filteredPayments.map((p) => ({
-      "Payment ID": p.id,
-      "Internal Bill ID": p.bill_number,
-      "Customer Name": p.customer_name_snapshot || "Walk-in",
-      "Room Number": p.room_number_snapshot || "",
-      "Payment Method": p.payment_method,
-      "Expected Bill Amount (INR)": p.expected_amount,
-      "Amount Actually Received (INR)": p.amount_received,
-      "Manual UPI Transaction ID / UTR": p.upi_reference || "",
-      "Duplicate UPI Warning": p.is_duplicate_upi_warning
-        ? "WARNING: Duplicate Reference"
-        : "No",
-      "Verification Mode": p.verification_status,
-      "Payment Status": p.payment_status,
-      "Payment Date & Time (IST)": formatIST(p.payment_date),
-      "Recorded By Admin": p.recorded_by,
-      Notes: p.notes || "",
-    }));
-    downloadCSV("Hostel-Canteen-Manual-Payments.csv", rows);
+    const timestamp = formatIST(new Date().toISOString());
+    const headers = [
+      "Payment ID",
+      "Internal Bill ID",
+      "Customer Name",
+      "Room Number",
+      "Payment Method",
+      "Expected Bill Amount (INR)",
+      "Amount Actually Received (INR)",
+      "Manual UPI Transaction ID / UTR",
+      "Duplicate UPI Warning",
+      "Verification Mode",
+      "Payment Status",
+      "Payment Date & Time (IST)",
+      "Recorded By Admin",
+      "Notes",
+    ];
+
+    const lines: string[] = [
+      "HOSTEL CANTEEN - MANUAL PAYMENTS & UPI LEDGER REPORT",
+      `"Generated At (IST)",${escapeCSVCell(timestamp)}`,
+      `"Total Records Count",${filteredPayments.length}`,
+      "",
+      headers.map(escapeCSVCell).join(","),
+    ];
+
+    if (filteredPayments.length > 0) {
+      filteredPayments.forEach((p) => {
+        const row = [
+          p.id,
+          p.bill_number,
+          p.customer_name_snapshot || "Walk-in",
+          p.room_number_snapshot || "",
+          p.payment_method,
+          p.expected_amount,
+          p.amount_received,
+          p.upi_reference || "",
+          p.is_duplicate_upi_warning ? "WARNING: Duplicate Reference" : "No",
+          p.verification_status,
+          p.payment_status,
+          formatIST(p.payment_date),
+          p.recorded_by,
+          p.notes || "",
+        ];
+        lines.push(row.map(escapeCSVCell).join(","));
+      });
+    } else {
+      lines.push(
+        headers
+          .map((_, i) => (i === 0 ? '"No payment records found"' : '""'))
+          .join(",")
+      );
+    }
+
+    downloadRawCSV("Hostel-Canteen-Manual-Payments.csv", lines.join("\r\n"));
   };
 
   return (

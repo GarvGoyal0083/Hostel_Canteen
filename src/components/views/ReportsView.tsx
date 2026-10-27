@@ -18,6 +18,8 @@ import {
 } from "@/types/pos";
 import {
   downloadCSV,
+  downloadRawCSV,
+  escapeCSVCell,
   formatDateIST,
   formatINR,
   formatIST,
@@ -53,6 +55,132 @@ const REPORT_TABS: Array<{ id: ReportType; label: string }> = [
   { id: "outstanding_dues", label: "11. Outstanding Customer Dues" },
   { id: "expenses_profit", label: "12. Expenses & Est. Profit" },
 ];
+
+const REPORT_COLUMNS: Record<ReportType, string[]> = {
+  daily_sales: [
+    "Date (IST)",
+    "Transactions",
+    "Net Sales (INR)",
+    "Discounts Given (INR)",
+    "COGS (INR)",
+    "Estimated Gross Profit (INR)",
+    "Operating Expenses (INR)",
+    "Estimated Net Profit (INR)",
+    "Cash Collected (INR)",
+    "UPI Collected (INR)",
+  ],
+  weekly_sales: [
+    "Week Period",
+    "Transactions",
+    "Gross Sales (INR)",
+    "Discounts (INR)",
+    "Net Sales (INR)",
+    "COGS (INR)",
+    "Estimated Gross Profit (INR)",
+  ],
+  monthly_sales: [
+    "Month",
+    "Transactions",
+    "Gross Sales (INR)",
+    "Discounts (INR)",
+    "Net Sales (INR)",
+    "COGS (INR)",
+    "Estimated Gross Profit (INR)",
+  ],
+  product_sales: [
+    "SKU",
+    "Product Name",
+    "Category",
+    "Units Sold",
+    "Gross Revenue (INR)",
+    "Discounts (INR)",
+    "Net Revenue (INR)",
+    "COGS (INR)",
+    "Estimated Profit (INR)",
+  ],
+  customer_purchases: [
+    "Student Name",
+    "Hostel Room",
+    "Phone",
+    "Total Purchases (INR)",
+    "Total Payments (INR)",
+    "Outstanding Dues (INR)",
+  ],
+  payment_collections: [
+    "Date & Time (IST)",
+    "Bill ID",
+    "Customer",
+    "Payment Method",
+    "Amount Received (INR)",
+    "Manual UPI Ref / UTR",
+    "Duplicate UTR Warning",
+    "Payment Status",
+    "Recorded By",
+  ],
+  discount_history: [
+    "Bill ID",
+    "Date (IST)",
+    "Customer",
+    "Original Subtotal (INR)",
+    "Item-Level Discounts (INR)",
+    "Bill-Level Discount (INR)",
+    "Total Discount (INR)",
+    "Final Payable (INR)",
+    "Discount Reason",
+    "Authorized By Admin",
+  ],
+  stock_purchases_adjustments: [
+    "Date & Time (IST)",
+    "Product",
+    "SKU",
+    "Movement Type",
+    "Quantity Change",
+    "Previous Stock",
+    "Closing Stock",
+    "Unit Cost (INR)",
+    "Reference",
+    "Reason",
+    "Recorded By",
+  ],
+  low_stock: [
+    "SKU",
+    "Product",
+    "Category",
+    "Available Stock",
+    "Min Alert Level",
+    "Alert Status",
+    "Purchase Price (INR)",
+    "Supplier",
+  ],
+  damaged_expired: [
+    "Date & Time (IST)",
+    "Product",
+    "SKU",
+    "Loss Type",
+    "Units Lost",
+    "Unit Cost (INR)",
+    "Estimated Loss Value (INR)",
+    "Reason",
+    "Recorded By",
+  ],
+  outstanding_dues: [
+    "Student Name",
+    "Hostel Room",
+    "Phone",
+    "Total Purchases (INR)",
+    "Total Paid (INR)",
+    "Pending Udhaar Due (INR)",
+  ],
+  expenses_profit: [
+    "Date",
+    "Expense Title",
+    "Category",
+    "Amount (INR)",
+    "Description",
+    "Supplier / Receipt Ref",
+    "Recorded By",
+  ],
+};
 
 interface ReportsViewProps {
   sales: SaleRecord[];
@@ -406,6 +534,50 @@ export function ReportsView({
   );
   const duePct = Math.max(0, 100 - cashPct - upiPct);
 
+  const handleExportReportCSV = () => {
+    const currentTab = REPORT_TABS.find((t) => t.id === activeReport);
+    const reportTitle = currentTab?.label || activeReport;
+    const timestamp = formatIST(new Date().toISOString());
+    const dateRangeStr =
+      dateFilter.startDate || dateFilter.endDate
+        ? `${dateFilter.startDate || "Beginning"} to ${dateFilter.endDate || "Today"}`
+        : "All Time";
+
+    const headers =
+      REPORT_COLUMNS[activeReport] ||
+      (currentReportRows.length > 0 ? Object.keys(currentReportRows[0]) : []);
+
+    const lines: string[] = [
+      `HOSTEL CANTEEN - ${reportTitle.toUpperCase()} REPORT`,
+      `"Generated At (IST)",${escapeCSVCell(timestamp)}`,
+      `"Date Period Filter",${escapeCSVCell(dateRangeStr)}`,
+      `"Total Records Count",${currentReportRows.length}`,
+      "",
+      headers.map(escapeCSVCell).join(","),
+    ];
+
+    if (currentReportRows.length > 0) {
+      currentReportRows.forEach((row) => {
+        lines.push(headers.map((h) => escapeCSVCell(row[h])).join(","));
+      });
+    } else {
+      lines.push(
+        headers
+          .map((_, idx) =>
+            idx === 0
+              ? '"No records found for this report in the selected period"'
+              : '""'
+          )
+          .join(",")
+      );
+    }
+
+    downloadRawCSV(
+      `Hostel-Canteen-Report-${activeReport}.csv`,
+      lines.join("\r\n")
+    );
+  };
+
   return (
     <div className="space-y-6">
       {/* Header & Date Filter */}
@@ -450,12 +622,7 @@ export function ReportsView({
           </div>
 
           <button
-            onClick={() =>
-              downloadCSV(
-                `Hostel-Canteen-Report-${activeReport}.csv`,
-                currentReportRows
-              )
-            }
+            onClick={handleExportReportCSV}
             className="inline-flex items-center gap-1.5 rounded-lg bg-[#2563EB] px-4 py-2 text-xs font-semibold text-white hover:bg-[#1D4ED8] transition shadow-xs cursor-pointer"
           >
             <Download className="h-4 w-4" />
@@ -645,12 +812,7 @@ export function ReportsView({
             {currentReportRows.length} rows)
           </h3>
           <button
-            onClick={() =>
-              downloadCSV(
-                `Hostel-Canteen-Report-${activeReport}.csv`,
-                currentReportRows
-              )
-            }
+            onClick={handleExportReportCSV}
             className="pos-link text-xs cursor-pointer"
           >
             Download CSV

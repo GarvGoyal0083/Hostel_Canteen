@@ -166,14 +166,14 @@ export async function POST(req: NextRequest) {
         { status: 400 }
       );
     }
-    if (!mobileDigits || mobileDigits.length < 10) {
+    if (!rawMobile) {
       return NextResponse.json(
-        { error: "Please enter your 10-digit registered mobile number as your password." },
+        { error: "Please enter your password or 10-digit registered mobile number." },
         { status: 400 }
       );
     }
 
-    // Match student: candidate match by Name or Room, then verify mobile number password
+    // Match student: candidate match by Name or Room, then verify password / mobile number
     const candidateMatches = customers.filter((c) => {
       const nameMatch = name && c.name.toLowerCase().includes(name.toLowerCase());
       const roomMatch =
@@ -182,15 +182,22 @@ export async function POST(req: NextRequest) {
       return nameMatch || roomMatch;
     });
 
+    const isPasswordOrPhoneMatch = (c: typeof customers[0]) => {
+      if (c.password && c.password.trim() === rawMobile) return true;
+      if (mobileDigits.length >= 4 && c.password && normalizePhone(c.password) === mobileDigits) return true;
+      if (mobileDigits.length >= 10 && normalizePhone(c.phone) === mobileDigits) return true;
+      return false;
+    };
+
     const verifiedCustomer =
-      candidateMatches.find((c) => normalizePhone(c.phone) === mobileDigits) ||
-      customers.find((c) => normalizePhone(c.phone) === mobileDigits);
+      candidateMatches.find(isPasswordOrPhoneMatch) ||
+      customers.find(isPasswordOrPhoneMatch);
 
     if (!verifiedCustomer) {
       return NextResponse.json(
         {
           error:
-            "Invalid Name or Mobile Number password. If you are a new student, please click 'Register as New Student'.",
+            "Invalid Name or Password / Mobile Number. If you are a new student, please click 'Register as New Student'.",
         },
         { status: 401 }
       );

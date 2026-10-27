@@ -1021,10 +1021,10 @@ export function CustomerPortalView({
                   <div>
                     <div className="flex items-center justify-between mb-1">
                       <label className="text-[11px] font-bold text-slate-700">
-                        Password (Mobile Number) *
+                        Password (Mobile No. or Custom Password) *
                       </label>
                       <span className="text-[10px] text-blue-600 font-semibold">
-                        🔒 Registered mobile
+                        🔒 Portal password
                       </span>
                     </div>
                     <div className="relative">
@@ -1034,8 +1034,8 @@ export function CustomerPortalView({
                         required
                         value={loginPassword}
                         onChange={(e) => setLoginPassword(e.target.value)}
-                        placeholder="10-digit mobile number"
-                        maxLength={15}
+                        placeholder="Enter password or mobile number"
+                        maxLength={30}
                         className="input-3d w-full rounded-xl pl-9 pr-9 py-2 text-xs text-[#111827]"
                       />
                       <button

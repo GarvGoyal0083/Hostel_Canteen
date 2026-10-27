@@ -874,6 +874,7 @@ export async function createCustomer(
     name: string;
     room_number?: string;
     phone?: string;
+    password?: string;
     notes?: string;
   },
   adminName: string
@@ -889,6 +890,7 @@ export async function createCustomer(
       name,
       room_number: input.room_number?.trim() || null,
       phone: input.phone?.trim() || null,
+      password: input.password?.trim() || null,
       registration_date: now,
       total_purchases: 0,
       total_payments: 0,
@@ -921,6 +923,7 @@ export async function updateCustomer(
     name: string;
     room_number: string | null;
     phone: string | null;
+    password: string | null;
     notes: string | null;
     is_active: boolean;
   }>,
@@ -941,6 +944,10 @@ export async function updateCustomer(
           : existing.room_number,
       phone:
         input.phone !== undefined ? input.phone?.trim() || null : existing.phone,
+      password:
+        input.password !== undefined
+          ? input.password?.trim() || null
+          : existing.password || null,
       notes:
         input.notes !== undefined ? input.notes?.trim() || null : existing.notes,
       is_active:
@@ -955,7 +962,7 @@ export async function updateCustomer(
       entity_type: "CUSTOMER",
       entity_id: updated.id,
       action: "UPDATE_CUSTOMER",
-      summary: `Updated customer "${updated.name}"`,
+      summary: `Updated customer profile & credentials for "${updated.name}" (Room: ${updated.room_number || "N/A"})`,
       previous_data: existing,
       new_data: updated,
       performed_by: adminName,

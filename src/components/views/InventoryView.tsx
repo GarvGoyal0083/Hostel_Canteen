@@ -17,7 +17,14 @@ import {
   ProductStockSummary,
   StockMovementType,
 } from "@/types/pos";
-import { downloadCSV, formatINR, formatIST, round2 } from "@/lib/format";
+import {
+  downloadCSV,
+  downloadRawCSV,
+  escapeCSVCell,
+  formatINR,
+  formatIST,
+  round2,
+} from "@/lib/format";
 import { StockStatusBadge } from "@/components/StatusBadge";
 
 interface InventoryViewProps {
@@ -210,40 +217,117 @@ export function InventoryView({
   };
 
   const handleExportCSV = () => {
+    const timestamp = formatIST(new Date().toISOString());
     if (activeSubTab === "reconciliation") {
-      const rows = filteredSummaries.map((s) => ({
-        SKU: s.sku,
-        Product: s.product_name,
-        Category: s.category,
-        "Opening Stock": s.opening_stock,
-        "Purchases (+)": s.purchases,
-        "Sales (-)": s.sales,
-        "Damaged/Expired/Wasted (-)": s.damaged_expired_wasted,
-        "Manual Adjustments (+/-)": s.manual_adjustments,
-        "Returns Restored (+)": s.returns_restored,
-        "Closing Stock": s.closing_stock,
-        "Min Stock Level": s.min_stock_level,
-        "Unit Purchase Cost (INR)": s.purchase_price,
-        "Inventory Cost Value (INR)": s.inventory_value,
-        Status: s.stock_status,
-      }));
-      downloadCSV("Hostel-Canteen-Stock-Reconciliation.csv", rows);
+      const headers = [
+        "SKU",
+        "Product",
+        "Category",
+        "Opening Stock",
+        "Purchases (+)",
+        "Sales (-)",
+        "Damaged/Expired/Wasted (-)",
+        "Manual Adjustments (+/-)",
+        "Returns Restored (+)",
+        "Closing Stock",
+        "Min Stock Level",
+        "Unit Purchase Cost (INR)",
+        "Inventory Cost Value (INR)",
+        "Status",
+      ];
+      const lines: string[] = [
+        "HOSTEL CANTEEN - STOCK RECONCILIATION REPORT",
+        `"Generated At (IST)",${escapeCSVCell(timestamp)}`,
+        `"Total Records Count",${filteredSummaries.length}`,
+        "",
+        headers.map(escapeCSVCell).join(","),
+      ];
+      if (filteredSummaries.length > 0) {
+        filteredSummaries.forEach((s) => {
+          const row = [
+            s.sku,
+            s.product_name,
+            s.category,
+            s.opening_stock,
+            s.purchases,
+            s.sales,
+            s.damaged_expired_wasted,
+            s.manual_adjustments,
+            s.returns_restored,
+            s.closing_stock,
+            s.min_stock_level,
+            s.purchase_price,
+            s.inventory_value,
+            s.stock_status,
+          ];
+          lines.push(row.map(escapeCSVCell).join(","));
+        });
+      } else {
+        lines.push(
+          headers
+            .map((_, i) =>
+              i === 0 ? '"No stock reconciliation records found"' : '""'
+            )
+            .join(",")
+        );
+      }
+      downloadRawCSV(
+        "Hostel-Canteen-Stock-Reconciliation.csv",
+        lines.join("\r\n")
+      );
     } else {
-      const rows = filteredMovements.map((m) => ({
-        "Date & Time (IST)": formatIST(m.created_at),
-        Product: m.product_name_snapshot,
-        SKU: m.sku_snapshot,
-        "Movement Type": m.movement_type,
-        "Quantity Change": m.quantity_change,
-        "Previous Stock": m.previous_stock,
-        "New Closing Stock": m.new_stock,
-        "Unit Cost (INR)": m.unit_cost,
-        Reference: m.reference_id || "",
-        Reason: m.reason,
-        Supplier: m.supplier_name || "",
-        "Recorded By": m.recorded_by,
-      }));
-      downloadCSV("Hostel-Canteen-Inventory-Movements.csv", rows);
+      const headers = [
+        "Date & Time (IST)",
+        "Product",
+        "SKU",
+        "Movement Type",
+        "Quantity Change",
+        "Previous Stock",
+        "New Closing Stock",
+        "Unit Cost (INR)",
+        "Reference",
+        "Reason",
+        "Supplier",
+        "Recorded By",
+      ];
+      const lines: string[] = [
+        "HOSTEL CANTEEN - INVENTORY MOVEMENTS LEDGER REPORT",
+        `"Generated At (IST)",${escapeCSVCell(timestamp)}`,
+        `"Total Records Count",${filteredMovements.length}`,
+        "",
+        headers.map(escapeCSVCell).join(","),
+      ];
+      if (filteredMovements.length > 0) {
+        filteredMovements.forEach((m) => {
+          const row = [
+            formatIST(m.created_at),
+            m.product_name_snapshot,
+            m.sku_snapshot,
+            m.movement_type,
+            m.quantity_change,
+            m.previous_stock,
+            m.new_stock,
+            m.unit_cost,
+            m.reference_id || "",
+            m.reason,
+            m.supplier_name || "",
+            m.recorded_by,
+          ];
+          lines.push(row.map(escapeCSVCell).join(","));
+        });
+      } else {
+        lines.push(
+          headers
+            .map((_, i) =>
+              i === 0 ? '"No inventory movements recorded"' : '""'
+            )
+            .join(",")
+        );
+      }
+      downloadRawCSV(
+        "Hostel-Canteen-Inventory-Movements.csv",
+        lines.join("\r\n")
+      );
     }
   };
 

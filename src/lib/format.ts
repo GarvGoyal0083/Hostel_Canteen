@@ -97,36 +97,56 @@ export function getISTCompactDateKey(isoOrDate: string | Date = new Date()): str
 }
 
 /**
+ * Escape a cell value according to RFC-4180 CSV specifications
+ */
+export function escapeCSVCell(val: unknown): string {
+  if (val === null || val === undefined) return "";
+  const str = String(val);
+  if (
+    str.includes(",") ||
+    str.includes('"') ||
+    str.includes("\n") ||
+    str.includes("\r")
+  ) {
+    return `"${str.replace(/"/g, '""')}"`;
+  }
+  return str;
+}
+
+/**
  * Convert an array of objects into RFC-4180 compliant CSV string
  */
-export function objectsToCSV(rows: Record<string, unknown>[]): string {
+export function objectsToCSV(
+  rows: Record<string, unknown>[],
+  fallbackHeaders?: string[]
+): string {
   if (!rows || rows.length === 0) {
+    if (fallbackHeaders && fallbackHeaders.length > 0) {
+      const headerLine = fallbackHeaders.map(escapeCSVCell).join(",");
+      const emptyRow = fallbackHeaders
+        .map((_, i) => (i === 0 ? '"No records found"' : '""'))
+        .join(",");
+      return `${headerLine}\r\n${emptyRow}`;
+    }
     return "";
   }
   const headers = Object.keys(rows[0]);
-  const escapeCell = (val: unknown): string => {
-    if (val === null || val === undefined) return "";
-    const str = String(val);
-    if (str.includes(",") || str.includes('"') || str.includes("\n") || str.includes("\r")) {
-      return `"${str.replace(/"/g, '""')}"`;
-    }
-    return str;
-  };
 
   const lines = [
-    headers.map(escapeCell).join(","),
-    ...rows.map((row) => headers.map((h) => escapeCell(row[h])).join(",")),
+    headers.map(escapeCSVCell).join(","),
+    ...rows.map((row) => headers.map((h) => escapeCSVCell(row[h])).join(",")),
   ];
   return lines.join("\r\n");
 }
 
 /**
- * Trigger a browser download of a CSV file
+ * Trigger a browser download of a raw CSV string with UTF-8 BOM
  */
-export function downloadCSV(filename: string, rows: Record<string, unknown>[]): void {
+export function downloadRawCSV(filename: string, csvContent: string): void {
   if (typeof window === "undefined") return;
-  const csvContent = objectsToCSV(rows);
-  const blob = new Blob(["\uFEFF" + csvContent], { type: "text/csv;charset=utf-8;" });
+  const blob = new Blob(["\uFEFF" + csvContent], {
+    type: "text/csv;charset=utf-8;",
+  });
   const url = URL.createObjectURL(blob);
   const link = document.createElement("a");
   link.href = url;
@@ -135,4 +155,17 @@ export function downloadCSV(filename: string, rows: Record<string, unknown>[]): 
   link.click();
   document.body.removeChild(link);
   URL.revokeObjectURL(url);
+}
+
+/**
+ * Trigger a browser download of a CSV file from an array of objects
+ */
+export function downloadCSV(
+  filename: string,
+  rows: Record<string, unknown>[],
+  fallbackHeaders?: string[]
+): void {
+  if (typeof window === "undefined") return;
+  const csvContent = objectsToCSV(rows, fallbackHeaders);
+  downloadRawCSV(filename, csvContent);
 }

@@ -12,7 +12,14 @@ import {
   Filter,
 } from "lucide-react";
 import { PaymentMethod, SaleRecord } from "@/types/pos";
-import { downloadCSV, formatINR, formatIST, getISTDateString } from "@/lib/format";
+import {
+  downloadCSV,
+  downloadRawCSV,
+  escapeCSVCell,
+  formatINR,
+  formatIST,
+  getISTDateString,
+} from "@/lib/format";
 import { PaymentStatusBadge, SaleStatusBadge } from "@/components/StatusBadge";
 
 interface TransactionsViewProps {
@@ -325,41 +332,93 @@ export function TransactionsView({
   };
 
   const handleExportTransactionsCSV = () => {
-    const rows = filteredSales.map((s) => ({
-      "Internal Bill ID": s.bill_number,
-      "Sale Date & Time (IST)": formatIST(s.created_at),
-      "Customer Name": s.customer_name_snapshot,
-      "Hostel Room Number": s.room_number_snapshot || "",
-      "Products Purchased": s.items
-        .map(
-          (i) =>
-            `${i.product_name_snapshot} [Qty: ${i.quantity}, Cost: ₹${i.purchase_price_at_sale}, Sell: ₹${i.selling_price_at_sale}]`
-        )
-        .join(" | "),
-      "Original Subtotal (INR)": s.subtotal_amount,
-      "Item Discounts (INR)": s.item_discount_total,
-      "Bill Discount (INR)": s.bill_discount_amount,
-      "Total Discount (INR)": s.total_discount_amount,
-      "Discount Reason": s.discount_reason || "",
-      "Discount Authorized By": s.discount_authorized_by || "",
-      "Final Payable Amount (INR)": s.payable_amount,
-      "Total Amount Received (INR)": s.paid_amount,
-      "Refunded Amount (INR)": s.refunded_amount,
-      "Outstanding Balance (INR)": s.outstanding_amount,
-      "COGS (INR)": s.cogs_amount,
-      "Estimated Gross Profit (INR)": s.estimated_gross_profit,
-      "Payment Methods Used": s.payment_methods_summary,
-      "Manual UPI Transaction Ref / UTR": s.upi_references_summary || "",
-      "Latest Payment Date & Time (IST)":
-        s.payments.length > 0 ? formatIST(s.payments[0].payment_date) : "",
-      "Payment Status": s.payment_status,
-      "Sale Status": s.sale_status,
-      "Created / Modified By Admin": s.updated_by || s.created_by,
-      "Refund / Cancellation Details": (s.refunds || [])
-        .map((r) => `${r.action_type}: ₹${r.refund_amount} (${r.reason})`)
-        .join(" | "),
-    }));
-    downloadCSV("Hostel-Canteen-Transactions-History.csv", rows);
+    const timestamp = formatIST(new Date().toISOString());
+    const headers = [
+      "Internal Bill ID",
+      "Sale Date & Time (IST)",
+      "Customer Name",
+      "Hostel Room Number",
+      "Products Purchased",
+      "Original Subtotal (INR)",
+      "Item Discounts (INR)",
+      "Bill Discount (INR)",
+      "Total Discount (INR)",
+      "Discount Reason",
+      "Discount Authorized By",
+      "Final Payable Amount (INR)",
+      "Total Amount Received (INR)",
+      "Refunded Amount (INR)",
+      "Outstanding Balance (INR)",
+      "COGS (INR)",
+      "Estimated Gross Profit (INR)",
+      "Payment Methods Used",
+      "Manual UPI Transaction Ref / UTR",
+      "Latest Payment Date & Time (IST)",
+      "Payment Status",
+      "Sale Status",
+      "Created / Modified By Admin",
+      "Refund / Cancellation Details",
+    ];
+
+    const lines: string[] = [
+      "HOSTEL CANTEEN - TRANSACTIONS & BILLING HISTORY REPORT",
+      `"Generated At (IST)",${escapeCSVCell(timestamp)}`,
+      `"Total Records Count",${filteredSales.length}`,
+      "",
+      headers.map(escapeCSVCell).join(","),
+    ];
+
+    if (filteredSales.length > 0) {
+      filteredSales.forEach((s) => {
+        const row = [
+          s.bill_number,
+          formatIST(s.created_at),
+          s.customer_name_snapshot,
+          s.room_number_snapshot || "",
+          s.items
+            .map(
+              (i) =>
+                `${i.product_name_snapshot} [Qty: ${i.quantity}, Cost: ₹${i.purchase_price_at_sale}, Sell: ₹${i.selling_price_at_sale}]`
+            )
+            .join(" | "),
+          s.subtotal_amount,
+          s.item_discount_total,
+          s.bill_discount_amount,
+          s.total_discount_amount,
+          s.discount_reason || "",
+          s.discount_authorized_by || "",
+          s.payable_amount,
+          s.paid_amount,
+          s.refunded_amount,
+          s.outstanding_amount,
+          s.cogs_amount,
+          s.estimated_gross_profit,
+          s.payment_methods_summary,
+          s.upi_references_summary || "",
+          s.payments.length > 0 ? formatIST(s.payments[0].payment_date) : "",
+          s.payment_status,
+          s.sale_status,
+          s.updated_by || s.created_by,
+          (s.refunds || [])
+            .map((r) => `${r.action_type}: ₹${r.refund_amount} (${r.reason})`)
+            .join(" | "),
+        ];
+        lines.push(row.map(escapeCSVCell).join(","));
+      });
+    } else {
+      lines.push(
+        headers
+          .map((_, i) =>
+            i === 0 ? '"No transaction records found for the filter"' : '""'
+          )
+          .join(",")
+      );
+    }
+
+    downloadRawCSV(
+      "Hostel-Canteen-Transactions-History.csv",
+      lines.join("\r\n")
+    );
   };
 
   return (
