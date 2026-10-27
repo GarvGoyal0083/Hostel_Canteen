@@ -166,6 +166,16 @@ export async function POST(req: NextRequest) {
       const deliveryFee = roomDelivery ? 20 : 0;
       const totalAmount = itemsTotal + deliveryFee;
 
+      if (paymentMethod === "Unpaid") {
+        return NextResponse.json(
+          {
+            error:
+              "Udhaar payment is not available for portal orders. Please select Cash on Delivery or UPI.",
+          },
+          { status: 400 }
+        );
+      }
+
       let paymentRecord: Array<{
         payment_method: PaymentMethod;
         amount_received: number;
@@ -184,22 +194,15 @@ export async function POST(req: NextRequest) {
             notes: "UPI payment via Student Portal",
           },
         ];
-      } else if (paymentMethod === "Cash") {
+      } else {
         paymentRecord = [
           {
             payment_method: "Cash",
             amount_received: 0,
             payment_status: "Pending",
-            notes: "Cash on delivery / pay at room",
-          },
-        ];
-      } else {
-        paymentRecord = [
-          {
-            payment_method: "Other",
-            amount_received: 0,
-            payment_status: "Pending",
-            notes: "Charged to Student Room Udhaar Account",
+            notes: roomDelivery
+              ? "Cash on delivery / pay at room door"
+              : "Cash on pickup / pay at canteen counter",
           },
         ];
       }

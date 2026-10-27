@@ -130,8 +130,8 @@ export function CustomerPortalView({
   const [deliveryRoom, setDeliveryRoom] = useState("");
   const [deliveryNotes, setDeliveryNotes] = useState("");
   const [orderPaymentMethod, setOrderPaymentMethod] = useState<
-    "Unpaid" | "Cash" | "UPI"
-  >("Unpaid");
+    "Cash" | "UPI"
+  >("Cash");
   const [orderUpiRef, setOrderUpiRef] = useState("");
   const [placingOrder, setPlacingOrder] = useState(false);
   const [orderError, setOrderError] = useState<string | null>(null);
@@ -1660,52 +1660,36 @@ export function CustomerPortalView({
                       Payment Mode
                     </span>
 
-                    <div className="grid grid-cols-3 gap-2 text-xs font-semibold">
-                      <button
-                        type="button"
-                        onClick={() => setOrderPaymentMethod("Unpaid")}
-                        className={`p-2.5 rounded-xl border text-center transition cursor-pointer ${
-                          orderPaymentMethod === "Unpaid"
-                            ? "bg-amber-50 border-amber-400 text-amber-950 font-extrabold ring-2 ring-amber-400/30"
-                            : "bg-white border-slate-200 text-slate-700 hover:bg-slate-50"
-                        }`}
-                      >
-                        <Wallet className="h-4 w-4 mx-auto mb-1 text-amber-700" />
-                        <span>Room Udhaar</span>
-                        <div className="text-[9px] text-amber-800 font-normal mt-0.5">
-                          Pay Later
-                        </div>
-                      </button>
-
+                    <div className="grid grid-cols-2 gap-3 text-xs font-semibold">
                       <button
                         type="button"
                         onClick={() => setOrderPaymentMethod("Cash")}
-                        className={`p-2.5 rounded-xl border text-center transition cursor-pointer ${
+                        className={`p-3 rounded-xl border text-center transition cursor-pointer ${
                           orderPaymentMethod === "Cash"
-                            ? "bg-emerald-50 border-emerald-400 text-emerald-950 font-extrabold ring-2 ring-emerald-400/30"
+                            ? "bg-emerald-50 border-emerald-400 text-emerald-950 font-extrabold ring-2 ring-emerald-400/30 shadow-xs"
                             : "bg-white border-slate-200 text-slate-700 hover:bg-slate-50"
                         }`}
                       >
-                        <CreditCard className="h-4 w-4 mx-auto mb-1 text-emerald-700" />
-                        <span>Cash (COD)</span>
-                        <div className="text-[9px] text-emerald-800 font-normal mt-0.5">
-                          Pay at Room
+                        <CreditCard className="h-5 w-5 mx-auto mb-1 text-emerald-700" />
+                        <span className="text-xs font-extrabold">Cash on Delivery</span>
+                        <div className="text-[10px] text-emerald-800 font-medium mt-0.5">
+                          {roomDelivery ? "Pay at room door" : "Pay at counter"}
                         </div>
                       </button>
 
                       <button
                         type="button"
                         onClick={() => setOrderPaymentMethod("UPI")}
-                        className={`p-2.5 rounded-xl border text-center transition cursor-pointer ${
+                        className={`p-3 rounded-xl border text-center transition cursor-pointer ${
                           orderPaymentMethod === "UPI"
-                            ? "bg-blue-50 border-blue-400 text-blue-950 font-extrabold ring-2 ring-blue-400/30"
+                            ? "bg-blue-50 border-blue-400 text-blue-950 font-extrabold ring-2 ring-blue-400/30 shadow-xs"
                             : "bg-white border-slate-200 text-slate-700 hover:bg-slate-50"
                         }`}
                       >
-                        <QrCode className="h-4 w-4 mx-auto mb-1 text-blue-700" />
-                        <span>UPI Payment</span>
-                        <div className="text-[9px] text-blue-800 font-normal mt-0.5">
-                          Pay via QR
+                        <QrCode className="h-5 w-5 mx-auto mb-1 text-blue-700" />
+                        <span className="text-xs font-extrabold">UPI Payment</span>
+                        <div className="text-[10px] text-blue-800 font-medium mt-0.5">
+                          Pay now via QR Code
                         </div>
                       </button>
                     </div>
