@@ -173,13 +173,13 @@ export function DashboardView({
   return (
     <div className="space-y-6">
       {/* 3D Top Control Bar */}
-      <div className="card-3d p-5 rounded-2xl flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+      <div className="card-3d p-4 sm:p-5 rounded-2xl flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div>
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-2.5 sm:gap-3 flex-wrap">
             <h1 className="text-xl sm:text-2xl font-black text-[#111827] tracking-tight">
               Canteen Financial Dashboard
             </h1>
-            <span className="inline-flex items-center gap-1.5 rounded-full bg-gradient-to-r from-blue-500/10 to-indigo-500/10 px-3 py-1 text-xs font-bold text-[#2563EB] border border-blue-200/80 shadow-[0_2px_6px_rgba(37,99,235,0.08)]">
+            <span className="inline-flex items-center gap-1.5 rounded-full bg-gradient-to-r from-blue-500/10 to-indigo-500/10 px-2.5 py-1 text-[11px] sm:text-xs font-bold text-[#2563EB] border border-blue-200/80 shadow-[0_2px_6px_rgba(37,99,235,0.08)]">
               <span className="h-2 w-2 rounded-full bg-[#2563EB] animate-pulse" />
               Live Database
             </span>
@@ -189,80 +189,82 @@ export function DashboardView({
           </p>
         </div>
 
-        <div className="flex flex-wrap items-center gap-2.5">
+        <div className="flex flex-col sm:flex-row sm:flex-wrap items-stretch sm:items-center gap-2.5">
           {/* 3D Date Selector */}
-          <div className="flex items-center gap-2 rounded-xl border border-slate-200 bg-white/90 px-3 py-2 text-xs shadow-xs">
-            <Calendar className="h-3.5 w-3.5 text-[#2563EB]" />
+          <div className="flex items-center justify-between sm:justify-start gap-1.5 sm:gap-2 rounded-xl border border-slate-200 bg-white/90 px-3 py-2 text-xs shadow-xs w-full sm:w-auto overflow-x-auto">
+            <Calendar className="h-3.5 w-3.5 text-[#2563EB] shrink-0" />
             <input
               type="date"
               value={dateFilter.startDate}
               onChange={(e) =>
                 onDateFilterChange(e.target.value, dateFilter.endDate)
               }
-              className="text-xs text-[#111827] font-semibold focus:outline-none"
+              className="text-xs text-[#111827] font-semibold focus:outline-none min-w-0"
               aria-label="Filter start date"
             />
-            <span className="text-gray-400 font-bold">&rarr;</span>
+            <span className="text-gray-400 font-bold shrink-0">&rarr;</span>
             <input
               type="date"
               value={dateFilter.endDate}
               onChange={(e) =>
                 onDateFilterChange(dateFilter.startDate, e.target.value)
               }
-              className="text-xs text-[#111827] font-semibold focus:outline-none"
+              className="text-xs text-[#111827] font-semibold focus:outline-none min-w-0"
               aria-label="Filter end date"
             />
             {(dateFilter.startDate || dateFilter.endDate) && (
               <button
                 onClick={() => onDateFilterChange("", "")}
-                className="ml-1 text-[#2563EB] hover:text-[#1D4ED8] font-bold cursor-pointer"
+                className="ml-1 text-[#2563EB] hover:text-[#1D4ED8] font-bold cursor-pointer shrink-0"
               >
                 Clear
               </button>
             )}
           </div>
 
-          {onOpenStatusModal && (
+          <div className="flex items-center gap-2 w-full sm:w-auto">
+            {onOpenStatusModal && (
+              <button
+                type="button"
+                onClick={onOpenStatusModal}
+                className={`hidden sm:inline-flex items-center gap-1.5 px-3 py-2 text-xs font-bold rounded-xl border transition cursor-pointer shadow-xs ${
+                  canteen_status?.is_open === false
+                    ? "bg-red-50 border-red-300 text-red-800 hover:bg-red-100"
+                    : "bg-emerald-50 border-emerald-300 text-emerald-800 hover:bg-emerald-100"
+                }`}
+              >
+                <span
+                  className={`h-2 w-2 rounded-full ${
+                    canteen_status?.is_open === false
+                      ? "bg-red-500"
+                      : "bg-emerald-500 animate-pulse"
+                  }`}
+                />
+                <span>
+                  {canteen_status?.is_open === false ? "Shop Closed" : "Shop Open"}
+                </span>
+              </button>
+            )}
+
+            <button
+              onClick={onRefresh}
+              className="btn-3d-secondary flex-1 sm:flex-initial inline-flex items-center justify-center gap-1.5 px-3.5 py-2 text-xs font-bold text-[#111827] cursor-pointer"
+            >
+              <RefreshCw className="h-3.5 w-3.5 text-gray-600" />
+              Refresh
+            </button>
+
+            {/* Highlighted UPI QR Code Option */}
             <button
               type="button"
-              onClick={onOpenStatusModal}
-              className={`inline-flex items-center gap-1.5 px-3 py-2 text-xs font-bold rounded-xl border transition cursor-pointer shadow-xs ${
-                canteen_status?.is_open === false
-                  ? "bg-red-50 border-red-300 text-red-800 hover:bg-red-100"
-                  : "bg-emerald-50 border-emerald-300 text-emerald-800 hover:bg-emerald-100"
-              }`}
+              onClick={() => setQrModalOpen(true)}
+              className="btn-3d-primary flex-1 sm:flex-initial inline-flex items-center justify-center gap-2 px-4 py-2 text-xs font-black cursor-pointer shadow-md shadow-blue-500/25 hover:scale-[1.03] active:scale-95 transition-all ring-2 ring-blue-500/20"
+              title="Show UPI Payment QR Code for customers to scan"
             >
-              <span
-                className={`h-2 w-2 rounded-full ${
-                  canteen_status?.is_open === false
-                    ? "bg-red-500"
-                    : "bg-emerald-500 animate-pulse"
-                }`}
-              />
-              <span>
-                {canteen_status?.is_open === false ? "Shop Closed" : "Shop Open"}
-              </span>
+              <QrCode className="h-4 w-4 text-white" />
+              <span>UPI QR Code</span>
             </button>
-          )}
-
-          <button
-            onClick={onRefresh}
-            className="btn-3d-secondary inline-flex items-center gap-1.5 px-3.5 py-2 text-xs font-bold text-[#111827] cursor-pointer"
-          >
-            <RefreshCw className="h-3.5 w-3.5 text-gray-600" />
-            Refresh
-          </button>
-
-          {/* Highlighted UPI QR Code Option */}
-          <button
-            type="button"
-            onClick={() => setQrModalOpen(true)}
-            className="btn-3d-primary inline-flex items-center gap-2 px-4 py-2 text-xs font-black cursor-pointer shadow-md shadow-blue-500/25 hover:scale-[1.03] active:scale-95 transition-all ring-2 ring-blue-500/20"
-            title="Show UPI Payment QR Code for customers to scan"
-          >
-            <QrCode className="h-4 w-4 text-white" />
-            <span>UPI QR Code</span>
-          </button>
+          </div>
         </div>
       </div>
 
@@ -274,7 +276,7 @@ export function DashboardView({
             : "border-l-emerald-500 bg-emerald-50/30"
         }`}
       >
-        <div className="flex items-center gap-3.5">
+        <div className="flex items-start sm:items-center gap-3.5 w-full sm:w-auto">
           <div
             className={`h-11 w-11 rounded-2xl flex items-center justify-center text-white shrink-0 ${
               canteen_status?.is_open === false ? "orb-3d-red" : "orb-3d-emerald"
@@ -282,7 +284,7 @@ export function DashboardView({
           >
             <Store className="h-5 w-5" />
           </div>
-          <div>
+          <div className="min-w-0 flex-1">
             <div className="flex items-center gap-2 flex-wrap">
               <span className="text-xs font-black uppercase tracking-wider text-slate-500">
                 Shop Operating Status:
@@ -309,11 +311,11 @@ export function DashboardView({
                 </span>
               )}
 
-              {/* Hide Analytics option next to Open For Orders option with gap */}
+              {/* Hide Analytics option */}
               <button
                 type="button"
                 onClick={handleTogglePrivacy}
-                className={`ml-3.5 inline-flex items-center gap-1.5 px-3 py-1 text-xs font-extrabold rounded-xl transition cursor-pointer shadow-xs border ${
+                className={`ml-0 sm:ml-3.5 inline-flex items-center gap-1.5 px-3 py-1 text-xs font-extrabold rounded-xl transition cursor-pointer shadow-xs border ${
                   privacyMode
                     ? "bg-amber-100 border-amber-300 text-amber-950 hover:bg-amber-200"
                     : "bg-white border-slate-300 text-slate-700 hover:bg-slate-50 hover:text-slate-900"
@@ -345,7 +347,7 @@ export function DashboardView({
           <button
             type="button"
             onClick={onOpenStatusModal}
-            className={`shrink-0 rounded-xl px-4 py-2.5 text-xs font-extrabold flex items-center gap-2 cursor-pointer transition shadow-sm ${
+            className={`w-full sm:w-auto justify-center shrink-0 rounded-xl px-4 py-2.5 text-xs font-extrabold flex items-center gap-2 cursor-pointer transition shadow-sm ${
               canteen_status?.is_open === false
                 ? "btn-3d-primary"
                 : "btn-3d-secondary text-slate-800 border-red-200 hover:border-red-400 hover:text-red-700"

@@ -339,22 +339,53 @@ export default function HostelCanteenPosApp() {
   }
 
   return (
-    <div className="min-h-screen flex flex-col lg:flex-row bg-[#F1F5F9] text-[#111827]">
-      {/* Mobile Header */}
-      <div className="flex items-center justify-between bg-[#090D16] px-4 py-3 text-white lg:hidden border-b border-slate-800 shadow-lg">
-        <div className="flex items-center gap-2.5">
-          <CanteenLogo className="h-8 w-8" size={32} />
-          <span className="font-bold text-sm tracking-tight">
-            Hostel Canteen POS
-          </span>
+    <div className="min-h-screen flex flex-col lg:flex-row bg-[#F1F5F9] text-[#111827] w-full max-w-full overflow-x-hidden">
+      {/* Mobile Top Header Bar */}
+      <div className="bg-[#090D16] text-white lg:hidden border-b border-slate-800 shadow-md sticky top-0 z-30">
+        <div className="flex items-center justify-between px-3.5 py-2.5">
+          <div className="flex items-center gap-2 min-w-0">
+            <CanteenLogo className="h-7 w-7 shrink-0" size={28} />
+            <div className="truncate">
+              <span className="font-extrabold text-sm tracking-tight block leading-tight">
+                Hostel Canteen
+              </span>
+              <span className="text-[10px] text-slate-400 font-semibold leading-none">
+                POS &bull; {canteenStatus.is_open ? "Open" : "Closed"}
+              </span>
+            </div>
+          </div>
+
+          <div className="flex items-center gap-2 shrink-0">
+            <button
+              onClick={() => setActiveTab("pos")}
+              className="btn-3d-primary rounded-xl px-3 py-1.5 text-xs font-black text-white shadow-xs flex items-center gap-1.5 cursor-pointer"
+            >
+              <ShoppingCart className="h-3.5 w-3.5" />
+              <span>Billing</span>
+            </button>
+
+            <button
+              onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
+              className="rounded-xl p-2 text-gray-200 hover:text-white bg-slate-800/80 border border-slate-700/80 cursor-pointer transition active:scale-95"
+              aria-label="Toggle navigation menu"
+            >
+              {mobileMenuOpen ? (
+                <X className="h-5 w-5" />
+              ) : (
+                <Menu className="h-5 w-5" />
+              )}
+            </button>
+          </div>
         </div>
-        <div className="flex items-center gap-2">
+
+        {/* Mobile Secondary Action Strip */}
+        <div className="flex items-center justify-between gap-1.5 px-3 py-1.5 bg-slate-900/90 border-t border-slate-800/80 text-[11px]">
           <button
             onClick={() => setStatusModalOpen(true)}
-            className={`rounded-lg px-2 py-1 text-[10px] font-extrabold flex items-center gap-1.5 ${
+            className={`flex-1 rounded-lg py-1 px-2 font-bold flex items-center justify-center gap-1 border transition ${
               canteenStatus.is_open
-                ? "bg-emerald-500/20 text-emerald-300 border border-emerald-500/30"
-                : "bg-red-500/20 text-red-300 border border-red-500/30"
+                ? "bg-emerald-500/15 border-emerald-500/30 text-emerald-300"
+                : "bg-red-500/15 border-red-500/30 text-red-300"
             }`}
           >
             <span
@@ -362,74 +393,68 @@ export default function HostelCanteenPosApp() {
                 canteenStatus.is_open ? "bg-emerald-400 animate-pulse" : "bg-red-400"
               }`}
             />
-            <span>{canteenStatus.is_open ? "Open" : "Closed"}</span>
+            <span className="truncate">{canteenStatus.is_open ? "Open" : "Closed"}</span>
           </button>
-          <button
-            onClick={() => setActiveTab("customer_portal")}
-            className="rounded-lg bg-emerald-600 px-2.5 py-1 text-[11px] font-bold text-white"
-          >
-            Student View
-          </button>
+
           <button
             onClick={handleOpenScan}
-            className="rounded-lg bg-blue-600 px-2.5 py-1 text-xs font-bold text-white flex items-center gap-1 shadow-xs"
-            title="Scan snack photo"
+            className="flex-1 rounded-lg py-1 px-2 font-bold bg-blue-500/15 border border-blue-500/30 text-blue-300 flex items-center justify-center gap-1"
           >
-            <ScanLine className="h-3.5 w-3.5" />
+            <ScanLine className="h-3 w-3" />
             <span>Scan</span>
           </button>
+
           <button
-            onClick={togglePrivacyMode}
-            className={`rounded-lg p-1.5 text-xs font-bold transition flex items-center gap-1 ${
-              privacyMode
-                ? "bg-amber-500 text-white"
-                : "bg-slate-800 text-slate-300 hover:text-white"
-            }`}
-            title={privacyMode ? "Privacy Mode Active: Click to Show Analytics" : "Hide Financial Analytics"}
+            onClick={() => setActiveTab("customer_portal")}
+            className="flex-1 rounded-lg py-1 px-2 font-bold bg-purple-500/15 border border-purple-500/30 text-purple-300 flex items-center justify-center gap-1"
           >
-            {privacyMode ? <Eye className="h-3.5 w-3.5" /> : <EyeOff className="h-3.5 w-3.5" />}
-          </button>
-          <button
-            onClick={() => setActiveTab("pos")}
-            className="btn-3d-primary rounded-lg px-3 py-1 text-xs font-black text-white shadow-xs"
-          >
-            Fast Billing
-          </button>
-          <button
-            onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-            className="rounded-lg p-1.5 text-gray-200 hover:bg-gray-800"
-          >
-            {mobileMenuOpen ? (
-              <X className="h-5 w-5" />
-            ) : (
-              <Menu className="h-5 w-5" />
-            )}
+            <GraduationCap className="h-3 w-3" />
+            <span>Student View</span>
           </button>
         </div>
       </div>
 
-      {/* Clean Modern Floating Sidebar Navigation */}
+      {/* Mobile Drawer Backdrop */}
+      {mobileMenuOpen && (
+        <div
+          onClick={() => setMobileMenuOpen(false)}
+          className="fixed inset-0 z-35 bg-black/60 backdrop-blur-xs lg:hidden"
+        />
+      )}
+
+      {/* Floating Sidebar Navigation */}
       <aside
         className={`${
-          mobileMenuOpen ? "block" : "hidden"
-        } lg:flex lg:w-68 lg:flex-col lg:fixed lg:inset-y-0 bg-white border-r border-slate-200 shadow-xs z-40`}
+          mobileMenuOpen
+            ? "fixed inset-y-0 left-0 w-72 max-w-[85vw] z-40 flex flex-col bg-white shadow-2xl overflow-y-auto"
+            : "hidden"
+        } lg:flex lg:w-68 lg:flex-col lg:fixed lg:inset-y-0 bg-white border-r border-slate-200 shadow-xs z-20`}
       >
         {/* Brand Header */}
-        <div className="hidden lg:flex items-center gap-3 px-5 py-4 border-b border-slate-100">
-          <CanteenLogo className="h-10 w-10 shadow-sm" size={40} />
-          <div>
-            <div className="flex items-center gap-1.5">
-              <span className="text-sm font-bold text-slate-900 leading-tight">
-                Hostel Canteen
-              </span>
-              <span className="rounded-md bg-blue-50 border border-blue-200 px-1.5 py-0.5 text-[10px] font-bold text-blue-700">
-                POS
-              </span>
-            </div>
-            <div className="text-[11px] text-slate-500 font-medium">
-              Management Portal
+        <div className="flex items-center justify-between gap-3 px-5 py-4 border-b border-slate-100">
+          <div className="flex items-center gap-3">
+            <CanteenLogo className="h-9 w-9 shadow-sm" size={36} />
+            <div>
+              <div className="flex items-center gap-1.5">
+                <span className="text-sm font-bold text-slate-900 leading-tight">
+                  Hostel Canteen
+                </span>
+                <span className="rounded-md bg-blue-50 border border-blue-200 px-1.5 py-0.5 text-[10px] font-bold text-blue-700">
+                  POS
+                </span>
+              </div>
+              <div className="text-[11px] text-slate-500 font-medium">
+                Management Portal
+              </div>
             </div>
           </div>
+          <button
+            type="button"
+            onClick={() => setMobileMenuOpen(false)}
+            className="lg:hidden p-1.5 rounded-lg text-slate-400 hover:text-slate-700 hover:bg-slate-100 cursor-pointer"
+          >
+            <X className="h-5 w-5" />
+          </button>
         </div>
 
         {/* Quick Action Buttons */}
@@ -581,7 +606,7 @@ export default function HostelCanteenPosApp() {
       </aside>
 
       {/* Main Content Area */}
-      <main className="flex-1 lg:pl-68">
+      <main className="flex-1 lg:pl-68 w-full max-w-full overflow-x-hidden min-w-0">
         {/* Persistence Alert Banner if table is not yet set up in Supabase */}
         {appData?.supabase_configured && appData?.supabase_cloud_synced === false && (
           <div className="bg-gradient-to-r from-red-600 to-amber-600 text-white px-5 py-2 text-xs font-bold flex items-center justify-between gap-3 shadow-sm sticky top-0 z-30">
@@ -688,7 +713,7 @@ export default function HostelCanteenPosApp() {
           </div>
         </div>
 
-        <div className="max-w-7xl mx-auto p-4 sm:p-6">
+        <div className="max-w-7xl mx-auto p-3 sm:p-6 w-full">
           {!appData ? (
             <div className="card-3d-static rounded-2xl p-12 text-center text-xs font-bold text-slate-500">
               Loading canteen 3D database records...
