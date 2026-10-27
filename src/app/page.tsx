@@ -786,6 +786,7 @@ export default function HostelCanteenPosApp() {
               {activeTab === "customers" && (
                 <CustomersView
                   customers={appData.customers}
+                  sales={appData.sales}
                   onRefresh={fetchAllData}
                   onSelectReceipt={(sale) => setReceiptSale(sale)}
                 />

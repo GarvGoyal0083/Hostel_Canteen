@@ -15,6 +15,7 @@ import {
   KeyRound,
   Edit,
   ShieldCheck,
+  TrendingUp,
 } from "lucide-react";
 import {
   Customer,
@@ -35,17 +36,147 @@ import { PaymentStatusBadge } from "@/components/StatusBadge";
 
 interface CustomersViewProps {
   customers: Customer[];
+  sales?: SaleRecord[];
   onRefresh: () => void;
   onSelectReceipt: (sale: SaleRecord) => void;
 }
 
 export function CustomersView({
   customers,
+  sales = [],
   onRefresh,
   onSelectReceipt,
 }: CustomersViewProps) {
   const [searchQuery, setSearchQuery] = useState("");
   const [onlyWithDues, setOnlyWithDues] = useState(false);
+
+  // Map of total profit till date per customer (by ID and by Name)
+  const customerProfitMap = useMemo(() => {
+    const map = new Map<
+      string,
+      {
+        profit: number;
+        cogs: number;
+        netPurchases: number;
+        marginPercent: number;
+        count: number;
+      }
+    >();
+
+    if (!sales || sales.length === 0) return map;
+
+    for (const sale of sales) {
+      if (sale.sale_status === "Cancelled") continue;
+
+      const custId = sale.customer_id;
+      const custName = sale.customer_name_snapshot?.trim().toLowerCase();
+
+      // Compute COGS
+      let cogs = 0;
+      if (sale.items && sale.items.length > 0) {
+        cogs = sale.items.reduce((acc, item) => {
+          const netQty = Math.max(
+            0,
+            item.quantity - (item.refunded_quantity || 0)
+          );
+          return acc + Number(item.purchase_price_at_sale || 0) * netQty;
+        }, 0);
+      } else {
+        cogs = Number(sale.cogs_amount ?? 0);
+      }
+
+      const netRevenue = Math.max(
+        0,
+        Number(sale.payable_amount || 0) - Number(sale.refunded_amount || 0)
+      );
+
+      const isRefunded =
+        sale.sale_status === "Refunded" ||
+        (netRevenue === 0 && sale.refunded_amount > 0);
+      const profit = isRefunded
+        ? 0
+        : Math.round((netRevenue - cogs) * 100) / 100;
+      const validCogs = isRefunded ? 0 : Math.round(cogs * 100) / 100;
+
+      if (custId) {
+        const cur = map.get(custId) || {
+          profit: 0,
+          cogs: 0,
+          netPurchases: 0,
+          marginPercent: 0,
+          count: 0,
+        };
+        cur.profit = Math.round((cur.profit + profit) * 100) / 100;
+        cur.cogs = Math.round((cur.cogs + validCogs) * 100) / 100;
+        cur.netPurchases =
+          Math.round((cur.netPurchases + netRevenue) * 100) / 100;
+        cur.count += 1;
+        cur.marginPercent =
+          cur.netPurchases > 0
+            ? Math.round((cur.profit / cur.netPurchases) * 1000) / 10
+            : 0;
+        map.set(custId, cur);
+      }
+
+      if (custName) {
+        const nameKey = `name:${custName}`;
+        const cur = map.get(nameKey) || {
+          profit: 0,
+          cogs: 0,
+          netPurchases: 0,
+          marginPercent: 0,
+          count: 0,
+        };
+        cur.profit = Math.round((cur.profit + profit) * 100) / 100;
+        cur.cogs = Math.round((cur.cogs + validCogs) * 100) / 100;
+        cur.netPurchases =
+          Math.round((cur.netPurchases + netRevenue) * 100) / 100;
+        cur.count += 1;
+        cur.marginPercent =
+          cur.netPurchases > 0
+            ? Math.round((cur.profit / cur.netPurchases) * 1000) / 10
+            : 0;
+        map.set(nameKey, cur);
+      }
+    }
+
+    return map;
+  }, [sales]);
+
+  const getCustomerProfit = (c: Customer) => {
+    const byId = customerProfitMap.get(c.id);
+    if (byId && byId.count > 0) return byId;
+
+    const byName = customerProfitMap.get(`name:${c.name.trim().toLowerCase()}`);
+    if (byName && byName.count > 0) return byName;
+
+    return { profit: 0, cogs: 0, netPurchases: 0, marginPercent: 0, count: 0 };
+  };
+
+  const overallStats = useMemo(() => {
+    let totalPurchases = 0;
+    let totalProfit = 0;
+    let totalCogs = 0;
+
+    for (const c of customers) {
+      totalPurchases += c.total_purchases || 0;
+      const cp = getCustomerProfit(c);
+      totalProfit += cp.profit;
+      totalCogs += cp.cogs;
+    }
+
+    const marginPercent =
+      totalPurchases > 0
+        ? Math.round((totalProfit / totalPurchases) * 1000) / 10
+        : 0;
+
+    return {
+      totalPurchases: Math.round(totalPurchases * 100) / 100,
+      totalProfit: Math.round(totalProfit * 100) / 100,
+      totalCogs: Math.round(totalCogs * 100) / 100,
+      marginPercent,
+    };
+  }, [customers, customerProfitMap]);
 
   // Add Customer Modal
   const [addModalOpen, setAddModalOpen] = useState(false);
@@ -306,6 +437,8 @@ export function CustomersView({
       "Total Purchases (INR)",
       "Total Payments (INR)",
       "Outstanding Dues / Udhaar (INR)",
+      "Total Profit Till Date (INR)",
+      "Profit Margin (%)",
       "Notes",
     ];
 
@@ -319,6 +452,7 @@ export function CustomersView({
 
     if (filteredCustomers.length > 0) {
       filteredCustomers.forEach((c) => {
+        const cp = getCustomerProfit(c);
         const row = [
           c.name,
           c.room_number || "",
@@ -327,6 +461,8 @@ export function CustomersView({
           c.total_purchases,
           c.total_payments,
           c.outstanding_dues,
+          cp.profit,
+          `${cp.marginPercent}%`,
           c.notes || "",
         ];
         lines.push(row.map(escapeCSVCell).join(","));
@@ -379,7 +515,7 @@ export function CustomersView({
       </div>
 
       {/* Summary Banner */}
-      <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
         <div className="card-3d rounded-2xl p-5">
           <span className="text-xs text-slate-500 font-bold uppercase tracking-wider block">
             Registered Hostel Students
@@ -390,12 +526,23 @@ export function CustomersView({
         </div>
         <div className="card-3d rounded-2xl p-5">
           <span className="text-xs text-slate-500 font-bold uppercase tracking-wider block">
-            Total Purchases by Students
+            Total Student Purchases
           </span>
           <span className="text-2xl font-black text-[#2563EB] mt-1 block">
-            {formatINR(
-              customers.reduce((acc, c) => acc + c.total_purchases, 0)
-            )}
+            {formatINR(overallStats.totalPurchases)}
+          </span>
+        </div>
+        <div className="card-3d rounded-2xl p-5 bg-gradient-to-br from-emerald-50 to-teal-50 border border-emerald-200">
+          <div className="flex items-center justify-between">
+            <span className="text-xs text-emerald-800 font-bold uppercase tracking-wider block">
+              Total Profit Till Date
+            </span>
+            <span className="text-[10px] font-black bg-emerald-200/80 text-emerald-950 px-1.5 py-0.5 rounded">
+              {overallStats.marginPercent}% avg
+            </span>
+          </div>
+          <span className="text-2xl font-black text-emerald-900 mt-1 block">
+            +{formatINR(overallStats.totalProfit)}
           </span>
         </div>
         <div className="card-3d rounded-2xl p-5">
@@ -450,6 +597,9 @@ export function CustomersView({
                 <th className="px-4 py-3 text-right font-semibold">
                   Outstanding Dues
                 </th>
+                <th className="px-4 py-3 text-right font-semibold text-emerald-800">
+                  Total Profit (Till Date)
+                </th>
                 <th className="px-4 py-3 text-right font-semibold">Actions</th>
               </tr>
             </thead>
@@ -457,7 +607,7 @@ export function CustomersView({
               {filteredCustomers.length === 0 ? (
                 <tr>
                   <td
-                    colSpan={7}
+                    colSpan={8}
                     className="py-8 text-center text-gray-500"
                   >
                     No customers match your filter.
@@ -518,6 +668,24 @@ export function CustomersView({
                           ₹0 (Settled)
                         </span>
                       )}
+                    </td>
+                    <td className="px-4 py-3 text-right">
+                      {(() => {
+                        const cp = getCustomerProfit(c);
+                        return (
+                          <div>
+                            <div className="font-black text-xs text-emerald-700">
+                              +{formatINR(cp.profit)}
+                            </div>
+                            <div className="text-[10px] text-gray-500 font-medium mt-0.5">
+                              Cost: {formatINR(cp.cogs)}
+                            </div>
+                            <div className="mt-1 inline-block text-[10px] font-bold px-1.5 py-0.5 rounded bg-emerald-50 text-emerald-800 border border-emerald-200">
+                              {cp.marginPercent}% margin
+                            </div>
+                          </div>
+                        );
+                      })()}
                     </td>
                     <td className="px-4 py-3 text-right">
                       <div className="inline-flex items-center gap-2">
@@ -1090,28 +1258,80 @@ export function CustomersView({
 
             <div className="p-6 space-y-6 max-h-[80vh] overflow-y-auto text-xs">
               {/* Summary Strip */}
-              <div className="grid grid-cols-3 gap-4">
-                <div className="rounded-lg bg-[#F3F4F6] p-3 border border-gray-200">
-                  <span className="text-gray-500 block">Total Purchases</span>
-                  <span className="text-lg font-bold text-[#111827]">
-                    {formatINR(ledgerData.customer.total_purchases)}
-                  </span>
-                </div>
-                <div className="rounded-lg bg-emerald-50 p-3 border border-emerald-200">
-                  <span className="text-emerald-800 block">Total Paid</span>
-                  <span className="text-lg font-bold text-emerald-700">
-                    {formatINR(ledgerData.customer.total_payments)}
-                  </span>
-                </div>
-                <div className="rounded-lg bg-amber-50 p-3 border border-amber-200">
-                  <span className="text-amber-900 block">
-                    Remaining Udhaar Due
-                  </span>
-                  <span className="text-lg font-bold text-amber-800">
-                    {formatINR(ledgerData.customer.outstanding_dues)}
-                  </span>
-                </div>
-              </div>
+              {(() => {
+                let ledgerProfit = 0;
+                let ledgerCogs = 0;
+                let ledgerNetRev = 0;
+                for (const s of ledgerData.sales) {
+                  if (s.sale_status === "Cancelled") continue;
+                  let sCogs = 0;
+                  if (s.items && s.items.length > 0) {
+                    sCogs = s.items.reduce((acc, item) => {
+                      const netQty = Math.max(
+                        0,
+                        item.quantity - (item.refunded_quantity || 0)
+                      );
+                      return acc + Number(item.purchase_price_at_sale || 0) * netQty;
+                    }, 0);
+                  } else {
+                    sCogs = Number(s.cogs_amount ?? 0);
+                  }
+                  const sNet = Math.max(
+                    0,
+                    Number(s.payable_amount || 0) - Number(s.refunded_amount || 0)
+                  );
+                  const isRef =
+                    s.sale_status === "Refunded" ||
+                    (sNet === 0 && s.refunded_amount > 0);
+                  if (!isRef) {
+                    ledgerProfit += sNet - sCogs;
+                    ledgerCogs += sCogs;
+                    ledgerNetRev += sNet;
+                  }
+                }
+                const ledgerMargin =
+                  ledgerNetRev > 0
+                    ? Math.round((ledgerProfit / ledgerNetRev) * 1000) / 10
+                    : 0;
+
+                return (
+                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                    <div className="rounded-lg bg-[#F3F4F6] p-3 border border-gray-200">
+                      <span className="text-gray-500 block">Total Purchases</span>
+                      <span className="text-lg font-bold text-[#111827]">
+                        {formatINR(ledgerData.customer.total_purchases)}
+                      </span>
+                    </div>
+                    <div className="rounded-lg bg-emerald-50 p-3 border border-emerald-200">
+                      <span className="text-emerald-800 block">Total Paid</span>
+                      <span className="text-lg font-bold text-emerald-700">
+                        {formatINR(ledgerData.customer.total_payments)}
+                      </span>
+                    </div>
+                    <div className="rounded-lg bg-gradient-to-br from-emerald-50 to-teal-50 p-3 border border-emerald-200 shadow-2xs">
+                      <div className="flex items-center justify-between">
+                        <span className="text-emerald-800 font-bold block">
+                          Profit Till Date
+                        </span>
+                        <span className="text-[10px] bg-emerald-200/80 text-emerald-950 font-black px-1.5 py-0.5 rounded">
+                          {ledgerMargin}%
+                        </span>
+                      </div>
+                      <span className="text-lg font-bold text-emerald-900 mt-0.5 block">
+                        +{formatINR(Math.round(ledgerProfit * 100) / 100)}
+                      </span>
+                    </div>
+                    <div className="rounded-lg bg-amber-50 p-3 border border-amber-200">
+                      <span className="text-amber-900 block">
+                        Remaining Udhaar Due
+                      </span>
+                      <span className="text-lg font-bold text-amber-800">
+                        {formatINR(ledgerData.customer.outstanding_dues)}
+                      </span>
+                    </div>
+                  </div>
+                );
+              })()}
 
               {/* Ledger Table */}
               <div>
@@ -1216,6 +1436,9 @@ export function CustomersView({
                         <th className="px-3 py-2 text-right font-semibold">
                           Due
                         </th>
+                        <th className="px-3 py-2 text-right font-semibold text-emerald-800">
+                          Profit
+                        </th>
                         <th className="px-3 py-2 text-center font-semibold">
                           Status
                         </th>
@@ -1225,37 +1448,86 @@ export function CustomersView({
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-gray-100">
-                      {ledgerData.sales.map((s) => (
-                        <tr key={s.id}>
-                          <td className="px-3 py-2 font-bold text-[#2563EB]">
-                            {s.bill_number}
-                          </td>
-                          <td className="px-3 py-2 text-gray-600">
-                            {formatIST(s.created_at)}
-                          </td>
-                          <td className="px-3 py-2 text-right font-bold">
-                            {formatINR(s.payable_amount)}
-                          </td>
-                          <td className="px-3 py-2 text-right text-emerald-700 font-semibold">
-                            {formatINR(s.paid_amount)}
-                          </td>
-                          <td className="px-3 py-2 text-right text-amber-800 font-bold">
-                            {formatINR(s.outstanding_amount)}
-                          </td>
-                          <td className="px-3 py-2 text-center">
-                            <PaymentStatusBadge status={s.payment_status} />
-                          </td>
-                          <td className="px-3 py-2 text-right">
-                            <button
-                              onClick={() => onSelectReceipt(s)}
-                              className="inline-flex items-center gap-1 rounded border border-gray-300 px-2 py-0.5 text-[11px] font-semibold text-[#111827] hover:bg-gray-100 cursor-pointer"
-                            >
-                              <Eye className="h-3 w-3" />
-                              Receipt
-                            </button>
-                          </td>
-                        </tr>
-                      ))}
+                      {ledgerData.sales.map((s) => {
+                        let billCogs = 0;
+                        if (s.items && s.items.length > 0) {
+                          billCogs = s.items.reduce((acc, item) => {
+                            const netQty = Math.max(
+                              0,
+                              item.quantity - (item.refunded_quantity || 0)
+                            );
+                            return (
+                              acc +
+                              Number(item.purchase_price_at_sale || 0) * netQty
+                            );
+                          }, 0);
+                        } else {
+                          billCogs = Number(s.cogs_amount ?? 0);
+                        }
+                        const netRev = Math.max(
+                          0,
+                          Number(s.payable_amount || 0) -
+                            Number(s.refunded_amount || 0)
+                        );
+                        const isRef =
+                          s.sale_status === "Refunded" ||
+                          (netRev === 0 && s.refunded_amount > 0);
+                        const profit = isRef
+                          ? 0
+                          : Math.round((netRev - billCogs) * 100) / 100;
+
+                        return (
+                          <tr key={s.id}>
+                            <td className="px-3 py-2 font-bold text-[#2563EB]">
+                              {s.bill_number}
+                            </td>
+                            <td className="px-3 py-2 text-gray-600">
+                              {formatIST(s.created_at)}
+                            </td>
+                            <td className="px-3 py-2 text-right font-bold">
+                              {formatINR(s.payable_amount)}
+                            </td>
+                            <td className="px-3 py-2 text-right text-emerald-700 font-semibold">
+                              {formatINR(s.paid_amount)}
+                            </td>
+                            <td className="px-3 py-2 text-right text-amber-800 font-bold">
+                              {formatINR(s.outstanding_amount)}
+                            </td>
+                            <td className="px-3 py-2 text-right">
+                              {isRef ? (
+                                <span className="text-gray-400 font-semibold line-through">
+                                  ₹0
+                                </span>
+                              ) : (
+                                <span
+                                  className={`font-black ${
+                                    profit > 0
+                                      ? "text-emerald-700"
+                                      : profit < 0
+                                      ? "text-red-700"
+                                      : "text-gray-700"
+                                  }`}
+                                >
+                                  {profit >= 0 ? "+" : ""}
+                                  {formatINR(profit)}
+                                </span>
+                              )}
+                            </td>
+                            <td className="px-3 py-2 text-center">
+                              <PaymentStatusBadge status={s.payment_status} />
+                            </td>
+                            <td className="px-3 py-2 text-right">
+                              <button
+                                onClick={() => onSelectReceipt(s)}
+                                className="inline-flex items-center gap-1 rounded border border-gray-300 px-2 py-0.5 text-[11px] font-semibold text-[#111827] hover:bg-gray-100 cursor-pointer"
+                              >
+                                <Eye className="h-3 w-3" />
+                                Receipt
+                              </button>
+                            </td>
+                          </tr>
+                        );
+                      })}
                     </tbody>
                   </table>
                 </div>
