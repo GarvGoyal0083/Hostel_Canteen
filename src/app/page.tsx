@@ -391,9 +391,9 @@ export default function HostelCanteenPosApp() {
           </button>
           <button
             onClick={() => setActiveTab("pos")}
-            className="btn-3d-secondary rounded-lg px-2.5 py-1 text-xs font-bold text-slate-800"
+            className="btn-3d-primary rounded-lg px-3 py-1 text-xs font-black text-white shadow-xs"
           >
-            + POS
+            Fast Billing
           </button>
           <button
             onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
@@ -662,10 +662,10 @@ export default function HostelCanteenPosApp() {
               <button
                 type="button"
                 onClick={handleOpenScan}
-                className="btn-3d-primary rounded-xl px-4 py-1.5 text-xs font-extrabold flex items-center gap-2 cursor-pointer shadow-sm hover:scale-[1.02] active:scale-95 transition-all"
+                className="rounded-xl bg-blue-50/80 border border-blue-200 px-3.5 py-1.5 text-xs font-bold text-blue-700 hover:bg-blue-100/80 flex items-center gap-2 cursor-pointer transition shadow-2xs hover:scale-[1.02] active:scale-95"
                 title="Scan a snack photo with camera or file upload"
               >
-                <ScanLine className="h-4 w-4" />
+                <ScanLine className="h-4 w-4 text-blue-600" />
                 <span>Scan Snack</span>
               </button>
 
@@ -702,11 +702,14 @@ export default function HostelCanteenPosApp() {
                 <GraduationCap className="h-4 w-4 text-[#2563EB]" />
                 <span>Customer / Student View</span>
               </button>
+
+              {/* Highlighted Fast Billing Primary Action */}
               <button
                 onClick={() => setActiveTab("pos")}
-                className="btn-3d-secondary rounded-xl px-3.5 py-1.5 text-xs font-extrabold flex items-center gap-1.5 cursor-pointer"
+                className="btn-3d-primary rounded-xl px-4 py-1.5 text-xs font-black flex items-center gap-2 cursor-pointer shadow-md shadow-blue-500/25 hover:scale-[1.03] active:scale-95 transition-all"
+                title="Open Fast POS Billing"
               >
-                <ShoppingCart className="h-3.5 w-3.5 text-slate-700" />
+                <ShoppingCart className="h-4 w-4 text-white" />
                 <span>Fast Billing</span>
               </button>
             </div>

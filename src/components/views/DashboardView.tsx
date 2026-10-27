@@ -248,14 +248,6 @@ export function DashboardView({
             <RefreshCw className="h-3.5 w-3.5 text-gray-600" />
             Refresh
           </button>
-
-          <button
-            onClick={() => onNavigate("pos")}
-            className="btn-3d-primary inline-flex items-center gap-2 px-4 py-2 text-xs font-bold cursor-pointer"
-          >
-            <PlusCircle className="h-4 w-4" />
-            New Sale (POS)
-          </button>
         </div>
       </div>
 
@@ -946,7 +938,7 @@ export function DashboardView({
                       colSpan={6}
                       className="py-6 text-center text-gray-500 font-medium"
                     >
-                      No transactions recorded yet. Tap &ldquo;New Sale (POS)&rdquo; to record your first sale.
+                      No transactions recorded yet. Tap &ldquo;Fast Billing&rdquo; to record your first sale.
                     </td>
                   </tr>
                 ) : (
