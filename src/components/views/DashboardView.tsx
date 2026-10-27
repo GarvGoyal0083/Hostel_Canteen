@@ -14,6 +14,7 @@ import {
   Calendar,
   PlusCircle,
   Eye,
+  EyeOff,
   RefreshCw,
   Layers,
   CheckCircle2,
@@ -92,6 +93,8 @@ interface DashboardProps {
   onSelectReceipt: (sale: SaleRecord) => void;
   onRefresh: () => void;
   onOpenStatusModal?: () => void;
+  privacyMode?: boolean;
+  onTogglePrivacyMode?: () => void;
 }
 
 export function DashboardView({
@@ -102,6 +105,8 @@ export function DashboardView({
   onSelectReceipt,
   onRefresh,
   onOpenStatusModal,
+  privacyMode: externalPrivacyMode,
+  onTogglePrivacyMode: externalTogglePrivacyMode,
 }: DashboardProps) {
   const {
     kpis,
@@ -112,6 +117,40 @@ export function DashboardView({
     environment_mode,
     canteen_status,
   } = data;
+
+  const [internalPrivacyMode, setInternalPrivacyMode] = useState<boolean>(
+    () => {
+      if (typeof window !== "undefined") {
+        return localStorage.getItem("hc_privacy_mode") === "true";
+      }
+      return false;
+    }
+  );
+
+  const privacyMode =
+    externalPrivacyMode !== undefined
+      ? externalPrivacyMode
+      : internalPrivacyMode;
+
+  const handleTogglePrivacy = () => {
+    if (externalTogglePrivacyMode) {
+      externalTogglePrivacyMode();
+    } else {
+      setInternalPrivacyMode((prev) => {
+        const next = !prev;
+        if (typeof window !== "undefined") {
+          localStorage.setItem("hc_privacy_mode", String(next));
+        }
+        return next;
+      });
+    }
+  };
+
+  const formatPrivateINR = (amount: number | undefined | null) => {
+    if (privacyMode) return "₹••••";
+    return formatINR(amount);
+  };
+
   const [chartMetric, setChartMetric] = useState<"sales_profit" | "collections">(
     "sales_profit"
   );
@@ -201,6 +240,30 @@ export function DashboardView({
               </span>
             </button>
           )}
+
+          {/* Customer Privacy / Hide Analytics Toggle */}
+          <button
+            type="button"
+            onClick={handleTogglePrivacy}
+            className={`inline-flex items-center gap-1.5 px-3.5 py-2 text-xs font-extrabold rounded-xl transition cursor-pointer shadow-xs border ${
+              privacyMode
+                ? "bg-amber-100 border-amber-300 text-amber-950 hover:bg-amber-200"
+                : "btn-3d-secondary text-[#111827]"
+            }`}
+            title="Customer at counter? Hide all financial statistics, profits & collections with one click"
+          >
+            {privacyMode ? (
+              <>
+                <Eye className="h-3.5 w-3.5 text-amber-800" />
+                <span>Show Analytics</span>
+              </>
+            ) : (
+              <>
+                <EyeOff className="h-3.5 w-3.5 text-slate-500" />
+                <span>Hide Analytics</span>
+              </>
+            )}
+          </button>
 
           <button
             onClick={onRefresh}
@@ -296,6 +359,38 @@ export function DashboardView({
         )}
       </div>
 
+      {/* Customer Privacy Mode Alert Banner */}
+      {privacyMode && (
+        <div className="card-3d p-4 rounded-2xl bg-gradient-to-r from-amber-50 to-orange-50 border border-amber-300 text-amber-900 flex flex-col sm:flex-row sm:items-center justify-between gap-3 shadow-xs">
+          <div className="flex items-center gap-3">
+            <div className="h-10 w-10 rounded-xl bg-amber-200/80 flex items-center justify-center text-amber-900 shrink-0">
+              <EyeOff className="h-5 w-5" />
+            </div>
+            <div>
+              <div className="flex items-center gap-2">
+                <span className="font-black text-sm text-amber-950">
+                  Customer Counter Privacy Mode Active
+                </span>
+                <span className="rounded-full bg-amber-200 px-2 py-0.5 text-[10px] font-black text-amber-900 uppercase">
+                  Analytics Hidden
+                </span>
+              </div>
+              <p className="text-xs text-amber-800 mt-0.5">
+                All financial figures, sales totals, profit margins, and collections are masked while customers are at the counter.
+              </p>
+            </div>
+          </div>
+          <button
+            type="button"
+            onClick={handleTogglePrivacy}
+            className="self-start sm:self-auto inline-flex items-center gap-1.5 px-4 py-2 rounded-xl bg-amber-900 text-white hover:bg-amber-950 text-xs font-bold transition cursor-pointer shadow-sm"
+          >
+            <Eye className="h-4 w-4" />
+            <span>Show All Analytics</span>
+          </button>
+        </div>
+      )}
+
       {/* Primary 3D KPI Cards (Row 1) */}
       <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-4">
         {/* Card 1: Today's Sales */}
@@ -310,12 +405,12 @@ export function DashboardView({
             </div>
           </div>
           <div className="mt-3 text-3xl font-black text-[#111827] tracking-tight">
-            {formatINR(kpis.today_sales)}
+            {formatPrivateINR(kpis.today_sales)}
           </div>
           <div className="mt-2 flex items-center justify-between text-xs text-gray-600 border-t border-slate-100 pt-2 font-medium">
             <span>7-Day Weekly Sales:</span>
             <span className="font-bold text-[#111827]">
-              {formatINR(kpis.weekly_sales)}
+              {formatPrivateINR(kpis.weekly_sales)}
             </span>
           </div>
         </div>
@@ -332,12 +427,12 @@ export function DashboardView({
             </div>
           </div>
           <div className="mt-3 text-3xl font-black text-[#111827] tracking-tight">
-            {formatINR(kpis.monthly_sales)}
+            {formatPrivateINR(kpis.monthly_sales)}
           </div>
           <div className="mt-2 flex items-center justify-between text-xs text-gray-600 border-t border-slate-100 pt-2 font-medium">
             <span>Transactions in Filter:</span>
             <span className="font-extrabold text-[#2563EB] bg-[#EFF6FF] px-2 py-0.5 rounded-md border border-blue-200">
-              {kpis.total_transactions} Bills
+              {privacyMode ? "•• Bills" : `${kpis.total_transactions} Bills`}
             </span>
           </div>
         </div>
@@ -354,11 +449,15 @@ export function DashboardView({
             </div>
           </div>
           <div className="mt-3 text-3xl font-black text-emerald-700 tracking-tight">
-            {formatINR(kpis.total_collected)}
+            {formatPrivateINR(kpis.total_collected)}
           </div>
           <div className="mt-2 flex items-center justify-between text-xs text-gray-600 border-t border-slate-100 pt-2 font-medium">
-            <span className="text-emerald-700 font-bold">Cash: {formatINR(kpis.cash_collected)}</span>
-            <span className="font-bold text-[#2563EB]">UPI: {formatINR(kpis.upi_collected)}</span>
+            <span className="text-emerald-700 font-bold">
+              Cash: {formatPrivateINR(kpis.cash_collected)}
+            </span>
+            <span className="font-bold text-[#2563EB]">
+              UPI: {formatPrivateINR(kpis.upi_collected)}
+            </span>
           </div>
         </div>
 
@@ -378,11 +477,15 @@ export function DashboardView({
               kpis.period_net_profit >= 0 ? "text-[#111827]" : "text-rose-600"
             }`}
           >
-            {formatINR(kpis.period_net_profit)}
+            {formatPrivateINR(kpis.period_net_profit)}
           </div>
           <div className="mt-2 flex items-center justify-between text-xs text-gray-600 border-t border-slate-100 pt-2 font-medium">
-            <span>Gross: <strong className="text-[#111827]">{formatINR(kpis.period_gross_profit)}</strong></span>
-            <span>Expenses: <strong className="text-rose-600">{formatINR(kpis.period_expenses)}</strong></span>
+            <span>
+              Gross: <strong className="text-[#111827]">{formatPrivateINR(kpis.period_gross_profit)}</strong>
+            </span>
+            <span>
+              Expenses: <strong className="text-rose-600">{formatPrivateINR(kpis.period_expenses)}</strong>
+            </span>
           </div>
         </div>
       </div>
@@ -396,10 +499,10 @@ export function DashboardView({
               Discounts Given
             </span>
             <span className="text-xl font-black text-[#111827] mt-1 block">
-              {formatINR(kpis.period_discounts)}
+              {formatPrivateINR(kpis.period_discounts)}
             </span>
             <span className="text-[11px] text-gray-500 font-medium">
-              Gross Sales: {formatINR(kpis.period_gross_sales)}
+              Gross Sales: {formatPrivateINR(kpis.period_gross_sales)}
             </span>
           </div>
           <div className="rounded-xl bg-gradient-to-br from-slate-600 to-slate-800 text-white p-2.5 shadow-md">
@@ -417,10 +520,10 @@ export function DashboardView({
               Pending Udhaar Due
             </span>
             <span className="text-xl font-black text-amber-700 mt-1 block">
-              {formatINR(kpis.pending_payments_amount)}
+              {formatPrivateINR(kpis.pending_payments_amount)}
             </span>
             <span className="text-[11px] text-[#2563EB] font-bold">
-              {kpis.pending_bills_count} unpaid bill(s) &rarr;
+              {privacyMode ? "•• unpaid bill(s) →" : `${kpis.pending_bills_count} unpaid bill(s) →`}
             </span>
           </div>
           <div className="rounded-xl bg-gradient-to-br from-amber-400 to-amber-600 text-white p-2.5 shadow-md shadow-amber-500/25">
@@ -438,10 +541,10 @@ export function DashboardView({
               Inventory Value (Cost)
             </span>
             <span className="text-xl font-black text-[#111827] mt-1 block">
-              {formatINR(kpis.current_inventory_value)}
+              {formatPrivateINR(kpis.current_inventory_value)}
             </span>
             <span className="text-[11px] text-gray-500 font-medium">
-              {kpis.active_products} products (Retail: {formatINR(kpis.current_retail_inventory_value)})
+              {kpis.active_products} products (Retail: {formatPrivateINR(kpis.current_retail_inventory_value)})
             </span>
           </div>
           <div className="rounded-xl bg-gradient-to-br from-blue-500 to-indigo-600 text-white p-2.5 shadow-md shadow-blue-500/25">
@@ -552,79 +655,98 @@ export function DashboardView({
             </div>
 
             {/* 3D Pillar Visualization Surface */}
-            <div className="mt-6 h-60 flex items-end gap-3.5 overflow-x-auto pb-3 pt-6 px-4 bg-slate-50/70 rounded-2xl border border-slate-200/70 shadow-inner">
-              {daily_series.length === 0 ? (
-                <div className="w-full h-full flex flex-col items-center justify-center text-xs text-gray-500 gap-2">
-                  <Layers className="h-6 w-6 text-gray-400" />
-                  <span>No transactions recorded yet in this date filter.</span>
+            {privacyMode ? (
+              <div className="mt-6 h-60 flex flex-col items-center justify-center bg-slate-50/80 rounded-2xl border border-dashed border-slate-300 p-6 text-center">
+                <div className="h-12 w-12 rounded-full bg-slate-200/80 flex items-center justify-center text-slate-600 mb-3 shadow-inner">
+                  <EyeOff className="h-6 w-6" />
                 </div>
-              ) : (
-                daily_series.slice(-10).map((day) => {
-                  const bar1 =
-                    chartMetric === "sales_profit" ? day.sales : day.cash_collected;
-                  const bar2 =
-                    chartMetric === "sales_profit" ? day.gross_profit : day.upi_collected;
-                  const bar3 =
-                    chartMetric === "sales_profit" ? Math.max(0, day.net_profit) : 0;
+                <h4 className="text-sm font-bold text-slate-800">Analytics Graph Concealed</h4>
+                <p className="text-xs text-slate-500 max-w-sm mt-1">
+                  Customer Privacy Mode is active. Financial trend bars and collection metrics are concealed from view.
+                </p>
+                <button
+                  onClick={handleTogglePrivacy}
+                  className="mt-3.5 inline-flex items-center gap-1.5 px-3.5 py-1.5 text-xs font-semibold rounded-lg bg-white border border-slate-300 hover:bg-slate-50 text-slate-700 shadow-xs transition cursor-pointer"
+                >
+                  <Eye className="h-3.5 w-3.5 text-indigo-600" />
+                  Show Analytics
+                </button>
+              </div>
+            ) : (
+              <div className="mt-6 h-60 flex items-end gap-3.5 overflow-x-auto pb-3 pt-6 px-4 bg-slate-50/70 rounded-2xl border border-slate-200/70 shadow-inner">
+                {daily_series.length === 0 ? (
+                  <div className="w-full h-full flex flex-col items-center justify-center text-xs text-gray-500 gap-2">
+                    <Layers className="h-6 w-6 text-gray-400" />
+                    <span>No transactions recorded yet in this date filter.</span>
+                  </div>
+                ) : (
+                  daily_series.slice(-10).map((day) => {
+                    const bar1 =
+                      chartMetric === "sales_profit" ? day.sales : day.cash_collected;
+                    const bar2 =
+                      chartMetric === "sales_profit" ? day.gross_profit : day.upi_collected;
+                    const bar3 =
+                      chartMetric === "sales_profit" ? Math.max(0, day.net_profit) : 0;
 
-                  const h1 = Math.max(8, Math.round((bar1 / maxChartVal) * 165));
-                  const h2 = Math.max(8, Math.round((bar2 / maxChartVal) * 165));
-                  const h3 = Math.max(8, Math.round((bar3 / maxChartVal) * 165));
+                    const h1 = Math.max(8, Math.round((bar1 / maxChartVal) * 165));
+                    const h2 = Math.max(8, Math.round((bar2 / maxChartVal) * 165));
+                    const h3 = Math.max(8, Math.round((bar3 / maxChartVal) * 165));
 
-                  return (
-                    <div
-                      key={day.date}
-                      className="flex-1 min-w-[58px] flex flex-col items-center group relative"
-                    >
-                      <div className="text-[10px] font-extrabold text-gray-700 mb-1.5 opacity-80 group-hover:opacity-100 transition-opacity whitespace-nowrap">
-                        {formatINR(
-                          chartMetric === "sales_profit"
-                            ? day.sales
-                            : day.cash_collected + day.upi_collected
-                        )}
-                      </div>
-                      <div className="flex items-end gap-1.5 h-44">
-                        <div
-                          style={{ height: `${h1}px` }}
-                          title={`Primary: ${formatINR(bar1)}`}
-                          className={`w-4 rounded-t-md transition-all duration-300 transform group-hover:scale-y-105 ${
+                    return (
+                      <div
+                        key={day.date}
+                        className="flex-1 min-w-[58px] flex flex-col items-center group relative"
+                      >
+                        <div className="text-[10px] font-extrabold text-gray-700 mb-1.5 opacity-80 group-hover:opacity-100 transition-opacity whitespace-nowrap">
+                          {formatINR(
                             chartMetric === "sales_profit"
-                              ? "chart-pillar-blue"
-                              : "chart-pillar-emerald"
-                          }`}
-                        />
-                        <div
-                          style={{ height: `${h2}px` }}
-                          title={`Secondary: ${formatINR(bar2)}`}
-                          className={`w-4 rounded-t-md transition-all duration-300 transform group-hover:scale-y-105 ${
-                            chartMetric === "sales_profit"
-                              ? "chart-pillar-dark"
-                              : "chart-pillar-blue"
-                          }`}
-                        />
-                        {chartMetric === "sales_profit" && (
+                              ? day.sales
+                              : day.cash_collected + day.upi_collected
+                          )}
+                        </div>
+                        <div className="flex items-end gap-1.5 h-44">
                           <div
-                            style={{ height: `${h3}px` }}
-                            title={`Net Profit: ${formatINR(day.net_profit)}`}
-                            className="w-4 rounded-t-md chart-pillar-emerald transition-all duration-300 transform group-hover:scale-y-105"
+                            style={{ height: `${h1}px` }}
+                            title={`Primary: ${formatINR(bar1)}`}
+                            className={`w-4 rounded-t-md transition-all duration-300 transform group-hover:scale-y-105 ${
+                              chartMetric === "sales_profit"
+                                ? "chart-pillar-blue"
+                                : "chart-pillar-emerald"
+                            }`}
                           />
-                        )}
+                          <div
+                            style={{ height: `${h2}px` }}
+                            title={`Secondary: ${formatINR(bar2)}`}
+                            className={`w-4 rounded-t-md transition-all duration-300 transform group-hover:scale-y-105 ${
+                              chartMetric === "sales_profit"
+                                ? "chart-pillar-dark"
+                                : "chart-pillar-blue"
+                            }`}
+                          />
+                          {chartMetric === "sales_profit" && (
+                            <div
+                              style={{ height: `${h3}px` }}
+                              title={`Net Profit: ${formatINR(day.net_profit)}`}
+                              className="w-4 rounded-t-md chart-pillar-emerald transition-all duration-300 transform group-hover:scale-y-105"
+                            />
+                          )}
+                        </div>
+                        <span className="mt-2.5 text-[11px] font-bold text-gray-600">
+                          {formatDateIST(day.date).slice(0, 6)}
+                        </span>
                       </div>
-                      <span className="mt-2.5 text-[11px] font-bold text-gray-600">
-                        {formatDateIST(day.date).slice(0, 6)}
-                      </span>
-                    </div>
-                  );
-                })
-              )}
-            </div>
+                    );
+                  })
+                )}
+              </div>
+            )}
           </div>
 
           <div className="mt-4 pt-3 border-t border-slate-100 flex items-center justify-between text-xs text-gray-600 font-medium">
             <span>
               COGS (Cost of Sold Goods):{" "}
               <strong className="text-[#111827]">
-                {formatINR(kpis.period_cogs)}
+                {formatPrivateINR(kpis.period_cogs)}
               </strong>
             </span>
             <button
@@ -777,10 +899,10 @@ export function DashboardView({
                         {item.units_sold}
                       </td>
                       <td className="py-2.5 text-right font-semibold text-[#111827]">
-                        {formatINR(item.net_revenue)}
+                        {formatPrivateINR(item.net_revenue)}
                       </td>
                       <td className="py-2.5 text-right font-black text-emerald-700">
-                        +{formatINR(item.estimated_profit)}
+                        {privacyMode ? "••••" : `+${formatINR(item.estimated_profit)}`}
                       </td>
                     </tr>
                   ))
@@ -851,15 +973,15 @@ export function DashboardView({
                         </div>
                       </td>
                       <td className="py-2.5 text-right font-black text-[#111827]">
-                        {formatINR(sale.payable_amount)}
+                        {formatPrivateINR(sale.payable_amount)}
                       </td>
                       <td className="py-2.5 text-right">
                         <div className="font-bold text-emerald-700">
-                          Paid: {formatINR(sale.paid_amount)}
+                          Paid: {formatPrivateINR(sale.paid_amount)}
                         </div>
                         {sale.outstanding_amount > 0 && (
                           <div className="text-[11px] font-extrabold text-amber-700">
-                            Due: {formatINR(sale.outstanding_amount)}
+                            Due: {formatPrivateINR(sale.outstanding_amount)}
                           </div>
                         )}
                       </td>

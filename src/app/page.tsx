@@ -22,6 +22,8 @@ import {
   Sparkles,
   ScanLine,
   AlertTriangle,
+  Eye,
+  EyeOff,
 } from "lucide-react";
 import {
   AdminUser,
@@ -121,6 +123,23 @@ export default function HostelCanteenPosApp() {
   const [receiptSale, setReceiptSale] = useState<SaleRecord | null>(null);
   const [statusModalOpen, setStatusModalOpen] = useState(false);
   const [scanTrigger, setScanTrigger] = useState(0);
+
+  const [privacyMode, setPrivacyMode] = useState<boolean>(() => {
+    if (typeof window !== "undefined") {
+      return localStorage.getItem("hc_privacy_mode") === "true";
+    }
+    return false;
+  });
+
+  const togglePrivacyMode = useCallback(() => {
+    setPrivacyMode((prev) => {
+      const next = !prev;
+      if (typeof window !== "undefined") {
+        localStorage.setItem("hc_privacy_mode", String(next));
+      }
+      return next;
+    });
+  }, []);
 
   const handleOpenScan = useCallback(() => {
     setActiveTab("pos");
@@ -360,6 +379,17 @@ export default function HostelCanteenPosApp() {
             <span>Scan</span>
           </button>
           <button
+            onClick={togglePrivacyMode}
+            className={`rounded-lg p-1.5 text-xs font-bold transition flex items-center gap-1 ${
+              privacyMode
+                ? "bg-amber-500 text-white"
+                : "bg-slate-800 text-slate-300 hover:text-white"
+            }`}
+            title={privacyMode ? "Privacy Mode Active: Click to Show Analytics" : "Hide Financial Analytics"}
+          >
+            {privacyMode ? <Eye className="h-3.5 w-3.5" /> : <EyeOff className="h-3.5 w-3.5" />}
+          </button>
+          <button
             onClick={() => setActiveTab("pos")}
             className="btn-3d-secondary rounded-lg px-2.5 py-1 text-xs font-bold text-slate-800"
           >
@@ -585,14 +615,14 @@ export default function HostelCanteenPosApp() {
                   <span>
                     Today:{" "}
                     <strong className="text-slate-900 font-bold">
-                      {formatINR(appData.kpis.today_sales)}
+                      {privacyMode ? "₹••••" : formatINR(appData.kpis.today_sales)}
                     </strong>
                   </span>
                   <span className="text-slate-300">•</span>
                   <span>
                     Pending Udhaar:{" "}
                     <strong className="text-blue-600 font-bold">
-                      {formatINR(appData.kpis.customer_udhaar_total)}
+                      {privacyMode ? "₹••••" : formatINR(appData.kpis.customer_udhaar_total)}
                     </strong>
                   </span>
                 </div>
@@ -600,6 +630,34 @@ export default function HostelCanteenPosApp() {
             </div>
 
             <div className="flex items-center gap-2.5">
+              {/* Customer Privacy Mode Quick Toggle */}
+              <button
+                type="button"
+                onClick={togglePrivacyMode}
+                className={`rounded-xl px-3 py-1.5 text-xs font-bold flex items-center gap-1.5 cursor-pointer border transition shadow-xs ${
+                  privacyMode
+                    ? "bg-amber-500 text-white border-amber-600 hover:bg-amber-600 shadow-amber-500/20"
+                    : "bg-white text-slate-700 border-slate-300 hover:bg-slate-50"
+                }`}
+                title={
+                  privacyMode
+                    ? "Privacy Mode Active (Financial numbers concealed). Click to reveal."
+                    : "Customer Privacy Mode: Click to conceal sensitive revenue and profits when customers are at counter."
+                }
+              >
+                {privacyMode ? (
+                  <>
+                    <Eye className="h-3.5 w-3.5" />
+                    <span>Show Stats</span>
+                  </>
+                ) : (
+                  <>
+                    <EyeOff className="h-3.5 w-3.5 text-slate-500" />
+                    <span>Hide Analytics</span>
+                  </>
+                )}
+              </button>
+
               {/* Scan Snack Button - Highly Accessible at Top of Page */}
               <button
                 type="button"
@@ -673,6 +731,8 @@ export default function HostelCanteenPosApp() {
                   onSelectReceipt={(sale) => setReceiptSale(sale)}
                   onRefresh={fetchAllData}
                   onOpenStatusModal={() => setStatusModalOpen(true)}
+                  privacyMode={privacyMode}
+                  onTogglePrivacyMode={togglePrivacyMode}
                 />
               )}
 
