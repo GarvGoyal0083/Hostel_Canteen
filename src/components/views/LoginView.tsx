@@ -343,7 +343,7 @@ export function LoginView({
                       required
                       value={email}
                       onChange={(e) => setEmail(e.target.value)}
-                      placeholder="e.g. garvgoyal927@gmail.com"
+                      placeholder="admin@example.com"
                       className="input-3d w-full rounded-xl pl-10 pr-3.5 py-2.5 text-xs sm:text-sm text-[#111827]"
                     />
                   </div>
