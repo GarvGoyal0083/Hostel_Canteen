@@ -1,7 +1,11 @@
 import { NextResponse } from "next/server";
+import { requireAdminAuth } from "@/lib/auth";
 import { createSupabaseAdminClient, isSupabaseConfigured } from "@/lib/supabase/server";
 
 export async function GET() {
+  const auth = await requireAdminAuth();
+  if (!auth.authorized) return auth.response;
+
   const configured = isSupabaseConfigured();
   const url = process.env.NEXT_PUBLIC_SUPABASE_URL || null;
   const hasAnonKey = Boolean(process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY);

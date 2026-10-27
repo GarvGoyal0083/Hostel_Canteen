@@ -22,6 +22,7 @@ import {
   escapeCSVCell,
   formatIST,
 } from "@/lib/format";
+import { CommissionRateCard } from "@/components/views/CommissionRateCard";
 
 interface SettingsViewProps {
   admin: AdminUser;
@@ -321,6 +322,8 @@ ON public.canteen_store FOR ALL USING (true) WITH CHECK (true);`;
             </div>
           </div>
         </div>
+
+        <CommissionRateCard />
 
         {/* Card 2: Database Mode & Production Separation */}
         <div className="rounded-xl bg-white p-5 border border-gray-200 shadow-xs space-y-3 text-xs">

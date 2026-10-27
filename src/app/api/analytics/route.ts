@@ -30,7 +30,16 @@ export async function GET(req: NextRequest) {
 
   if (includeFullBackup) {
     const fullDb = readDatabase();
-    return NextResponse.json({ backup: fullDb });
+    // Never export password hashes
+    const backup = {
+      ...fullDb,
+      users: fullDb.users.map((u) => {
+        const { password_hash: _omit, ...rest } = u;
+        void _omit;
+        return rest;
+      }),
+    };
+    return NextResponse.json({ backup });
   }
 
   const metrics = computeFinancialMetrics({ startDate, endDate });

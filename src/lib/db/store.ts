@@ -3,6 +3,7 @@ import path from "path";
 import os from "os";
 import crypto from "crypto";
 import {
+  AdminUser,
   AuditLogRecord,
   CanteenStatus,
   CreateSaleInput,
@@ -32,6 +33,8 @@ import {
   getSaleActiveFinancials,
   round2,
 } from "@/lib/format";
+import { hashPassword } from "@/lib/password";
+import { isAdminEmail } from "@/lib/roles";
 import {
   fetchRemoteDatabase,
   getCloudPersistenceStatus,
@@ -1100,7 +1103,8 @@ function recalculateSalePaymentSummary(db: DatabaseSchema, sale: SaleRecord): vo
 
 export async function createSaleTransaction(
   input: CreateSaleInput,
-  adminName: string
+  adminName: string,
+  creator?: { id: string }
 ): Promise<{
   sale: SaleRecord;
   duplicateUpiWarnings: string[];
@@ -1413,6 +1417,8 @@ export async function createSaleTransaction(
       upi_references_summary: null,
       notes: input.notes?.trim() || null,
       created_by: adminName,
+      created_by_user_id: creator?.id ?? null,
+      commission_rate_percent: commissionRateOf(db),
       updated_by: adminName,
       created_at: nowIso,
       updated_at: nowIso,
@@ -1771,7 +1777,12 @@ export async function cancelOrRefundSale(
       quantity_to_refund: number;
     }>;
   },
-  adminName: string
+  adminName: string,
+  opts?: {
+    /** Runs inside the transaction lock once the sale is found; throw to reject. */
+    guard?: (sale: SaleRecord) => void;
+    actorId?: string;
+  }
 ): Promise<SaleRecord> {
   return withTransactionLock(() => {
     const db = readDatabase();
@@ -1779,6 +1790,7 @@ export async function cancelOrRefundSale(
       (s) => s.id === saleId || s.bill_number === saleId
     );
     if (!sale) throw new Error("Sale record not found.");
+    opts?.guard?.(sale);
 
     if (sale.sale_status === "Cancelled" || sale.sale_status === "Refunded") {
       throw new Error(
@@ -1958,6 +1970,7 @@ export async function cancelOrRefundSale(
       reason,
       items_json: restockedItemsSummary,
       authorized_by: adminName,
+      authorized_by_user_id: opts?.actorId ?? null,
       created_at: nowIso,
     };
 
@@ -2664,4 +2677,672 @@ export async function switchDatabaseEnvironmentMode(
     writeDatabase(newDb);
     return newDb.meta;
   });
+}
+
+// ==============================================================================
+// 7. SALES EXECUTIVES: TEAM MANAGEMENT, BILLING, EDIT/CANCEL & PERFORMANCE
+// ==============================================================================
+
+export type ExecutivePeriod = "today" | "week" | "month" | "all";
+
+const DEFAULT_COMMISSION_RATE_PERCENT = 20;
+const MIN_EXECUTIVE_PASSWORD_LENGTH = 8;
+
+function commissionRateOf(db: DatabaseSchema): number {
+  const rate = db.meta.commission_rate_percent;
+  return typeof rate === "number" && Number.isFinite(rate) && rate >= 0 && rate <= 100
+    ? rate
+    : DEFAULT_COMMISSION_RATE_PERCENT;
+}
+
+export function getCommissionRate(): number {
+  return commissionRateOf(readDatabase());
+}
+
+export async function setCommissionRate(
+  ratePercent: number,
+  adminName: string
+): Promise<number> {
+  const rate = round2(Number(ratePercent));
+  if (!Number.isFinite(rate) || rate < 0 || rate > 100) {
+    throw new Error("Commission rate must be between 0 and 100.");
+  }
+  return withTransactionLock(() => {
+    const db = readDatabase();
+    const previous = commissionRateOf(db);
+    db.meta.commission_rate_percent = rate;
+    appendAudit(db, {
+      entity_type: "SYSTEM",
+      entity_id: "commission_rate",
+      action: "SET_COMMISSION_RATE",
+      summary: `Sales executive commission rate changed from ${previous}% to ${rate}% (applies to new bills only).`,
+      previous_data: { commission_rate_percent: previous },
+      new_data: { commission_rate_percent: rate },
+      performed_by: adminName,
+    });
+    writeDatabase(db);
+    return rate;
+  });
+}
+
+function toPublicUser(user: AdminUser): AdminUser {
+  const { password_hash: _omit, ...rest } = user;
+  void _omit;
+  return rest;
+}
+
+export function listSalesExecutives(): AdminUser[] {
+  return readDatabase()
+    .users.filter((u) => u.role === "sales_executive")
+    .map(toPublicUser)
+    .sort((a, b) => a.full_name.localeCompare(b.full_name));
+}
+
+function assertValidExecutivePassword(password: string): void {
+  if (typeof password !== "string" || password.length < MIN_EXECUTIVE_PASSWORD_LENGTH) {
+    throw new Error(
+      `Password must be at least ${MIN_EXECUTIVE_PASSWORD_LENGTH} characters long.`
+    );
+  }
+}
+
+export async function createSalesExecutive(
+  input: { full_name: string; email: string; password: string },
+  adminName: string
+): Promise<AdminUser> {
+  const fullName = (input.full_name || "").trim();
+  const email = (input.email || "").trim().toLowerCase();
+  if (!fullName) throw new Error("Executive name is required.");
+  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+    throw new Error("A valid email address is required.");
+  }
+  assertValidExecutivePassword(input.password);
+  if (isAdminEmail(email)) {
+    throw new Error("This email belongs to an admin and cannot be used for a Sales Executive.");
+  }
+
+  return withTransactionLock(() => {
+    const db = readDatabase();
+    if (db.users.some((u) => u.email.toLowerCase() === email)) {
+      throw new Error("A user with this email already exists.");
+    }
+    const nowIso = new Date().toISOString();
+    const user: AdminUser = {
+      id: `exec-${crypto.randomUUID().slice(0, 12)}`,
+      email,
+      full_name: fullName,
+      role: "sales_executive",
+      is_active: true,
+      password_hash: hashPassword(input.password),
+      created_at: nowIso,
+      updated_at: nowIso,
+    };
+    db.users.push(user);
+    appendAudit(db, {
+      entity_type: "AUTH",
+      entity_id: user.id,
+      action: "CREATE_SALES_EXECUTIVE",
+      summary: `Sales Executive "${fullName}" (${email}) was added.`,
+      performed_by: adminName,
+    });
+    writeDatabase(db);
+    return toPublicUser(user);
+  });
+}
+
+function findExecutiveInDb(db: DatabaseSchema, id: string): AdminUser {
+  const user = db.users.find((u) => u.id === id && u.role === "sales_executive");
+  if (!user) throw new Error("Sales Executive not found.");
+  return user;
+}
+
+export async function resetSalesExecutivePassword(
+  id: string,
+  newPassword: string,
+  adminName: string
+): Promise<void> {
+  assertValidExecutivePassword(newPassword);
+  await withTransactionLock(() => {
+    const db = readDatabase();
+    const user = findExecutiveInDb(db, id);
+    user.password_hash = hashPassword(newPassword);
+    user.updated_at = new Date().toISOString();
+    appendAudit(db, {
+      entity_type: "AUTH",
+      entity_id: user.id,
+      action: "RESET_EXECUTIVE_PASSWORD",
+      summary: `Password reset for Sales Executive "${user.full_name}" (${user.email}).`,
+      performed_by: adminName,
+    });
+    writeDatabase(db);
+  });
+}
+
+export async function setSalesExecutiveActive(
+  id: string,
+  isActive: boolean,
+  adminName: string
+): Promise<AdminUser> {
+  return withTransactionLock(() => {
+    const db = readDatabase();
+    const user = findExecutiveInDb(db, id);
+    user.is_active = Boolean(isActive);
+    user.updated_at = new Date().toISOString();
+    appendAudit(db, {
+      entity_type: "AUTH",
+      entity_id: user.id,
+      action: isActive ? "ACTIVATE_EXECUTIVE" : "DEACTIVATE_EXECUTIVE",
+      summary: `Sales Executive "${user.full_name}" (${user.email}) was ${isActive ? "activated" : "deactivated"}.`,
+      performed_by: adminName,
+    });
+    writeDatabase(db);
+    return toPublicUser(user);
+  });
+}
+
+/** Raw stored user (includes password_hash) for the login route only. */
+export function findStoredUserByEmail(email: string): AdminUser | null {
+  const lc = email.trim().toLowerCase();
+  return readDatabase().users.find((u) => u.email.toLowerCase() === lc) || null;
+}
+
+// ---- Billing data safe for sales executives (no cost price, no supplier) ----
+
+export function listProductsForBilling(): Array<{
+  id: string;
+  name: string;
+  sku: string;
+  category: string;
+  image_url?: string | null;
+  selling_price: number;
+  stock_quantity: number;
+  min_stock_level: number;
+  expiry_date?: string | null;
+}> {
+  return listProducts({ includeInactive: false }).map((p) => ({
+    id: p.id,
+    name: p.name,
+    sku: p.sku,
+    category: p.category,
+    image_url: p.image_url,
+    selling_price: p.selling_price,
+    stock_quantity: p.stock_quantity,
+    min_stock_level: p.min_stock_level,
+    expiry_date: p.expiry_date,
+  }));
+}
+
+export function listCustomersForBilling(): Array<{
+  id: string;
+  name: string;
+  room_number?: string | null;
+}> {
+  return listCustomers()
+    .filter((c) => c.is_active)
+    .map((c) => ({ id: c.id, name: c.name, room_number: c.room_number }));
+}
+
+/** A sale as an executive may see it: no cost, profit or payment fields. */
+export type ExecutiveSaleView = Omit<
+  SaleRecord,
+  | "cogs_amount"
+  | "estimated_gross_profit"
+  | "commission_rate_percent"
+  | "idempotency_key"
+  | "items"
+  | "payments"
+  | "refunds"
+> & {
+  items: Array<Omit<SaleItem, "purchase_price_at_sale" | "line_cogs" | "line_profit">>;
+  can_modify: boolean;
+};
+
+function isExecutiveEditable(
+  db: DatabaseSchema,
+  sale: SaleRecord,
+  executiveId: string
+): boolean {
+  return (
+    sale.created_by_user_id === executiveId &&
+    sale.sale_status === "Completed" &&
+    sale.paid_amount === 0 &&
+    sale.refunded_amount === 0 &&
+    sale.payment_status === "Pending" &&
+    !db.payments.some((p) => p.sale_id === sale.id)
+  );
+}
+
+export function toExecutiveSaleView(
+  db: DatabaseSchema,
+  sale: SaleRecord,
+  executiveId: string
+): ExecutiveSaleView {
+  const {
+    cogs_amount: _c,
+    estimated_gross_profit: _p,
+    commission_rate_percent: _rate,
+    idempotency_key: _key,
+    payments: _pay,
+    refunds: _ref,
+    items,
+    ...rest
+  } = sale;
+  void _c;
+  void _p;
+  void _rate;
+  void _key;
+  void _pay;
+  void _ref;
+  return {
+    ...rest,
+    items: items.map((item) => {
+      const {
+        purchase_price_at_sale: _a,
+        line_cogs: _b,
+        line_profit: _d,
+        ...safeItem
+      } = item;
+      void _a;
+      void _b;
+      void _d;
+      return safeItem;
+    }),
+    can_modify: isExecutiveEditable(db, sale, executiveId),
+  };
+}
+
+// ---- Create / edit / cancel (own, unpaid bills only) ----
+
+export async function createExecutiveSale(
+  input: {
+    idempotency_key?: string;
+    customer_id: string;
+    items: Array<{ product_id: string; quantity: number }>;
+    notes?: string;
+  },
+  executive: AdminUser
+): Promise<SaleRecord> {
+  if (!input.customer_id) {
+    throw new Error("Please select the student this bill is for.");
+  }
+  const customer = readDatabase().customers.find(
+    (c) => c.id === input.customer_id && c.is_active
+  );
+  if (!customer) throw new Error("Selected student was not found.");
+
+  const { sale } = await createSaleTransaction(
+    {
+      // Namespaced so one executive can never be handed another executive's bill.
+      idempotency_key: input.idempotency_key
+        ? `${executive.id}:${input.idempotency_key}`
+        : undefined,
+      customer_id: input.customer_id,
+      items: (input.items || []).map((i) => ({
+        product_id: i.product_id,
+        quantity: i.quantity,
+      })),
+      payments: [], // executives never collect payment; the bill goes to the student's dues
+      notes: input.notes,
+    },
+    executive.full_name,
+    { id: executive.id }
+  );
+  return sale;
+}
+
+function assertExecutiveMayChangeSale(
+  db: DatabaseSchema,
+  sale: SaleRecord,
+  executive: AdminUser
+): void {
+  if (sale.created_by_user_id !== executive.id) {
+    throw new Error("You can only change bills that you created.");
+  }
+  if (sale.sale_status !== "Completed") {
+    throw new Error(`Bill ${sale.bill_number} is already ${sale.sale_status.toLowerCase()}.`);
+  }
+  if (!isExecutiveEditable(db, sale, executive.id)) {
+    throw new Error(
+      `Bill ${sale.bill_number} can no longer be changed because a payment has been recorded.`
+    );
+  }
+}
+
+export async function editExecutiveSale(
+  saleId: string,
+  input: {
+    customer_id?: string;
+    items: Array<{ product_id: string; quantity: number }>;
+    notes?: string;
+  },
+  executive: AdminUser
+): Promise<SaleRecord> {
+  return withTransactionLock(() => {
+    const db = readDatabase();
+    const sale = db.sales.find((s) => s.id === saleId || s.bill_number === saleId);
+    if (!sale) throw new Error("Bill not found.");
+    assertExecutiveMayChangeSale(db, sale, executive);
+
+    // 1. Resolve the student (may be reassigned)
+    const newCustomerId = input.customer_id || sale.customer_id;
+    if (!newCustomerId) throw new Error("Please select the student this bill is for.");
+    const newCustomer = db.customers.find((c) => c.id === newCustomerId && c.is_active);
+    if (!newCustomer) throw new Error("Selected student was not found.");
+
+    // 2. Consolidate requested quantities
+    if (!input.items || input.items.length === 0) {
+      throw new Error("A bill needs at least one item. Cancel the bill instead.");
+    }
+    const requested = new Map<string, number>();
+    for (const it of input.items) {
+      const qty = Math.floor(Number(it.quantity));
+      if (!Number.isFinite(qty) || qty <= 0) {
+        throw new Error("Item quantity must be a positive integer.");
+      }
+      requested.set(it.product_id, (requested.get(it.product_id) || 0) + qty);
+    }
+
+    // 3. Validate BEFORE mutating: available = current stock + what this bill already holds
+    const oldQtyByProduct = new Map<string, number>();
+    for (const old of sale.items) {
+      oldQtyByProduct.set(
+        old.product_id,
+        (oldQtyByProduct.get(old.product_id) || 0) + old.quantity
+      );
+    }
+    for (const [productId, qty] of requested.entries()) {
+      const product = db.products.find((p) => p.id === productId);
+      if (!product) throw new Error(`Product ID "${productId}" does not exist.`);
+      const alreadyOnBill = oldQtyByProduct.get(productId) || 0;
+      if (!product.is_active && alreadyOnBill === 0) {
+        throw new Error(`Product "${product.name}" is deactivated and cannot be sold.`);
+      }
+      const available = product.stock_quantity + alreadyOnBill;
+      if (qty > available) {
+        throw new Error(
+          `Insufficient stock for "${product.name}". Available: ${available}, Requested: ${qty}.`
+        );
+      }
+    }
+
+    const nowIso = new Date().toISOString();
+    const previousSummary = {
+      customer_id: sale.customer_id,
+      payable_amount: sale.payable_amount,
+      items: sale.items.map((i) => ({
+        product_id: i.product_id,
+        name: i.product_name_snapshot,
+        quantity: i.quantity,
+      })),
+    };
+
+    // 4. Put the old items back into stock
+    for (const [productId, qty] of oldQtyByProduct.entries()) {
+      const product = db.products.find((p) => p.id === productId);
+      if (!product) continue;
+      const prev = product.stock_quantity;
+      product.stock_quantity = prev + qty;
+      product.updated_at = nowIso;
+      db.inventory_movements.unshift({
+        id: `mov-${crypto.randomUUID().slice(0, 12)}`,
+        product_id: product.id,
+        product_name_snapshot: product.name,
+        sku_snapshot: product.sku,
+        movement_type: "SALE_CANCEL_RESTORE",
+        quantity_change: qty,
+        previous_stock: prev,
+        new_stock: product.stock_quantity,
+        unit_cost: product.purchase_price,
+        reference_id: sale.bill_number,
+        reason: `Bill ${sale.bill_number} edited by ${executive.full_name}: previous items returned to stock`,
+        recorded_by: executive.full_name,
+        created_at: nowIso,
+      });
+    }
+
+    // 5. Build new lines. Unchanged products keep the prices snapshotted at the original sale.
+    const oldItemByProduct = new Map(sale.items.map((i) => [i.product_id, i]));
+    const newItems: SaleItem[] = [];
+    let subtotal = 0;
+    let totalCogs = 0;
+    for (const [productId, qty] of requested.entries()) {
+      const product = db.products.find((p) => p.id === productId)!;
+      const old = oldItemByProduct.get(productId);
+      const sellingPrice = old ? old.selling_price_at_sale : product.selling_price;
+      const purchasePrice = old ? old.purchase_price_at_sale : product.purchase_price;
+      const lineTotal = round2(sellingPrice * qty);
+      const lineCogs = round2(purchasePrice * qty);
+      subtotal = round2(subtotal + lineTotal);
+      totalCogs = round2(totalCogs + lineCogs);
+      newItems.push({
+        id: `sitem-${crypto.randomUUID().slice(0, 12)}`,
+        sale_id: sale.id,
+        product_id: product.id,
+        product_name_snapshot: product.name,
+        sku_snapshot: product.sku,
+        category_snapshot: product.category,
+        quantity: qty,
+        refunded_quantity: 0,
+        purchase_price_at_sale: purchasePrice,
+        selling_price_at_sale: sellingPrice,
+        original_line_total: lineTotal,
+        discount_type: "none",
+        discount_value: 0,
+        discount_amount: 0,
+        discount_reason: null,
+        final_line_total: lineTotal,
+        line_cogs: lineCogs,
+        line_profit: round2(lineTotal - lineCogs),
+        created_at: sale.created_at,
+      });
+
+      // 6. Deduct the new quantities
+      const prev = product.stock_quantity;
+      product.stock_quantity = prev - qty;
+      product.updated_at = nowIso;
+      db.inventory_movements.unshift({
+        id: `mov-${crypto.randomUUID().slice(0, 12)}`,
+        product_id: product.id,
+        product_name_snapshot: product.name,
+        sku_snapshot: product.sku,
+        movement_type: "SALE",
+        quantity_change: -qty,
+        previous_stock: prev,
+        new_stock: product.stock_quantity,
+        unit_cost: purchasePrice,
+        reference_id: sale.bill_number,
+        reason: `Sold in Bill ${sale.bill_number} (edited by ${executive.full_name})`,
+        recorded_by: executive.full_name,
+        created_at: nowIso,
+      });
+    }
+
+    // 7. Update the sale and student dues
+    const oldCustomerId = sale.customer_id;
+    sale.items = newItems;
+    sale.customer_id = newCustomer.id;
+    sale.customer_name_snapshot = newCustomer.name;
+    sale.room_number_snapshot = newCustomer.room_number || null;
+    sale.subtotal_amount = subtotal;
+    sale.item_discount_total = 0;
+    sale.bill_discount_type = "none";
+    sale.bill_discount_value = 0;
+    sale.bill_discount_amount = 0;
+    sale.total_discount_amount = 0;
+    sale.payable_amount = subtotal;
+    sale.cogs_amount = totalCogs;
+    sale.estimated_gross_profit = round2(subtotal - totalCogs);
+    if (input.notes !== undefined) sale.notes = String(input.notes).trim() || null;
+    sale.updated_by = executive.full_name;
+    sale.updated_at = nowIso;
+    if (!sale.edit_history) sale.edit_history = [];
+    sale.edit_history.push({
+      at: nowIso,
+      by: executive.full_name,
+      by_user_id: executive.id,
+      action: "EDIT",
+    });
+    recalculateSalePaymentSummary(db, sale);
+
+    recalculateCustomerTotals(db, newCustomer.id);
+    if (oldCustomerId && oldCustomerId !== newCustomer.id) {
+      recalculateCustomerTotals(db, oldCustomerId);
+    }
+
+    appendAudit(db, {
+      entity_type: "SALE",
+      entity_id: sale.id,
+      action: "EDIT_SALE",
+      summary: `Bill ${sale.bill_number} edited by Sales Executive "${executive.full_name}" (${executive.id}). New payable: ₹${sale.payable_amount}.`,
+      previous_data: previousSummary,
+      new_data: {
+        customer_id: sale.customer_id,
+        payable_amount: sale.payable_amount,
+        items: newItems.map((i) => ({
+          product_id: i.product_id,
+          name: i.product_name_snapshot,
+          quantity: i.quantity,
+        })),
+        edited_by_user_id: executive.id,
+      },
+      performed_by: executive.full_name,
+    });
+
+    writeDatabase(db);
+    return sale;
+  });
+}
+
+export async function cancelExecutiveSale(
+  saleId: string,
+  reason: string,
+  executive: AdminUser
+): Promise<SaleRecord> {
+  return cancelOrRefundSale(
+    saleId,
+    {
+      action_type: "CANCEL",
+      reason: (reason || "").trim() || `Cancelled by Sales Executive ${executive.full_name}`,
+      restock_items: true,
+      refund_method: "None",
+    },
+    executive.full_name,
+    {
+      actorId: executive.id,
+      guard: (sale) => {
+        assertExecutiveMayChangeSale(readDatabase(), sale, executive);
+        if (!sale.edit_history) sale.edit_history = [];
+        sale.edit_history.push({
+          at: new Date().toISOString(),
+          by: executive.full_name,
+          by_user_id: executive.id,
+          action: "CANCEL",
+        });
+      },
+    }
+  );
+}
+
+// ---- Period helpers, My Sales and admin performance ----
+
+function periodMatcher(period: ExecutivePeriod): (istDate: string) => boolean {
+  const todayStr = getISTDateString(new Date());
+  if (period === "today") return (d) => d === todayStr;
+  if (period === "week") {
+    const from = getISTDateString(new Date(Date.now() - 6 * 24 * 60 * 60 * 1000));
+    return (d) => d >= from && d <= todayStr;
+  }
+  if (period === "month") {
+    const from = `${todayStr.slice(0, 7)}-01`;
+    return (d) => d >= from && d <= todayStr;
+  }
+  return () => true;
+}
+
+export function parseExecutivePeriod(value: string | null | undefined): ExecutivePeriod {
+  return value === "today" || value === "week" || value === "month" ? value : "all";
+}
+
+function totalsForSales(sales: SaleRecord[]): {
+  bills: number;
+  total_sales: number;
+  profit: number;
+  commission: number;
+} {
+  let totalSales = 0;
+  let profit = 0;
+  let commission = 0;
+  let bills = 0;
+  for (const s of sales) {
+    if (s.sale_status === "Cancelled") continue;
+    const fin = getSaleActiveFinancials(s);
+    bills += 1;
+    totalSales = round2(totalSales + fin.activeNet);
+    profit = round2(profit + fin.activeProfit);
+    const rate = s.commission_rate_percent ?? DEFAULT_COMMISSION_RATE_PERCENT;
+    commission = round2(commission + Math.max(0, fin.activeProfit) * (rate / 100));
+  }
+  return { bills, total_sales: totalSales, profit, commission };
+}
+
+/** Everything an executive may see about their own sales. Never includes cost or profit. */
+export function getExecutiveMySales(
+  executive: AdminUser,
+  period: ExecutivePeriod
+): {
+  period: ExecutivePeriod;
+  summary: { bill_count: number; total_sales: number; my_commission: number };
+  sales: ExecutiveSaleView[];
+} {
+  const db = readDatabase();
+  const inPeriod = periodMatcher(period);
+  const own = db.sales
+    .filter(
+      (s) =>
+        s.created_by_user_id === executive.id &&
+        inPeriod(getISTDateString(s.created_at))
+    )
+    .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
+  const totals = totalsForSales(own);
+  return {
+    period,
+    summary: {
+      bill_count: totals.bills,
+      total_sales: totals.total_sales,
+      my_commission: totals.commission,
+    },
+    sales: own.map((s) => toExecutiveSaleView(db, s, executive.id)),
+  };
+}
+
+export function getExecutivePerformance(period: ExecutivePeriod): {
+  commission_rate_percent: number;
+  period: ExecutivePeriod;
+  executives: Array<{
+    user: AdminUser;
+    bills: number;
+    total_sales: number;
+    profit_generated: number;
+    commission_owed: number;
+  }>;
+} {
+  const db = readDatabase();
+  const inPeriod = periodMatcher(period);
+  const executives = db.users
+    .filter((u) => u.role === "sales_executive")
+    .map((u) => {
+      const sales = db.sales.filter(
+        (s) => s.created_by_user_id === u.id && inPeriod(getISTDateString(s.created_at))
+      );
+      const t = totalsForSales(sales);
+      return {
+        user: toPublicUser(u),
+        bills: t.bills,
+        total_sales: t.total_sales,
+        profit_generated: t.profit,
+        commission_owed: t.commission,
+      };
+    })
+    .sort((a, b) => b.total_sales - a.total_sales);
+  return { commission_rate_percent: commissionRateOf(db), period, executives };
 }

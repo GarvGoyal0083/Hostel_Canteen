@@ -36,7 +36,9 @@ export async function POST(req: NextRequest) {
 
   try {
     const body = await req.json();
-    const result = await createSaleTransaction(body, auth.admin.full_name);
+    const result = await createSaleTransaction(body, auth.admin.full_name, {
+      id: auth.admin.id,
+    });
     return NextResponse.json(result, { status: 201 });
   } catch (err) {
     return NextResponse.json(

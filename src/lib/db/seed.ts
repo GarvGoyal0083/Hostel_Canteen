@@ -17,6 +17,7 @@ export interface DatabaseSchema {
     version: number;
     environment_mode: "development_sample" | "production_clean";
     canteen_status?: CanteenStatus;
+    commission_rate_percent?: number;
     created_at: string;
     updated_at: string;
   };

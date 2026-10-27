@@ -24,6 +24,7 @@ import {
   AlertTriangle,
   Eye,
   EyeOff,
+  UserCog,
 } from "lucide-react";
 import {
   AdminUser,
@@ -49,6 +50,8 @@ import { PaymentsView } from "@/components/views/PaymentsView";
 import { ExpensesView } from "@/components/views/ExpensesView";
 import { ReportsView } from "@/components/views/ReportsView";
 import { SettingsView } from "@/components/views/SettingsView";
+import { TeamView } from "@/components/views/TeamView";
+import { ExecutivePanel } from "@/components/views/ExecutivePanel";
 import { CustomerPortalView } from "@/components/views/CustomerPortalView";
 import { CanteenStatusModal } from "@/components/CanteenStatusModal";
 import { ReceiptModal } from "@/components/ReceiptModal";
@@ -64,6 +67,7 @@ type NavTab =
   | "payments"
   | "expenses"
   | "reports"
+  | "team"
   | "settings"
   | "customer_portal";
 
@@ -81,6 +85,7 @@ const SIDEBAR_ITEMS: Array<{
   { id: "payments", label: "Payments & Ledger", icon: CreditCard },
   { id: "expenses", label: "Expenses", icon: Wallet },
   { id: "reports", label: "Analytics & P&L", icon: BarChart3 },
+  { id: "team", label: "Team", icon: UserCog },
   { id: "settings", label: "Settings", icon: Settings },
 ];
 
@@ -246,6 +251,9 @@ export default function HostelCanteenPosApp() {
         setAdmin(null);
         return;
       }
+      if (res.status === 403) {
+        return;
+      }
       if (res.ok) {
         const json = await res.json();
         setAppData(json);
@@ -278,7 +286,8 @@ export default function HostelCanteenPosApp() {
   }, []);
 
   useEffect(() => {
-    if (admin) {
+    // Sales executives have no access to the admin analytics API
+    if (admin && admin.role !== "sales_executive") {
       fetchAllData();
     }
   }, [admin, fetchAllData]);
@@ -336,6 +345,10 @@ export default function HostelCanteenPosApp() {
         }}
       />
     );
+  }
+
+  if (admin.role === "sales_executive") {
+    return <ExecutivePanel user={admin} onLogout={handleLogout} />;
   }
 
   return (
@@ -819,6 +832,8 @@ export default function HostelCanteenPosApp() {
                   }
                 />
               )}
+
+              {activeTab === "team" && <TeamView />}
 
               {activeTab === "settings" && (
                 <SettingsView

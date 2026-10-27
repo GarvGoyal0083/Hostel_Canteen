@@ -1,4 +1,4 @@
-export type UserRole = "admin" | "manager" | "staff";
+export type UserRole = "admin" | "manager" | "staff" | "sales_executive";
 
 export interface CanteenStatus {
   is_open: boolean;
@@ -15,6 +15,7 @@ export interface AdminUser {
   full_name: string;
   role: UserRole;
   is_active: boolean;
+  password_hash?: string | null; // scrypt hash; only stored in db.users, never sent to clients
   created_at: string;
   updated_at: string;
 }
@@ -218,6 +219,14 @@ export interface SaleRecord {
   upi_references_summary?: string | null;
   notes?: string | null;
   created_by: string;
+  created_by_user_id?: string | null;
+  commission_rate_percent?: number | null; // snapshot of the sales-executive commission rate at creation
+  edit_history?: Array<{
+    at: string;
+    by: string;
+    by_user_id: string;
+    action: string;
+  }>;
   updated_by?: string | null;
   created_at: string;
   updated_at: string;
@@ -243,6 +252,7 @@ export interface RefundCancellationRecord {
     amount_refunded: number;
   }>;
   authorized_by: string;
+  authorized_by_user_id?: string | null;
   created_at: string;
 }
 

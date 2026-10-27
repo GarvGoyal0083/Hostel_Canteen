@@ -1,11 +1,16 @@
 import { NextRequest, NextResponse } from "next/server";
+import { AdminUser } from "@/types/pos";
 import {
-  getAuthenticatedAdmin,
+  getAuthenticatedUser,
   SESSION_COOKIE_NAME,
   signSessionToken,
+  stripSecrets,
 } from "@/lib/auth";
+import { burnPasswordCheck, verifyPassword } from "@/lib/password";
+import { isAdminEmail } from "@/lib/roles";
 import {
   ensureDatabaseSync,
+  findStoredUserByEmail,
   getCloudPersistenceStatus,
   getLastSyncError,
   readDatabase,
@@ -15,7 +20,8 @@ import {
 import { createSupabaseServerClient, isSupabaseConfigured } from "@/lib/supabase/server";
 
 export async function GET() {
-  const admin = await getAuthenticatedAdmin();
+  const admin = await getAuthenticatedUser();
+  const isExecutive = admin?.role === "sales_executive";
   if (admin) {
     if (admin.email.toLowerCase() === "nidhishmathur2007@gmail.com") {
       admin.full_name = "Nidhish Mathur (Founder)";
@@ -31,7 +37,8 @@ export async function GET() {
     supabase_cloud_synced: getCloudPersistenceStatus(),
     supabase_sync_error: getLastSyncError(),
     environment_mode: db.meta.environment_mode,
-    available_admins: admin
+    // Sales executives only ever see their own session; no team or student lists here
+    available_admins: admin && !isExecutive
       ? db.users
           .filter((u) => u.is_active)
           .map((u) => {
@@ -44,7 +51,7 @@ export async function GET() {
             return { email: u.email, full_name: fullName, role: u.role };
           })
       : [],
-    available_customers: admin
+    available_customers: admin && !isExecutive
       ? db.customers
           .filter((c) => c.is_active)
           .map((c) => ({
@@ -79,27 +86,42 @@ export async function POST(req: NextRequest) {
           password,
         });
         if (!error && data.user) {
-          const adminUser = {
-            id: data.user.id,
-            email: data.user.email || email,
-            full_name:
-              (data.user.user_metadata?.full_name as string) ||
-              email.split("@")[0] ||
-              "Canteen Admin",
-            role: "admin" as const,
-            is_active: true,
-            created_at: data.user.created_at || new Date().toISOString(),
-            updated_at: new Date().toISOString(),
-          };
-          const token = signSessionToken(adminUser);
-          const res = NextResponse.json({ authenticated: true, admin: adminUser });
-          res.cookies.set(SESSION_COOKIE_NAME, token, {
-            httpOnly: true,
-            sameSite: "lax",
-            path: "/",
-            maxAge: 60 * 60 * 24,
-          });
-          return res;
+          // Only the two admin emails become admins; a stored active sales executive keeps
+          // their stored role; any other Supabase user is not accepted.
+          const supabaseEmail = (data.user.email || email).toLowerCase();
+          let sessionUser: AdminUser | null = null;
+          if (isAdminEmail(supabaseEmail)) {
+            sessionUser = {
+              id: data.user.id,
+              email: supabaseEmail,
+              full_name:
+                (data.user.user_metadata?.full_name as string) ||
+                email.split("@")[0] ||
+                "Canteen Admin",
+              role: "admin",
+              is_active: true,
+              created_at: data.user.created_at || new Date().toISOString(),
+              updated_at: new Date().toISOString(),
+            };
+          } else {
+            await ensureDatabaseSync();
+            const stored = findStoredUserByEmail(supabaseEmail);
+            if (stored && stored.is_active && stored.role === "sales_executive") {
+              sessionUser = stripSecrets(stored);
+            }
+          }
+          if (sessionUser) {
+            const token = signSessionToken(sessionUser);
+            const res = NextResponse.json({ authenticated: true, admin: sessionUser });
+            res.cookies.set(SESSION_COOKIE_NAME, token, {
+              httpOnly: true,
+              sameSite: "lax",
+              path: "/",
+              maxAge: 60 * 60 * 24,
+            });
+            return res;
+          }
+          // Not an admin or an executive: fall through to the checks below, which reject.
         }
       }
     }
@@ -122,6 +144,54 @@ export async function POST(req: NextRequest) {
     };
 
     const authConfig = AUTHORIZED_ADMINS[email];
+
+    // 3. Sales Executives: stored in db.users with a scrypt password hash
+    if (!authConfig) {
+      await ensureDatabaseSync();
+      const stored = findStoredUserByEmail(email);
+      if (
+        stored &&
+        stored.role === "sales_executive" &&
+        !isAdminEmail(stored.email) &&
+        verifyPassword(password, stored.password_hash)
+      ) {
+        if (!stored.is_active) {
+          return NextResponse.json(
+            { error: "This account has been deactivated. Please contact an admin." },
+            { status: 403 }
+          );
+        }
+        await withTransactionLock(() => {
+          const currentDb = readDatabase();
+          currentDb.audit_logs.unshift({
+            id: `aud-${Date.now()}`,
+            entity_type: "AUTH",
+            entity_id: stored.id,
+            action: "EXECUTIVE_LOGIN",
+            summary: `Sales Executive "${stored.full_name}" (${stored.email}) signed in.`,
+            performed_by: stored.full_name,
+            created_at: new Date().toISOString(),
+          });
+          writeDatabase(currentDb);
+        });
+        const executive = stripSecrets(stored);
+        const execToken = signSessionToken(executive);
+        const execRes = NextResponse.json({ authenticated: true, admin: executive });
+        execRes.cookies.set(SESSION_COOKIE_NAME, execToken, {
+          httpOnly: true,
+          sameSite: "lax",
+          path: "/",
+          maxAge: 60 * 60 * 24,
+        });
+        return execRes;
+      }
+      if (!stored || stored.role !== "sales_executive") burnPasswordCheck(password);
+      return NextResponse.json(
+        { error: "Invalid email or password. Access restricted to authorized canteen staff." },
+        { status: 401 }
+      );
+    }
+
     if (!authConfig) {
       return NextResponse.json(
         {
