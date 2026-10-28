@@ -50,6 +50,18 @@ export function StudentNotificationButton({
     }
   };
 
+  const handleClick = async () => {
+    if (!isSubscribed) {
+      if (isIosWithoutPwa) {
+        setShowModal(true);
+      } else {
+        await handleSubscribe();
+      }
+    } else {
+      setShowModal(true);
+    }
+  };
+
   if (!isSupported) {
     return null; // Don't clutter UI if device doesn't support Web Push
   }
@@ -58,7 +70,7 @@ export function StudentNotificationButton({
     <>
       <button
         type="button"
-        onClick={() => setShowModal(true)}
+        onClick={handleClick}
         className={`rounded-xl transition cursor-pointer flex items-center gap-1.5 border ${
           compact ? "p-2" : "px-3 py-2 text-xs font-bold"
         } ${

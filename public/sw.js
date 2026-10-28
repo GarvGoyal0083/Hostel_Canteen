@@ -3,47 +3,50 @@
 // =============================================================================
 
 self.addEventListener("install", (event) => {
-  // Activate worker immediately
   self.skipWaiting();
 });
 
 self.addEventListener("activate", (event) => {
-  // Become available to all active clients without reloading
   event.waitUntil(self.clients.claim());
 });
 
 self.addEventListener("push", (event) => {
-  if (!event.data) return;
-
   let title = "Hostel Canteen";
   let options = {
-    body: "You have a new notification from Hostel Canteen.",
+    body: "You have a new update from Hostel Canteen.",
     icon: "/logo.svg",
     badge: "/logo.svg",
     vibrate: [200, 100, 200, 100, 200],
     data: { url: "/" },
-    tag: "hostel-canteen-notification",
+    tag: "hostel-canteen-" + Date.now(),
     renotify: true,
+    requireInteraction: true,
   };
 
-  try {
-    const payload = event.data.json();
-    title = payload.title || title;
-    options.body = payload.body || options.body;
-    if (payload.icon) options.icon = payload.icon;
-    if (payload.badge) options.badge = payload.badge;
-    if (payload.tag) options.tag = payload.tag;
-    if (payload.data && typeof payload.data === "object") {
-      options.data = payload.data;
-    } else if (payload.url) {
-      options.data = { url: payload.url };
+  if (event.data) {
+    try {
+      const payload = event.data.json();
+      title = payload.title || title;
+      options.body = payload.body || options.body;
+      if (payload.icon) options.icon = payload.icon;
+      if (payload.badge) options.badge = payload.badge;
+      if (payload.tag) options.tag = payload.tag;
+      if (payload.data && typeof payload.data === "object") {
+        options.data = payload.data;
+      } else if (payload.url) {
+        options.data = { url: payload.url };
+      }
+      if (payload.actions && Array.isArray(payload.actions)) {
+        options.actions = payload.actions;
+      }
+    } catch (err) {
+      try {
+        const text = event.data.text();
+        if (text) options.body = text;
+      } catch {
+        // fallback to default options
+      }
     }
-    if (payload.actions && Array.isArray(payload.actions)) {
-      options.actions = payload.actions;
-    }
-  } catch (err) {
-    const text = event.data.text();
-    if (text) options.body = text;
   }
 
   event.waitUntil(self.registration.showNotification(title, options));
@@ -59,7 +62,6 @@ self.addEventListener("notificationclick", (event) => {
     self.clients
       .matchAll({ type: "window", includeUncontrolled: true })
       .then((clientList) => {
-        // If an open window matches origin, focus and navigate it
         for (const client of clientList) {
           if ("focus" in client) {
             client.focus();
@@ -69,7 +71,6 @@ self.addEventListener("notificationclick", (event) => {
             return;
           }
         }
-        // Otherwise open a new window
         if (self.clients.openWindow) {
           return self.clients.openWindow(targetUrl);
         }
@@ -78,7 +79,6 @@ self.addEventListener("notificationclick", (event) => {
 });
 
 self.addEventListener("pushsubscriptionchange", (event) => {
-  // Handle subscription renewal if required by the browser
   event.waitUntil(
     self.registration.pushManager
       .subscribe(event.oldSubscription.options)

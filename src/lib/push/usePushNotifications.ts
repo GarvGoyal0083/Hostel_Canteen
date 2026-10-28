@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useCallback } from "react";
 
-function urlBase64ToUint8Array(base64String: string): Uint8Array {
+export function urlBase64ToUint8Array(base64String: string): Uint8Array {
   const padding = "=".repeat((4 - (base64String.length % 4)) % 4);
   const base64 = (base64String + padding)
     .replace(/-/g, "+")
@@ -61,16 +61,52 @@ export function usePushNotifications(options: UsePushNotificationsOptions = {}) 
       setIsIosWithoutPwa(true);
     }
 
-    // Check existing active subscription
+    // Auto-register service worker and sync subscription whenever supported
     if (supported) {
-      navigator.serviceWorker.ready
-        .then((reg) => reg.pushManager.getSubscription())
-        .then((sub) => {
-          setIsSubscribed(Boolean(sub));
+      navigator.serviceWorker
+        .register("/sw.js", { scope: "/" })
+        .then(() => navigator.serviceWorker.ready)
+        .then(async (reg) => {
+          let sub = await reg.pushManager.getSubscription();
+
+          if (Notification.permission === "granted") {
+            if (!sub) {
+              try {
+                const keyRes = await fetch("/api/push/vapid-public-key");
+                if (keyRes.ok) {
+                  const { publicKey } = await keyRes.json();
+                  const appKey = urlBase64ToUint8Array(publicKey);
+                  sub = await reg.pushManager.subscribe({
+                    userVisibleOnly: true,
+                    applicationServerKey: appKey as unknown as BufferSource,
+                  });
+                }
+              } catch (e) {
+                console.warn("[push] Auto-subscribe error:", e);
+              }
+            }
+
+            if (sub) {
+              setIsSubscribed(true);
+              // Always auto-sync subscription with server so database has this device + customer_id + role
+              await fetch("/api/push/subscribe", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({
+                  subscription: sub.toJSON(),
+                  role,
+                  customer_id: customerId || null,
+                  user_name: userName || null,
+                }),
+              }).catch(() => undefined);
+            }
+          } else {
+            setIsSubscribed(Boolean(sub));
+          }
         })
-        .catch(() => undefined);
+        .catch((err) => console.warn("[push] SW registration error:", err));
     }
-  }, []);
+  }, [role, customerId, userName]);
 
   const subscribe = useCallback(async () => {
     if (!isSupported) {

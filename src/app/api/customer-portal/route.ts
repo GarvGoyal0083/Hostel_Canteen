@@ -8,9 +8,13 @@ import {
   getCustomerDetailsWithLedger,
   listCustomers,
   listProducts,
+  savePushSubscription,
 } from "@/lib/db/store";
 import { PaymentMethod, PaymentStatus } from "@/types/pos";
-import { notifyStaffOfNewOrder } from "@/lib/push/webPush";
+import {
+  notifyCustomerOfOrderPlaced,
+  notifyStaffOfNewOrder,
+} from "@/lib/push/webPush";
 
 function normalizePhone(p?: string | null): string {
   if (!p) return "";
@@ -217,6 +221,26 @@ export async function POST(req: NextRequest) {
         .filter(Boolean)
         .join(" | ");
 
+      const pushSubscription = body.push_subscription;
+      if (
+        pushSubscription &&
+        pushSubscription.endpoint &&
+        pushSubscription.keys &&
+        pushSubscription.keys.p256dh &&
+        pushSubscription.keys.auth
+      ) {
+        savePushSubscription({
+          endpoint: pushSubscription.endpoint,
+          keys: {
+            p256dh: pushSubscription.keys.p256dh,
+            auth: pushSubscription.keys.auth,
+          },
+          role: "customer",
+          customer_id: customerId,
+          user_agent: req.headers.get("user-agent") || undefined,
+        }).catch((err) => console.warn("[push] Error auto-saving subscription:", err));
+      }
+
       const { sale } = await createSaleTransaction(
         {
           customer_id: customerId,
@@ -228,7 +252,12 @@ export async function POST(req: NextRequest) {
         { id: "customer-portal" }
       );
 
-      // Trigger Web Push Notification to Canteen Staff & Admin devices
+      // 1. Immediately send order confirmation push notification to the student
+      notifyCustomerOfOrderPlaced(sale, pushSubscription?.endpoint).catch((err) =>
+        console.warn("[push] Failed to deliver student push notification:", err)
+      );
+
+      // 2. Trigger Web Push Notification to Canteen Staff & Admin devices
       notifyStaffOfNewOrder(sale).catch((err) =>
         console.warn("[push] Failed to deliver staff push notification:", err)
       );

@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getCanteenStatus, updateCanteenStatus } from "@/lib/db/store";
 import { requireAdminAuth } from "@/lib/auth";
+import { notifyShopStatusChange } from "@/lib/push/webPush";
 
 export async function GET() {
   try {
@@ -35,6 +36,11 @@ export async function POST(req: NextRequest) {
         reopen_at,
       },
       auth.admin.full_name
+    );
+
+    // Broadcast shop status change (Open / Closed) to all students & staff devices
+    notifyShopStatusChange(updated).catch((err) =>
+      console.warn("[push] Failed to broadcast shop status update:", err)
     );
 
     return NextResponse.json({

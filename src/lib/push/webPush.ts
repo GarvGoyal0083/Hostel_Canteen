@@ -4,6 +4,7 @@ import {
   cleanupExpiredPushSubscriptions,
 } from "@/lib/db/store";
 import {
+  CanteenStatus,
   PushNotificationPayload,
   PushSubscriptionRecord,
   SaleRecord,
@@ -131,7 +132,14 @@ export async function sendPushToSubscribers(
 export async function notifyStaffOfNewOrder(
   sale: SaleRecord
 ): Promise<{ sent: number; failed: number }> {
-  const staffSubscriptions = listPushSubscriptions({ role: "staff" });
+  let staffSubscriptions = listPushSubscriptions({ role: "staff" });
+  if (staffSubscriptions.length === 0) {
+    staffSubscriptions = listPushSubscriptions({ role: "admin" });
+  }
+  // If no dedicated staff subscription registered yet, notify all active subscriptions so alert is never missed in testing
+  if (staffSubscriptions.length === 0) {
+    staffSubscriptions = listPushSubscriptions();
+  }
   if (staffSubscriptions.length === 0) {
     return { sent: 0, failed: 0 };
   }
@@ -156,6 +164,98 @@ export async function notifyStaffOfNewOrder(
       saleId: sale.id,
       billNumber: sale.bill_number,
       url: "/?tab=transactions",
+    },
+  });
+}
+
+/**
+ * Triggered when a customer places an order.
+ * Sends an immediate order confirmation to that student device.
+ */
+export async function notifyCustomerOfOrderPlaced(
+  sale: SaleRecord,
+  directEndpoint?: string | null
+): Promise<{ sent: number; failed: number }> {
+  const isRoomDelivery = Boolean(sale.room_number_snapshot);
+  const locationText = isRoomDelivery
+    ? `Room ${sale.room_number_snapshot} Delivery`
+    : `Self-Pickup`;
+
+  const payload: PushNotificationPayload = {
+    title: `🎉 Order Confirmed! (Bill #${sale.bill_number})`,
+    body: `₹${sale.payable_amount} • ${sale.items.length} item${sale.items.length > 1 ? "s" : ""} for ${locationText}. Canteen is preparing your order!`,
+    url: `/customer?customerId=${encodeURIComponent(sale.customer_id || "")}`,
+    tag: `order-placed-${sale.id}`,
+    data: {
+      saleId: sale.id,
+      billNumber: sale.bill_number,
+      url: `/customer?customerId=${encodeURIComponent(sale.customer_id || "")}`,
+    },
+  };
+
+  const targetSubs: PushSubscriptionRecord[] = [];
+
+  // If a direct endpoint was sent in the request, prioritize it
+  if (directEndpoint) {
+    const allSubs = listPushSubscriptions();
+    const match = allSubs.find((s) => s.endpoint === directEndpoint);
+    if (match) targetSubs.push(match);
+  }
+
+  // Also include any subscriptions registered to this customer_id
+  if (sale.customer_id) {
+    const custSubs = listPushSubscriptions({
+      role: "customer",
+      customer_id: sale.customer_id,
+    });
+    for (const sub of custSubs) {
+      if (!targetSubs.some((s) => s.endpoint === sub.endpoint)) {
+        targetSubs.push(sub);
+      }
+    }
+  }
+
+  if (targetSubs.length === 0) {
+    return { sent: 0, failed: 0 };
+  }
+
+  return sendPushToSubscribers(targetSubs, payload);
+}
+
+/**
+ * Triggered when Canteen Staff changes the shop status (Open / Closed).
+ * Broadcasts an announcement to all students & staff devices.
+ */
+export async function notifyShopStatusChange(
+  status: CanteenStatus
+): Promise<{ sent: number; failed: number }> {
+  let title = "🏪 Hostel Canteen Status Update";
+  let body = "Canteen opening hours have been updated.";
+
+  if (status.is_open) {
+    title = "🏪 Canteen is Now OPEN!";
+    body = "The hostel canteen is now open for orders! Tap to order snacks, food & drinks.";
+  } else {
+    const timeInfo = status.reopen_at ? ` (Reopening at ${status.reopen_at})` : "";
+    title = `🌙 Canteen Closed${timeInfo}`;
+    body = status.closure_reason
+      ? `Canteen is closed: ${status.closure_reason}`
+      : `The canteen is currently closed for orders${timeInfo}.`;
+  }
+
+  const allSubscriptions = listPushSubscriptions();
+  if (allSubscriptions.length === 0) {
+    return { sent: 0, failed: 0 };
+  }
+
+  return sendPushToSubscribers(allSubscriptions, {
+    title,
+    body,
+    url: "/customer",
+    tag: `canteen-status-${Date.now()}`,
+    data: {
+      url: "/customer",
+      isOpen: status.is_open,
     },
   });
 }

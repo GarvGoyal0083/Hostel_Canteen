@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { requireAdminAuth } from "@/lib/auth";
 import { createSaleTransaction, ensureDatabaseSync, listSales } from "@/lib/db/store";
+import { notifyCustomerOfOrderPlaced } from "@/lib/push/webPush";
 
 export async function GET(req: NextRequest) {
   const auth = await requireAdminAuth();
@@ -39,6 +40,13 @@ export async function POST(req: NextRequest) {
     const result = await createSaleTransaction(body, auth.admin.full_name, {
       id: auth.admin.id,
     });
+
+    if (result.sale.customer_id) {
+      notifyCustomerOfOrderPlaced(result.sale).catch((err) =>
+        console.warn("[push] Failed to notify student of counter purchase:", err)
+      );
+    }
+
     return NextResponse.json(result, { status: 201 });
   } catch (err) {
     return NextResponse.json(

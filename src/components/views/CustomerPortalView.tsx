@@ -36,6 +36,7 @@ import {
   BellRing,
 } from "lucide-react";
 import { StudentNotificationButton } from "@/components/StudentNotificationButton";
+import { urlBase64ToUint8Array } from "@/lib/push/usePushNotifications";
 import {
   Customer,
   CustomerLedgerEntry,
@@ -217,6 +218,40 @@ export function CustomerPortalView({
     setOrderError(null);
     setPlacingOrder(true);
 
+    // Try to auto-connect Web Push Notifications so student gets order confirmation & delivery updates
+    let pushSubJson: unknown = undefined;
+    try {
+      if (
+        typeof window !== "undefined" &&
+        "serviceWorker" in navigator &&
+        "PushManager" in window
+      ) {
+        if (Notification.permission === "default") {
+          await Notification.requestPermission();
+        }
+        if (Notification.permission === "granted") {
+          const reg = await navigator.serviceWorker.ready;
+          let sub = await reg.pushManager.getSubscription();
+          if (!sub) {
+            const keyRes = await fetch("/api/push/vapid-public-key");
+            if (keyRes.ok) {
+              const { publicKey } = await keyRes.json();
+              const appKey = urlBase64ToUint8Array(publicKey);
+              sub = await reg.pushManager.subscribe({
+                userVisibleOnly: true,
+                applicationServerKey: appKey as unknown as BufferSource,
+              });
+            }
+          }
+          if (sub) {
+            pushSubJson = sub.toJSON();
+          }
+        }
+      }
+    } catch (e) {
+      console.warn("[portal] Push auto-subscribe during checkout:", e);
+    }
+
     try {
       const res = await fetch("/api/customer-portal", {
         method: "POST",
@@ -234,6 +269,7 @@ export function CustomerPortalView({
           payment_method: orderPaymentMethod,
           upi_reference:
             orderPaymentMethod === "UPI" ? orderUpiRef.trim() : undefined,
+          push_subscription: pushSubJson,
         }),
       });
 
