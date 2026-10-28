@@ -3,6 +3,7 @@
 import React, { useState, useRef, useEffect } from "react";
 import { Sun, Moon, Laptop, Check, ChevronDown, Sparkles } from "lucide-react";
 import { useTheme, ThemeMode } from "@/lib/theme";
+import { toggleLiquidGlassCursor } from "@/components/effects/LiquidGlassCursor";
 
 interface ThemeToggleProps {
   compact?: boolean;
@@ -15,7 +16,14 @@ interface ThemeToggleProps {
 export function ThemeToggle({ compact = false, className = "" }: ThemeToggleProps) {
   const { theme, resolvedTheme, setTheme, mounted } = useTheme();
   const [dropdownOpen, setDropdownOpen] = useState(false);
+  const [glassActive, setGlassActive] = useState(true);
   const dropdownRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      setGlassActive(localStorage.getItem("hc_glass_cursor") !== "false");
+    }
+  }, []);
 
   // Close dropdown on outside click
   useEffect(() => {
@@ -142,6 +150,35 @@ export function ThemeToggle({ compact = false, className = "" }: ThemeToggleProp
             </div>
             {theme === "system" && <Check className="h-3.5 w-3.5 text-blue-600" />}
           </button>
+
+          {/* Liquid Glass Cursor Toggle */}
+          <div className="my-1 border-t border-slate-100 dark:border-slate-800" />
+          <button
+            type="button"
+            onClick={() => {
+              const next = toggleLiquidGlassCursor();
+              setGlassActive(Boolean(next));
+            }}
+            className={`w-full flex items-center justify-between px-2.5 py-2 rounded-xl text-left font-bold transition cursor-pointer ${
+              glassActive
+                ? "bg-blue-50/70 dark:bg-blue-950/40 text-blue-700 dark:text-blue-300"
+                : "text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800"
+            }`}
+          >
+            <div className="flex items-center gap-2">
+              <Sparkles className="h-4 w-4 text-pink-500" />
+              <span>Glass Cursor</span>
+            </div>
+            <span
+              className={`text-[9px] font-black px-1.5 py-0.5 rounded-full ${
+                glassActive
+                  ? "bg-blue-600 text-white"
+                  : "bg-slate-200 dark:bg-slate-700 text-slate-500"
+              }`}
+            >
+              {glassActive ? "ON" : "OFF"}
+            </span>
+          </button>
         </div>
       )}
     </div>
@@ -153,6 +190,13 @@ export function ThemeToggle({ compact = false, className = "" }: ThemeToggleProp
  */
 export function AdminThemeSettingsCard() {
   const { theme, resolvedTheme, setTheme, mounted } = useTheme();
+  const [glassActive, setGlassActive] = useState(true);
+
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      setGlassActive(localStorage.getItem("hc_glass_cursor") !== "false");
+    }
+  }, []);
 
   if (!mounted) {
     return (
@@ -257,6 +301,41 @@ export function AdminThemeSettingsCard() {
       <div className="pt-1 text-[11px] text-slate-500 dark:text-slate-400 flex items-center justify-between">
         <span>Active display mode: <strong className="text-slate-800 dark:text-slate-200 capitalize">{resolvedTheme}</strong></span>
         <span>Saved locally in browser</span>
+      </div>
+
+      {/* 3D Liquid Glass Cursor Setting */}
+      <div className="pt-3 border-t border-slate-100 dark:border-slate-800 flex items-center justify-between gap-3">
+        <div className="flex items-center gap-2.5 min-w-0">
+          <div className="h-9 w-9 rounded-xl bg-pink-50 dark:bg-pink-950/40 text-pink-500 flex items-center justify-center shrink-0 border border-pink-200/50 dark:border-pink-900/50 shadow-2xs">
+            <Sparkles className="h-4 w-4" />
+          </div>
+          <div>
+            <div className="font-extrabold text-xs text-slate-900 dark:text-slate-100 flex items-center gap-1.5">
+              <span>Liquid Glass Cursor Effect</span>
+              <span className="text-[10px] font-bold text-pink-600 dark:text-pink-400 bg-pink-50 dark:bg-pink-950/50 px-1.5 py-0.2 rounded-full border border-pink-200 dark:border-pink-800">
+                Desktop
+              </span>
+            </div>
+            <div className="text-[10px] text-slate-500 dark:text-slate-400 mt-0.5 leading-snug">
+              Floating 3D glass refraction sphere with chromatic prism rim &amp; satellite droplets
+            </div>
+          </div>
+        </div>
+
+        <button
+          type="button"
+          onClick={() => {
+            const next = toggleLiquidGlassCursor();
+            setGlassActive(Boolean(next));
+          }}
+          className={`shrink-0 px-3.5 py-1.5 rounded-xl text-xs font-black transition cursor-pointer shadow-xs ${
+            glassActive
+              ? "btn-3d-primary text-white"
+              : "bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 border border-slate-300 dark:border-slate-700"
+          }`}
+        >
+          {glassActive ? "Enabled ✓" : "Disabled"}
+        </button>
       </div>
     </div>
   );

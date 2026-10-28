@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import "./globals.css";
+import { LiquidGlassCursor } from "@/components/effects/LiquidGlassCursor";
 
 export const metadata: Metadata = {
   title: "Hostel Canteen POS — Complete Canteen Management System",
@@ -41,6 +42,7 @@ export default function RootLayout({
         />
       </head>
       <body className="min-h-screen bg-[#F8FAFC] dark:bg-[#090D16] text-[#0F172A] dark:text-[#F1F5F9] antialiased">
+        <LiquidGlassCursor />
         {children}
       </body>
     </html>
