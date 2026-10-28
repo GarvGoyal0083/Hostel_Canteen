@@ -1,11 +1,320 @@
 "use client";
 
 import React from "react";
-import { Printer, Download, X, AlertTriangle, CheckCircle2 } from "lucide-react";
+import { Printer, Download, X, AlertTriangle, CheckCircle2, FileText } from "lucide-react";
 import { SaleRecord } from "@/types/pos";
 import { formatINR, formatIST } from "@/lib/format";
 import { PaymentStatusBadge, SaleStatusBadge } from "@/components/StatusBadge";
 import { CanteenLogo } from "@/components/CanteenLogo";
+
+/**
+ * Generates a clean, standalone, high-resolution HTML invoice/receipt
+ * optimized for standard desktop printing, thermal 80mm printers, and PDF export.
+ */
+function generateReceiptHTML(sale: SaleRecord): string {
+  const itemsHtml = sale.items
+    .map(
+      (item) => `
+      <tr>
+        <td style="padding: 8px 6px; border-bottom: 1px solid #e2e8f0;">
+          <div style="font-weight: 700; color: #0f172a; font-size: 13px;">${item.product_name_snapshot}</div>
+          <div style="font-size: 11px; color: #64748b;">SKU: ${item.sku_snapshot}${
+        item.refunded_quantity > 0 ? ` &bull; <span style="color:#dc2626;">Refunded: ${item.refunded_quantity}</span>` : ""
+      }</div>
+        </td>
+        <td style="padding: 8px 6px; text-align: center; font-weight: 700; border-bottom: 1px solid #e2e8f0;">${item.quantity}</td>
+        <td style="padding: 8px 6px; text-align: right; border-bottom: 1px solid #e2e8f0; font-family: monospace;">${formatINR(item.selling_price_at_sale)}</td>
+        <td style="padding: 8px 6px; text-align: right; border-bottom: 1px solid #e2e8f0; font-family: monospace; color: #475569;">${
+          item.discount_amount > 0 ? `-${formatINR(item.discount_amount)}` : "&mdash;"
+        }</td>
+        <td style="padding: 8px 6px; text-align: right; font-weight: 700; border-bottom: 1px solid #e2e8f0; font-family: monospace;">${formatINR(item.final_line_total)}</td>
+      </tr>
+    `
+    )
+    .join("");
+
+  const paymentsHtml =
+    sale.payments.length === 0
+      ? `<div style="color: #b45309; font-weight: 600; padding: 6px 0;">No payment received at billing &mdash; Recorded as Pending Customer Udhaar.</div>`
+      : sale.payments
+          .map(
+            (p) => `
+        <div style="display: flex; justify-content: space-between; align-items: center; padding: 6px 0; border-bottom: 1px dashed #e2e8f0; font-size: 12px;">
+          <div>
+            <strong>${p.payment_method}</strong>: ${formatINR(p.amount_received)}
+            ${p.upi_reference ? `<div style="font-family: monospace; font-size: 11px; color: #1d4ed8;">Ref/UTR: ${p.upi_reference}</div>` : ""}
+          </div>
+          <div style="color: #64748b; font-size: 11px;">${formatIST(p.payment_date)}</div>
+        </div>
+      `
+          )
+          .join("");
+
+  return `<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <title>Receipt — ${sale.bill_number}</title>
+  <style>
+    @page {
+      size: auto;
+      margin: 8mm 12mm;
+    }
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+      font-size: 13px;
+      line-height: 1.45;
+      color: #0f172a;
+      background: #f8fafc;
+      padding: 24px 12px;
+    }
+    .receipt-container {
+      max-width: 540px;
+      margin: 0 auto;
+      background: #ffffff;
+      border: 1px solid #cbd5e1;
+      border-radius: 14px;
+      padding: 28px;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.06);
+    }
+    .header {
+      text-align: center;
+      padding-bottom: 16px;
+      border-bottom: 2px dashed #cbd5e1;
+      margin-bottom: 18px;
+    }
+    .canteen-title {
+      font-size: 22px;
+      font-weight: 900;
+      letter-spacing: -0.5px;
+      color: #0f172a;
+      text-transform: uppercase;
+      margin-bottom: 4px;
+    }
+    .canteen-sub {
+      font-size: 12px;
+      color: #64748b;
+      margin-bottom: 10px;
+    }
+    .bill-pill {
+      display: inline-block;
+      padding: 4px 14px;
+      background: #eff6ff;
+      border: 1px solid #bfdbfe;
+      border-radius: 9999px;
+      font-size: 12px;
+      font-weight: 800;
+      color: #1d4ed8;
+      font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+    }
+    .meta-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 10px;
+      font-size: 12px;
+      padding-bottom: 14px;
+      border-bottom: 1px solid #e2e8f0;
+      margin-bottom: 16px;
+    }
+    .meta-label {
+      color: #64748b;
+      font-size: 11px;
+      display: block;
+    }
+    .meta-val {
+      font-weight: 700;
+      color: #0f172a;
+    }
+    .badge {
+      display: inline-block;
+      padding: 2px 8px;
+      border-radius: 6px;
+      font-size: 10px;
+      font-weight: 700;
+      text-transform: uppercase;
+    }
+    .badge-paid {
+      background: #dcfce7;
+      color: #166534;
+      border: 1px solid #86efac;
+    }
+    .badge-udhaar {
+      background: #fef3c7;
+      color: #92400e;
+      border: 1px solid #fde68a;
+    }
+    .items-table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 12px;
+      margin-bottom: 16px;
+    }
+    .items-table th {
+      text-align: left;
+      font-size: 11px;
+      font-weight: 800;
+      color: #64748b;
+      padding: 6px 6px 8px 6px;
+      border-bottom: 2px solid #cbd5e1;
+      text-transform: uppercase;
+    }
+    .totals-box {
+      border-top: 1px solid #cbd5e1;
+      padding-top: 12px;
+      margin-bottom: 16px;
+      font-size: 12px;
+    }
+    .totals-row {
+      display: flex;
+      justify-content: space-between;
+      padding: 3px 0;
+      color: #475569;
+    }
+    .grand-total-row {
+      border-top: 2px solid #0f172a;
+      border-bottom: 2px solid #0f172a;
+      padding: 10px 0;
+      margin: 10px 0;
+      display: flex;
+      justify-content: space-between;
+      font-size: 16px;
+      font-weight: 900;
+      color: #0f172a;
+    }
+    .payment-box {
+      background: #f8fafc;
+      border: 1px solid #e2e8f0;
+      border-radius: 10px;
+      padding: 12px;
+      margin-bottom: 18px;
+    }
+    .footer {
+      text-align: center;
+      font-size: 11px;
+      color: #64748b;
+      border-top: 1px dashed #cbd5e1;
+      padding-top: 14px;
+      line-height: 1.6;
+    }
+    @media print {
+      body {
+        background: #ffffff !important;
+        padding: 0 !important;
+      }
+      .receipt-container {
+        border: none !important;
+        box-shadow: none !important;
+        max-width: 100% !important;
+        padding: 0 !important;
+      }
+      .no-print {
+        display: none !important;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="receipt-container">
+    <div class="header">
+      <div class="canteen-title">Hostel Canteen</div>
+      <div class="canteen-sub">Room Canteen &bull; Kurkure, Chips, Biscuits, Cold Drinks &amp; Snacks</div>
+      <div class="bill-pill">Bill ID: ${sale.bill_number}</div>
+    </div>
+
+    <div class="meta-grid">
+      <div>
+        <span class="meta-label">Customer / Student:</span>
+        <span class="meta-val">${sale.customer_name_snapshot}</span>
+        ${
+          sale.room_number_snapshot
+            ? `<span style="margin-left: 4px; padding: 1px 6px; background: #f1f5f9; border-radius: 4px; font-size: 10px; font-weight: 700;">Room ${sale.room_number_snapshot}</span>`
+            : ""
+        }
+      </div>
+      <div style="text-align: right;">
+        <span class="meta-label">Date &amp; Time (IST):</span>
+        <span class="meta-val">${formatIST(sale.created_at, true)}</span>
+      </div>
+      <div>
+        <span class="meta-label">Cashier / Recorded By:</span>
+        <span class="meta-val">${sale.created_by}</span>
+      </div>
+      <div style="text-align: right;">
+        <span class="meta-label">Status:</span>
+        <span class="badge ${sale.payment_status === "Paid" ? "badge-paid" : "badge-udhaar"}">${sale.payment_status}</span>
+      </div>
+    </div>
+
+    <table class="items-table">
+      <thead>
+        <tr>
+          <th>Item</th>
+          <th style="text-align: center;">Qty</th>
+          <th style="text-align: right;">Rate</th>
+          <th style="text-align: right;">Disc</th>
+          <th style="text-align: right;">Total</th>
+        </tr>
+      </thead>
+      <tbody>
+        ${itemsHtml}
+      </tbody>
+    </table>
+
+    <div class="totals-box">
+      <div class="totals-row">
+        <span>Original Subtotal:</span>
+        <span style="font-family: monospace; font-weight: 600;">${formatINR(sale.subtotal_amount)}</span>
+      </div>
+      ${
+        sale.item_discount_total > 0
+          ? `<div class="totals-row" style="color: #2563eb;">
+              <span>Item-Level Discounts:</span>
+              <span style="font-family: monospace;">-${formatINR(sale.item_discount_total)}</span>
+            </div>`
+          : ""
+      }
+      ${
+        sale.bill_discount_amount > 0
+          ? `<div class="totals-row" style="color: #2563eb;">
+              <span>Bill Discount (${sale.discount_reason || "Promotional"}):</span>
+              <span style="font-family: monospace;">-${formatINR(sale.bill_discount_amount)}</span>
+            </div>`
+          : ""
+      }
+      <div class="grand-total-row">
+        <span>FINAL PAYABLE:</span>
+        <span style="color: #2563eb; font-family: monospace;">${formatINR(sale.payable_amount)}</span>
+      </div>
+      <div class="totals-row" style="color: #166534; font-weight: 700;">
+        <span>Total Amount Paid:</span>
+        <span style="font-family: monospace;">${formatINR(sale.paid_amount)}</span>
+      </div>
+      <div class="totals-row" style="color: #b45309; font-weight: 700;">
+        <span>Remaining Due (Udhaar):</span>
+        <span style="font-family: monospace;">${formatINR(sale.outstanding_amount)}</span>
+      </div>
+    </div>
+
+    <div class="payment-box">
+      <div style="font-weight: 800; font-size: 11px; text-transform: uppercase; color: #475569; margin-bottom: 6px;">
+        Payment Details
+      </div>
+      ${paymentsHtml}
+    </div>
+
+    <div class="footer">
+      <div>Thank you for visiting Hostel Canteen! &bull; Visit Again</div>
+      <div style="font-size: 10px; color: #94a3b8; margin-top: 4px;">Computer-Generated POS Receipt &bull; Verification Bill No: ${sale.bill_number}</div>
+    </div>
+  </div>
+</body>
+</html>`;
+}
 
 export function ReceiptModal({
   sale,
@@ -16,10 +325,75 @@ export function ReceiptModal({
 }) {
   if (!sale) return null;
 
+  /**
+   * Print receipt via an isolated hidden iframe
+   * Guarantees 100% reliable printing without blank pages, cuts, or modal dark mode artifacts
+   */
   const handlePrint = () => {
-    window.print();
+    const receiptHtml = generateReceiptHTML(sale);
+
+    try {
+      let printFrame = document.getElementById("receipt-print-frame") as HTMLIFrameElement;
+      if (!printFrame) {
+        printFrame = document.createElement("iframe");
+        printFrame.id = "receipt-print-frame";
+        printFrame.style.position = "fixed";
+        printFrame.style.right = "0";
+        printFrame.style.bottom = "0";
+        printFrame.style.width = "0";
+        printFrame.style.height = "0";
+        printFrame.style.border = "none";
+        document.body.appendChild(printFrame);
+      }
+
+      const frameDoc = printFrame.contentWindow?.document || printFrame.contentDocument;
+      if (frameDoc) {
+        frameDoc.open();
+        frameDoc.write(receiptHtml);
+        frameDoc.close();
+
+        setTimeout(() => {
+          printFrame.contentWindow?.focus();
+          printFrame.contentWindow?.print();
+        }, 300);
+        return;
+      }
+    } catch (e) {
+      console.warn("Iframe print failed, falling back to popup window:", e);
+    }
+
+    // Fallback if iframe fails or is blocked
+    const printWindow = window.open("", "_blank", "width=600,height=800");
+    if (printWindow) {
+      printWindow.document.open();
+      printWindow.document.write(receiptHtml);
+      printWindow.document.close();
+      printWindow.focus();
+      setTimeout(() => {
+        printWindow.print();
+      }, 350);
+    }
   };
 
+  /**
+   * Download a complete standalone HTML receipt file
+   */
+  const handleDownloadHtmlReceipt = () => {
+    const html = generateReceiptHTML(sale);
+    const blob = new Blob([html], { type: "text/html;charset=utf-8" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `Receipt-${sale.bill_number}.html`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+  };
+
+  /**
+   * Plain text receipt export
+   */
   const handleDownloadTextReceipt = () => {
     const lines = [
       "================================================",
@@ -99,20 +473,36 @@ export function ReceiptModal({
             </h3>
           </div>
           <div className="flex items-center gap-2">
+            {/* Primary Print / Save PDF Button */}
             <button
               onClick={handlePrint}
-              className="inline-flex items-center gap-1.5 rounded-lg bg-[#2563EB] px-3 py-1.5 text-xs font-semibold text-white hover:bg-[#1D4ED8] transition cursor-pointer"
+              className="inline-flex items-center gap-1.5 rounded-lg bg-[#2563EB] hover:bg-[#1D4ED8] px-3.5 py-1.5 text-xs font-bold text-white shadow-sm transition cursor-pointer active:scale-95"
+              title="Print Receipt or Save as PDF"
             >
               <Printer className="h-3.5 w-3.5" />
-              Print
+              <span>Print / Save PDF</span>
             </button>
+
+            {/* Download HTML Receipt Button */}
+            <button
+              onClick={handleDownloadHtmlReceipt}
+              className="inline-flex items-center gap-1.5 rounded-lg bg-white dark:bg-slate-800 border border-gray-300 dark:border-slate-700 px-3 py-1.5 text-xs font-semibold text-[#111827] dark:text-slate-200 hover:bg-gray-50 dark:hover:bg-slate-700 transition cursor-pointer"
+              title="Download standalone formatted receipt"
+            >
+              <FileText className="h-3.5 w-3.5 text-blue-600 dark:text-blue-400" />
+              <span>Receipt</span>
+            </button>
+
+            {/* Quick .TXT Export */}
             <button
               onClick={handleDownloadTextReceipt}
-              className="inline-flex items-center gap-1.5 rounded-lg bg-white dark:bg-slate-800 border border-gray-300 dark:border-slate-700 px-3 py-1.5 text-xs font-semibold text-[#111827] dark:text-slate-200 hover:bg-gray-50 dark:hover:bg-slate-700 transition cursor-pointer"
+              className="hidden sm:inline-flex items-center gap-1 rounded-lg bg-white dark:bg-slate-800 border border-gray-300 dark:border-slate-700 px-2 py-1.5 text-[11px] font-medium text-slate-600 dark:text-slate-400 hover:bg-gray-50 dark:hover:bg-slate-700 transition cursor-pointer"
+              title="Download thermal plain text"
             >
-              <Download className="h-3.5 w-3.5" />
-              Download .TXT
+              <Download className="h-3 w-3" />
+              <span>.TXT</span>
             </button>
+
             <button
               onClick={onClose}
               className="rounded-lg p-1.5 text-gray-500 dark:text-slate-400 hover:bg-gray-200 dark:hover:bg-slate-700 hover:text-[#111827] dark:hover:text-white transition cursor-pointer"
@@ -133,7 +523,7 @@ export function ReceiptModal({
             <p className="text-xs text-gray-600 dark:text-slate-400 mt-0.5">
               Room Canteen — Kurkure, Chips, Biscuits, Cold Drinks & Snacks
             </p>
-            <div className="mt-2 inline-flex items-center gap-2 rounded-md bg-[#EFF6FF] dark:bg-blue-950/40 px-3 py-1 text-xs font-bold text-[#1D4ED8] dark:text-blue-300 border border-blue-200 dark:border-blue-800">
+            <div className="mt-2 inline-flex items-center gap-2 rounded-md bg-[#EFF6FF] dark:bg-blue-950/40 px-3 py-1 text-xs font-bold text-[#1D4ED8] dark:text-blue-300 border border-blue-200 dark:border-blue-800 font-mono">
               Bill ID: {sale.bill_number}
             </div>
           </div>
@@ -153,7 +543,7 @@ export function ReceiptModal({
             <div className="text-right">
               <span className="text-gray-500 dark:text-slate-400 block">Sale Date & Time (IST):</span>
               <span className="font-semibold text-[#111827] dark:text-slate-200">
-                {formatIST(sale.created_at)}
+                {formatIST(sale.created_at, true)}
               </span>
             </div>
             <div>
