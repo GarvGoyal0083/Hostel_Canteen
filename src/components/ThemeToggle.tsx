@@ -166,8 +166,8 @@ export function ThemeToggle({ compact = false, className = "" }: ThemeToggleProp
             }`}
           >
             <div className="flex items-center gap-2">
-              <Sparkles className="h-4 w-4 text-pink-500" />
-              <span>Fluid Ribbon</span>
+              <Sparkles className="h-4 w-4 text-blue-500" />
+              <span>Smooth Cursor</span>
             </div>
             <span
               className={`text-[9px] font-black px-1.5 py-0.5 rounded-full ${
@@ -311,13 +311,13 @@ export function AdminThemeSettingsCard() {
           </div>
           <div>
             <div className="font-extrabold text-xs text-slate-900 dark:text-slate-100 flex items-center gap-1.5">
-              <span>Fluid Ribbon Trail Cursor</span>
-              <span className="text-[10px] font-bold text-pink-600 dark:text-pink-400 bg-pink-50 dark:bg-pink-950/50 px-1.5 py-0.2 rounded-full border border-pink-200 dark:border-pink-800">
-                Awwwards Style
+              <span>Smooth Minimal Cursor</span>
+              <span className="text-[10px] font-bold text-blue-600 dark:text-blue-400 bg-blue-50 dark:bg-blue-950/50 px-1.5 py-0.2 rounded-full border border-blue-200 dark:border-blue-800">
+                Desktop
               </span>
             </div>
             <div className="text-[10px] text-slate-500 dark:text-slate-400 mt-0.5 leading-snug">
-              Fluid multi-segment liquid ribbon stream tracking mouse motion with click ripples
+              Crisp precision center dot with gentle floating follower ring and click feedback
             </div>
           </div>
         </div>
