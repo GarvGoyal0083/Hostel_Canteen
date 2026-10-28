@@ -470,7 +470,7 @@ export function PaymentsView({
       </div>
 
       {/* Filters */}
-      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between bg-white p-4 rounded-xl border border-gray-200 shadow-xs text-xs">
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between bg-white dark:bg-slate-900 p-4 rounded-xl border border-gray-200 dark:border-slate-800 shadow-xs text-xs">
         <div className="flex flex-1 flex-wrap items-center gap-2.5">
           <div className="relative min-w-[220px] flex-1">
             <Search className="absolute left-3 top-2.5 h-3.5 w-3.5 text-gray-400" />
@@ -479,14 +479,14 @@ export function PaymentsView({
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               placeholder="Search Bill ID, Customer, or UPI Ref / UTR..."
-              className="w-full rounded-lg border border-gray-300 pl-8 pr-3 py-1.5 text-[#111827]"
+              className="w-full rounded-lg border border-gray-300 dark:border-slate-700 bg-white dark:bg-slate-800 pl-8 pr-3 py-1.5 text-[#111827] dark:text-slate-200"
             />
           </div>
 
           <select
             value={methodFilter}
             onChange={(e) => setMethodFilter(e.target.value)}
-            className="rounded-lg border border-gray-300 bg-white px-2.5 py-1.5 text-[#111827]"
+            className="rounded-lg border border-gray-300 dark:border-slate-700 bg-white dark:bg-slate-800 px-2.5 py-1.5 text-[#111827] dark:text-slate-200"
           >
             <option value="ALL">All Methods</option>
             <option value="Cash">Cash</option>
@@ -497,7 +497,7 @@ export function PaymentsView({
           <select
             value={statusFilter}
             onChange={(e) => setStatusFilter(e.target.value)}
-            className="rounded-lg border border-gray-300 bg-white px-2.5 py-1.5 text-[#111827]"
+            className="rounded-lg border border-gray-300 dark:border-slate-700 bg-white dark:bg-slate-800 px-2.5 py-1.5 text-[#111827] dark:text-slate-200"
           >
             <option value="ALL">All Statuses</option>
             <option value="Paid">Paid</option>
@@ -511,17 +511,17 @@ export function PaymentsView({
             type="date"
             value={startDate}
             onChange={(e) => setStartDate(e.target.value)}
-            className="rounded-lg border border-gray-300 px-2 py-1.5 text-[#111827]"
+            className="rounded-lg border border-gray-300 dark:border-slate-700 bg-white dark:bg-slate-800 px-2 py-1.5 text-[#111827] dark:text-slate-200"
           />
           <input
             type="date"
             value={endDate}
             onChange={(e) => setEndDate(e.target.value)}
-            className="rounded-lg border border-gray-300 px-2 py-1.5 text-[#111827]"
+            className="rounded-lg border border-gray-300 dark:border-slate-700 bg-white dark:bg-slate-800 px-2 py-1.5 text-[#111827] dark:text-slate-200"
           />
         </div>
 
-        <label className="inline-flex items-center gap-1.5 font-semibold text-amber-800 cursor-pointer">
+        <label className="inline-flex items-center gap-1.5 font-semibold text-amber-800 dark:text-amber-400 cursor-pointer">
           <input
             type="checkbox"
             checked={duplicateOnly}
@@ -533,14 +533,14 @@ export function PaymentsView({
       </div>
 
       {/* Date-wise Cash and UPI Collection Report */}
-      <div className="rounded-xl bg-white p-4 border border-gray-200 shadow-xs">
-        <h2 className="text-sm font-bold text-[#111827] mb-3">
+      <div className="rounded-xl bg-white dark:bg-slate-900 p-4 border border-gray-200 dark:border-slate-800 shadow-xs">
+        <h2 className="text-sm font-bold text-[#111827] dark:text-slate-100 mb-3">
           Date-Wise Cash & UPI Collection Summary
         </h2>
         <div className="overflow-x-auto">
           <table className="w-full text-xs">
             <thead>
-              <tr className="border-b border-gray-200 bg-[#F3F4F6] text-left text-gray-600">
+              <tr className="border-b border-gray-200 dark:border-slate-800 bg-[#F3F4F6] dark:bg-slate-800/80 text-left text-gray-600 dark:text-slate-300">
                 <th className="px-3 py-2 font-semibold">Date (IST)</th>
                 <th className="px-3 py-2 text-center font-semibold">
                   Payment Entries
@@ -597,11 +597,11 @@ export function PaymentsView({
       </div>
 
       {/* Detailed Payment Entries Table */}
-      <div className="rounded-xl bg-white border border-gray-200 shadow-xs overflow-hidden">
+      <div className="rounded-xl bg-white dark:bg-slate-900 border border-gray-200 dark:border-slate-800 shadow-xs overflow-hidden">
         <div className="overflow-x-auto">
           <table className="w-full text-xs">
             <thead>
-              <tr className="border-b border-gray-200 bg-[#F3F4F6] text-left text-gray-600">
+              <tr className="border-b border-gray-200 dark:border-slate-800 bg-[#F3F4F6] dark:bg-slate-800/80 text-left text-gray-600 dark:text-slate-300">
                 <th className="px-4 py-3 font-semibold">Date & Time (IST)</th>
                 <th className="px-4 py-3 font-semibold">Bill ID & Customer</th>
                 <th className="px-4 py-3 font-semibold">Method</th>

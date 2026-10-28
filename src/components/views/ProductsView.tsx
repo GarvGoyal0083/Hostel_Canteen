@@ -492,7 +492,7 @@ export function ProductsView({
                         )}
                         <button
                           onClick={() => openEditModal(p)}
-                          className="rounded-md border border-gray-300 bg-white p-1.5 text-gray-700 hover:bg-gray-100 transition cursor-pointer"
+                          className="rounded-md border border-gray-300 dark:border-slate-700 bg-white dark:bg-slate-800 p-1.5 text-gray-700 dark:text-slate-200 hover:bg-gray-100 dark:hover:bg-slate-700 transition cursor-pointer"
                           title="Edit product"
                         >
                           <Edit3 className="h-3.5 w-3.5" />

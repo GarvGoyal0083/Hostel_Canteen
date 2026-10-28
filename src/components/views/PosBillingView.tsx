@@ -859,14 +859,14 @@ export function PosBillingView({
           )}
 
           {/* 2. Bill-Level Discount Panel */}
-          <div className="rounded-lg border border-gray-200 bg-[#F3F4F6]/60 p-3 space-y-2">
+          <div className="rounded-lg border border-gray-200 dark:border-slate-800 bg-[#F3F4F6]/60 dark:bg-slate-900/60 p-3 space-y-2">
             <div className="flex items-center justify-between">
-              <span className="text-xs font-bold text-[#111827] flex items-center gap-1.5">
-                <Tag className="h-3.5 w-3.5 text-[#2563EB]" />
+              <span className="text-xs font-bold text-[#111827] dark:text-slate-100 flex items-center gap-1.5">
+                <Tag className="h-3.5 w-3.5 text-[#2563EB] dark:text-blue-400" />
                 Bill-Level Discount
               </span>
               {calculations.billDiscAmount > 0 && (
-                <span className="text-xs font-bold text-[#2563EB]">
+                <span className="text-xs font-bold text-[#2563EB] dark:text-blue-400">
                   -{formatINR(calculations.billDiscAmount)}
                 </span>
               )}
@@ -878,7 +878,7 @@ export function PosBillingView({
                 onChange={(e) =>
                   setBillDiscountType(e.target.value as DiscountType)
                 }
-                className="rounded-lg border border-gray-300 bg-white px-2.5 py-1.5 text-xs text-[#111827]"
+                className="rounded-lg border border-gray-300 dark:border-slate-700 bg-white dark:bg-slate-800 px-2.5 py-1.5 text-xs text-[#111827] dark:text-slate-200"
               >
                 <option value="none">No Bill Discount</option>
                 <option value="fixed">Fixed Amount Off (₹)</option>
@@ -894,7 +894,7 @@ export function PosBillingView({
                 placeholder={
                   billDiscountType === "percentage" ? "% off" : "₹ off"
                 }
-                className="rounded-lg border border-gray-300 bg-white px-2.5 py-1.5 text-xs text-[#111827] disabled:bg-gray-100"
+                className="rounded-lg border border-gray-300 dark:border-slate-700 bg-white dark:bg-slate-800 px-2.5 py-1.5 text-xs text-[#111827] dark:text-slate-200 disabled:bg-gray-100 dark:disabled:bg-slate-800/50"
               />
             </div>
 
@@ -906,22 +906,22 @@ export function PosBillingView({
                   value={discountReason}
                   onChange={(e) => setDiscountReason(e.target.value)}
                   placeholder="Discount reason (e.g. Hostel Combo)"
-                  className="rounded-lg border border-gray-300 bg-white px-2.5 py-1.5 text-xs text-[#111827]"
+                  className="rounded-lg border border-gray-300 dark:border-slate-700 bg-white dark:bg-slate-800 px-2.5 py-1.5 text-xs text-[#111827] dark:text-slate-200"
                 />
                 <input
                   type="text"
                   value={discountAuthorizedBy}
                   onChange={(e) => setDiscountAuthorizedBy(e.target.value)}
                   placeholder="Authorized by Admin"
-                  className="rounded-lg border border-gray-300 bg-white px-2.5 py-1.5 text-xs text-[#111827]"
+                  className="rounded-lg border border-gray-300 dark:border-slate-700 bg-white dark:bg-slate-800 px-2.5 py-1.5 text-xs text-[#111827] dark:text-slate-200"
                 />
               </div>
             )}
           </div>
 
           {/* 3. Customer Selection (Anonymous / Existing / New Hostel Student) */}
-          <div className="rounded-lg border border-gray-200 bg-white p-3 space-y-2.5">
-            <span className="text-xs font-bold text-[#111827] block">
+          <div className="rounded-lg border border-gray-200 dark:border-slate-800 bg-white dark:bg-slate-900 p-3 space-y-2.5">
+            <span className="text-xs font-bold text-[#111827] dark:text-slate-100 block">
               Customer / Hostel Room Selection
             </span>
             <div className="grid grid-cols-3 gap-1.5">
@@ -931,7 +931,7 @@ export function PosBillingView({
                 className={`flex items-center justify-center gap-1 rounded-lg py-1.5 px-2 text-xs font-semibold border transition cursor-pointer ${
                   customerMode === "anonymous"
                     ? "bg-[#2563EB] text-white border-[#2563EB]"
-                    : "bg-[#F3F4F6] text-[#111827] border-gray-200 hover:bg-gray-200"
+                    : "bg-[#F3F4F6] dark:bg-slate-800 text-[#111827] dark:text-slate-200 border-gray-200 dark:border-slate-700 hover:bg-gray-200 dark:hover:bg-slate-700"
                 }`}
               >
                 <UserCheck className="h-3.5 w-3.5" />
@@ -943,7 +943,7 @@ export function PosBillingView({
                 className={`flex items-center justify-center gap-1 rounded-lg py-1.5 px-2 text-xs font-semibold border transition cursor-pointer ${
                   customerMode === "existing"
                     ? "bg-[#2563EB] text-white border-[#2563EB]"
-                    : "bg-[#F3F4F6] text-[#111827] border-gray-200 hover:bg-gray-200"
+                    : "bg-[#F3F4F6] dark:bg-slate-800 text-[#111827] dark:text-slate-200 border-gray-200 dark:border-slate-700 hover:bg-gray-200 dark:hover:bg-slate-700"
                 }`}
               >
                 <Users className="h-3.5 w-3.5" />
@@ -955,7 +955,7 @@ export function PosBillingView({
                 className={`flex items-center justify-center gap-1 rounded-lg py-1.5 px-2 text-xs font-semibold border transition cursor-pointer ${
                   customerMode === "new"
                     ? "bg-[#2563EB] text-white border-[#2563EB]"
-                    : "bg-[#F3F4F6] text-[#111827] border-gray-200 hover:bg-gray-200"
+                    : "bg-[#F3F4F6] dark:bg-slate-800 text-[#111827] dark:text-slate-200 border-gray-200 dark:border-slate-700 hover:bg-gray-200 dark:hover:bg-slate-700"
                 }`}
               >
                 <UserPlus className="h-3.5 w-3.5" />
@@ -1028,14 +1028,14 @@ export function PosBillingView({
           </div>
 
           {/* 4. Manual Payment Entry Section */}
-          <div className="rounded-lg border border-blue-200 bg-[#EFF6FF]/60 p-3 space-y-3">
+          <div className="rounded-lg border border-blue-200 dark:border-blue-900/60 bg-[#EFF6FF]/60 dark:bg-blue-950/25 p-3 space-y-3">
             <div className="flex items-center justify-between">
               <div>
-                <span className="text-xs font-bold text-[#111827] flex items-center gap-1.5">
-                  <CreditCard className="h-3.5 w-3.5 text-[#2563EB]" />
+                <span className="text-xs font-bold text-[#111827] dark:text-slate-100 flex items-center gap-1.5">
+                  <CreditCard className="h-3.5 w-3.5 text-[#2563EB] dark:text-blue-400" />
                   Manual Payment Entry (No Gateway)
                 </span>
-                <span className="text-[10px] text-gray-600 block">
+                <span className="text-[10px] text-gray-600 dark:text-slate-400 block">
                   Record Cash, GPay/PhonePe/Paytm UPI, Split, or Udhaar
                 </span>
               </div>
@@ -1047,28 +1047,28 @@ export function PosBillingView({
               <button
                 type="button"
                 onClick={() => applyPaymentPreset("full_cash")}
-                className="rounded bg-white border border-gray-300 py-1 px-1.5 text-[11px] font-semibold text-[#111827] hover:border-[#2563EB] cursor-pointer"
+                className="rounded bg-white dark:bg-slate-800 border border-gray-300 dark:border-slate-700 py-1 px-1.5 text-[11px] font-semibold text-[#111827] dark:text-slate-200 hover:border-[#2563EB] cursor-pointer"
               >
                 Full Cash
               </button>
               <button
                 type="button"
                 onClick={() => applyPaymentPreset("full_upi")}
-                className="rounded bg-white border border-gray-300 py-1 px-1.5 text-[11px] font-semibold text-[#2563EB] hover:border-[#2563EB] cursor-pointer"
+                className="rounded bg-white dark:bg-slate-800 border border-gray-300 dark:border-slate-700 py-1 px-1.5 text-[11px] font-semibold text-[#2563EB] dark:text-blue-400 hover:border-[#2563EB] cursor-pointer"
               >
                 Full UPI
               </button>
               <button
                 type="button"
                 onClick={() => applyPaymentPreset("split_50_50")}
-                className="rounded bg-white border border-gray-300 py-1 px-1.5 text-[11px] font-semibold text-[#111827] hover:border-[#2563EB] cursor-pointer"
+                className="rounded bg-white dark:bg-slate-800 border border-gray-300 dark:border-slate-700 py-1 px-1.5 text-[11px] font-semibold text-[#111827] dark:text-slate-200 hover:border-[#2563EB] cursor-pointer"
               >
                 Split Pay
               </button>
               <button
                 type="button"
                 onClick={() => applyPaymentPreset("full_udhaar")}
-                className="rounded bg-amber-50 border border-amber-300 py-1 px-1.5 text-[11px] font-semibold text-amber-900 hover:bg-amber-100 cursor-pointer"
+                className="rounded bg-amber-50 dark:bg-amber-950/40 border border-amber-300 dark:border-amber-800/60 py-1 px-1.5 text-[11px] font-semibold text-amber-900 dark:text-amber-300 hover:bg-amber-100 cursor-pointer"
               >
                 Full Udhaar
               </button>
@@ -1079,11 +1079,11 @@ export function PosBillingView({
               {effectivePaymentRows.map((row, idx) => (
                 <div
                   key={row.id}
-                  className="rounded-lg bg-white p-2.5 border border-gray-200 space-y-2"
+                  className="rounded-lg bg-white dark:bg-slate-900/90 p-2.5 border border-gray-200 dark:border-slate-800 space-y-2"
                 >
                   <div className="grid grid-cols-12 gap-2 items-center">
                     <div className="col-span-5">
-                      <label className="text-[10px] font-semibold text-gray-500 block">
+                      <label className="text-[10px] font-semibold text-gray-500 dark:text-slate-400 block">
                         Method #{idx + 1}
                       </label>
                       <select
@@ -1098,7 +1098,7 @@ export function PosBillingView({
                             )
                           );
                         }}
-                        className="w-full rounded border border-gray-300 bg-white px-2 py-1 text-xs font-semibold text-[#111827]"
+                        className="w-full rounded border border-gray-300 dark:border-slate-700 bg-white dark:bg-slate-800 px-2 py-1 text-xs font-semibold text-[#111827] dark:text-slate-200"
                       >
                         <option value="Cash">Cash</option>
                         <option value="UPI">UPI (Manual Ref)</option>
@@ -1107,7 +1107,7 @@ export function PosBillingView({
                     </div>
 
                     <div className="col-span-6">
-                      <label className="text-[10px] font-semibold text-gray-500 block">
+                      <label className="text-[10px] font-semibold text-gray-500 dark:text-slate-400 block">
                         Amount Received (₹)
                       </label>
                       <input
@@ -1126,7 +1126,7 @@ export function PosBillingView({
                             )
                           );
                         }}
-                        className="w-full rounded border border-gray-300 bg-white px-2 py-1 text-xs font-bold text-[#111827]"
+                        className="w-full rounded border border-gray-300 dark:border-slate-700 bg-white dark:bg-slate-800 px-2 py-1 text-xs font-bold text-[#111827] dark:text-slate-200"
                       />
                     </div>
 
@@ -1165,10 +1165,10 @@ export function PosBillingView({
                           handleCheckDuplicateUpi(row.id, val);
                         }}
                         placeholder="Enter 12-digit UPI Ref / UTR manually (optional)"
-                        className="w-full rounded border border-blue-300 bg-[#EFF6FF]/40 px-2.5 py-1 text-xs font-mono text-[#111827]"
+                        className="w-full rounded border border-blue-300 dark:border-blue-800 bg-[#EFF6FF]/40 dark:bg-blue-950/40 px-2.5 py-1 text-xs font-mono text-[#111827] dark:text-blue-200"
                       />
                       {row.duplicateWarning?.isDuplicate && (
-                        <div className="mt-1.5 rounded bg-amber-50 border border-amber-300 p-2 flex items-start gap-1.5 text-[11px] text-amber-900">
+                        <div className="mt-1.5 rounded bg-amber-50 dark:bg-amber-950/40 border border-amber-300 dark:border-amber-800 p-2 flex items-start gap-1.5 text-[11px] text-amber-900 dark:text-amber-200">
                           <AlertTriangle className="h-3.5 w-3.5 text-amber-600 shrink-0 mt-0.5" />
                           <span>
                             <strong>Duplicate UPI Ref Warning:</strong> This UTR
@@ -1199,7 +1199,7 @@ export function PosBillingView({
                   },
                 ]);
               }}
-              className="inline-flex items-center gap-1 text-xs font-semibold text-[#2563EB] hover:text-[#1D4ED8] cursor-pointer"
+              className="inline-flex items-center gap-1 text-xs font-semibold text-[#2563EB] dark:text-blue-400 hover:text-[#1D4ED8] cursor-pointer"
             >
               <PlusCircle className="h-3.5 w-3.5" />
               Add Split Payment Entry
@@ -1207,7 +1207,7 @@ export function PosBillingView({
           </div>
 
           {/* 5. Bill Summary & Save Button */}
-          <div className="rounded-lg bg-[#F3F4F6] p-3.5 space-y-1.5 text-xs border border-gray-200">
+          <div className="rounded-lg bg-[#F3F4F6] dark:bg-slate-900/90 p-3.5 space-y-1.5 text-xs border border-gray-200 dark:border-slate-800">
             <div className="flex justify-between text-gray-600">
               <span>Original Subtotal:</span>
               <span className="font-semibold text-[#111827]">

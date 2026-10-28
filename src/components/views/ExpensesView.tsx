@@ -449,7 +449,7 @@ export function ExpensesView({
         <div className="overflow-x-auto">
           <table className="w-full text-xs">
             <thead>
-              <tr className="border-b border-gray-200 bg-[#F3F4F6] text-left text-gray-600">
+              <tr className="border-b border-gray-200 dark:border-slate-800 bg-[#F3F4F6] dark:bg-slate-800/80 text-left text-gray-600 dark:text-slate-300">
                 <th className="px-4 py-3 font-semibold">Expense Date</th>
                 <th className="px-4 py-3 font-semibold">Expense Title</th>
                 <th className="px-4 py-3 font-semibold">Category</th>

@@ -440,14 +440,14 @@ export function InventoryView({
       </div>
 
       {/* Sub-navigation & Filters */}
-      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between bg-white p-4 rounded-xl border border-gray-200 shadow-xs">
-        <div className="inline-flex rounded-lg bg-[#F3F4F6] p-1">
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between bg-white dark:bg-slate-900 p-4 rounded-xl border border-gray-200 dark:border-slate-800 shadow-xs">
+        <div className="inline-flex rounded-lg bg-[#F3F4F6] dark:bg-slate-800 p-1">
           <button
             onClick={() => setActiveSubTab("reconciliation")}
             className={`inline-flex items-center gap-1.5 rounded-md px-3 py-1.5 text-xs font-semibold transition cursor-pointer ${
               activeSubTab === "reconciliation"
                 ? "bg-[#2563EB] text-white"
-                : "text-[#111827] hover:bg-gray-200"
+                : "text-[#111827] dark:text-slate-300 hover:bg-gray-200 dark:hover:bg-slate-700"
             }`}
           >
             <Layers className="h-3.5 w-3.5" />
@@ -458,7 +458,7 @@ export function InventoryView({
             className={`inline-flex items-center gap-1.5 rounded-md px-3 py-1.5 text-xs font-semibold transition cursor-pointer ${
               activeSubTab === "history"
                 ? "bg-[#2563EB] text-white"
-                : "text-[#111827] hover:bg-gray-200"
+                : "text-[#111827] dark:text-slate-300 hover:bg-gray-200 dark:hover:bg-slate-700"
             }`}
           >
             <History className="h-3.5 w-3.5" />
@@ -474,14 +474,14 @@ export function InventoryView({
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               placeholder="Search product, SKU, reason..."
-              className="w-full rounded-lg border border-gray-300 pl-8 pr-3 py-1.5 text-xs text-[#111827]"
+              className="w-full rounded-lg border border-gray-300 dark:border-slate-700 bg-white dark:bg-slate-800 pl-8 pr-3 py-1.5 text-xs text-[#111827] dark:text-slate-200"
             />
           </div>
 
           <select
             value={productFilter}
             onChange={(e) => setProductFilter(e.target.value)}
-            className="rounded-lg border border-gray-300 bg-white px-2.5 py-1.5 text-xs text-[#111827]"
+            className="rounded-lg border border-gray-300 dark:border-slate-700 bg-white dark:bg-slate-800 px-2.5 py-1.5 text-xs text-[#111827] dark:text-slate-200"
           >
             <option value="ALL">All Products</option>
             {physicalProducts.map((p) => (
@@ -495,7 +495,7 @@ export function InventoryView({
             <select
               value={movementTypeFilter}
               onChange={(e) => setMovementTypeFilter(e.target.value)}
-              className="rounded-lg border border-gray-300 bg-white px-2.5 py-1.5 text-xs text-[#111827]"
+              className="rounded-lg border border-gray-300 dark:border-slate-700 bg-white dark:bg-slate-800 px-2.5 py-1.5 text-xs text-[#111827] dark:text-slate-200"
             >
               <option value="ALL">All Movement Types</option>
               <option value="OPENING">OPENING</option>
@@ -516,11 +516,11 @@ export function InventoryView({
 
       {/* Tab 1: Opening, Purchases, Sales, Adjustments & Closing Stock Table */}
       {activeSubTab === "reconciliation" ? (
-        <div className="rounded-xl bg-white border border-gray-200 shadow-xs overflow-hidden">
+        <div className="rounded-xl bg-white dark:bg-slate-900 border border-gray-200 dark:border-slate-800 shadow-xs overflow-hidden">
           <div className="overflow-x-auto">
             <table className="w-full text-xs">
               <thead>
-                <tr className="border-b border-gray-200 bg-[#F3F4F6] text-left text-gray-600">
+                <tr className="border-b border-gray-200 dark:border-slate-800 bg-[#F3F4F6] dark:bg-slate-800/80 text-left text-gray-600 dark:text-slate-300">
                   <th className="px-4 py-3 font-semibold">Product & SKU</th>
                   <th className="px-3 py-3 text-center font-semibold">
                     Opening
@@ -608,11 +608,11 @@ export function InventoryView({
         </div>
       ) : (
         /* Tab 2: Complete Stock Movement History */
-        <div className="rounded-xl bg-white border border-gray-200 shadow-xs overflow-hidden">
+        <div className="rounded-xl bg-white dark:bg-slate-900 border border-gray-200 dark:border-slate-800 shadow-xs overflow-hidden">
           <div className="overflow-x-auto">
             <table className="w-full text-xs">
               <thead>
-                <tr className="border-b border-gray-200 bg-[#F3F4F6] text-left text-gray-600">
+                <tr className="border-b border-gray-200 dark:border-slate-800 bg-[#F3F4F6] dark:bg-slate-800/80 text-left text-gray-600 dark:text-slate-300">
                   <th className="px-4 py-3 font-semibold">Date & Time (IST)</th>
                   <th className="px-4 py-3 font-semibold">Product</th>
                   <th className="px-4 py-3 font-semibold">Movement Type</th>

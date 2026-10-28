@@ -714,7 +714,7 @@ export function TransactionsView({
           <select
             value={paymentMethodFilter}
             onChange={(e) => setPaymentMethodFilter(e.target.value)}
-            className="rounded-lg border border-gray-300 bg-white px-2.5 py-1.5 text-[#111827]"
+            className="rounded-lg border border-gray-300 dark:border-slate-700 bg-white dark:bg-slate-800 px-2.5 py-1.5 text-[#111827] dark:text-slate-200"
           >
             <option value="ALL">All Payment Methods</option>
             <option value="Cash">Cash</option>
@@ -726,7 +726,7 @@ export function TransactionsView({
           <select
             value={paymentStatusFilter}
             onChange={(e) => setPaymentStatusFilter(e.target.value)}
-            className="rounded-lg border border-gray-300 bg-white px-2.5 py-1.5 text-[#111827]"
+            className="rounded-lg border border-gray-300 dark:border-slate-700 bg-white dark:bg-slate-800 px-2.5 py-1.5 text-[#111827] dark:text-slate-200"
           >
             <option value="ALL">All Payment Statuses</option>
             <option value="Paid">Paid</option>
@@ -743,7 +743,7 @@ export function TransactionsView({
                 e.target.value as "newest" | "oldest" | "highest" | "lowest"
               )
             }
-            className="rounded-lg border border-blue-300 bg-[#EFF6FF] px-2.5 py-1.5 font-semibold text-[#1D4ED8]"
+            className="rounded-lg border border-blue-300 dark:border-blue-800 bg-[#EFF6FF] dark:bg-blue-950/60 px-2.5 py-1.5 font-semibold text-[#1D4ED8] dark:text-blue-300"
           >
             <option value="newest">Sort: Newest First</option>
             <option value="oldest">Sort: Oldest First</option>
@@ -988,11 +988,11 @@ export function TransactionsView({
       </div>
 
       {/* Desktop Transactions Table (>= md) */}
-      <div className="hidden md:block rounded-xl bg-white border border-gray-200 shadow-xs overflow-hidden">
+      <div className="hidden md:block rounded-xl bg-white dark:bg-slate-900 border border-gray-200 dark:border-slate-800 shadow-xs overflow-hidden">
         <div className="overflow-x-auto">
           <table className="w-full text-xs">
             <thead>
-              <tr className="border-b border-gray-200 bg-[#F3F4F6] text-left text-gray-600">
+              <tr className="border-b border-gray-200 dark:border-slate-800 bg-[#F3F4F6] dark:bg-slate-800/80 text-left text-gray-600 dark:text-slate-300">
                 <th className="px-4 py-3 font-semibold">Bill ID & Date (IST)</th>
                 <th className="px-4 py-3 font-semibold">Customer & Room</th>
                 <th className="px-4 py-3 font-semibold">
@@ -1179,7 +1179,7 @@ export function TransactionsView({
                       <div className="flex flex-col items-end gap-1.5">
                         <button
                           onClick={() => onSelectReceipt(sale)}
-                          className="inline-flex items-center gap-1 rounded-md border border-gray-300 bg-white px-2.5 py-1 text-xs font-semibold text-[#111827] hover:bg-gray-100 cursor-pointer"
+                          className="inline-flex items-center gap-1 rounded-md border border-gray-300 dark:border-slate-700 bg-white dark:bg-slate-800 px-2.5 py-1 text-xs font-semibold text-[#111827] dark:text-slate-200 hover:bg-gray-100 dark:hover:bg-slate-700 cursor-pointer"
                         >
                           <Eye className="h-3.5 w-3.5 text-[#2563EB]" />
                           Receipt

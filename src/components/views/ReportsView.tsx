@@ -808,9 +808,9 @@ export function ReportsView({
       </div>
 
       {/* Active Report Data Table */}
-      <div className="rounded-xl bg-white border border-gray-200 shadow-xs overflow-hidden">
-        <div className="flex items-center justify-between border-b border-gray-200 bg-[#F3F4F6] px-5 py-3">
-          <h3 className="text-sm font-bold text-[#111827]">
+      <div className="rounded-xl bg-white dark:bg-slate-900 border border-gray-200 dark:border-slate-800 shadow-xs overflow-hidden">
+        <div className="flex items-center justify-between border-b border-gray-200 dark:border-slate-800 bg-[#F3F4F6] dark:bg-slate-800/80 px-5 py-3">
+          <h3 className="text-sm font-bold text-[#111827] dark:text-slate-100">
             {REPORT_TABS.find((t) => t.id === activeReport)?.label} (
             {currentReportRows.length} rows)
           </h3>
@@ -824,13 +824,13 @@ export function ReportsView({
 
         <div className="overflow-x-auto">
           {currentReportRows.length === 0 ? (
-            <div className="py-10 text-center text-xs text-gray-500">
+            <div className="py-10 text-center text-xs text-gray-500 dark:text-slate-400">
               No records found for this report in the selected period.
             </div>
           ) : (
             <table className="w-full text-xs">
               <thead>
-                <tr className="border-b border-gray-200 bg-gray-50 text-left text-gray-600">
+                <tr className="border-b border-gray-200 dark:border-slate-800 bg-gray-50 dark:bg-slate-800/80 text-left text-gray-600 dark:text-slate-300">
                   {Object.keys(currentReportRows[0]).map((col) => (
                     <th key={col} className="px-4 py-2.5 font-semibold">
                       {col}

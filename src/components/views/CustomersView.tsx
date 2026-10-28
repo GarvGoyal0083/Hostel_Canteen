@@ -584,7 +584,7 @@ export function CustomersView({
         <div className="overflow-x-auto">
           <table className="w-full text-xs">
             <thead>
-              <tr className="border-b border-gray-200 bg-[#F3F4F6] text-left text-gray-600">
+              <tr className="border-b border-gray-200 dark:border-slate-800 bg-[#F3F4F6] dark:bg-slate-800/80 text-left text-gray-600 dark:text-slate-300">
                 <th className="px-4 py-3 font-semibold">Student Name</th>
                 <th className="px-4 py-3 font-semibold">Hostel Room</th>
                 <th className="px-4 py-3 font-semibold">Phone</th>
@@ -692,7 +692,7 @@ export function CustomersView({
                         <button
                           type="button"
                           onClick={() => openEditModal(c)}
-                          className="inline-flex items-center gap-1 rounded-md border border-gray-300 bg-white px-2.5 py-1 text-xs font-semibold text-[#111827] hover:bg-[#F3F4F6] transition cursor-pointer"
+                          className="inline-flex items-center gap-1 rounded-md border border-gray-300 dark:border-slate-700 bg-white dark:bg-slate-800 px-2.5 py-1 text-xs font-semibold text-[#111827] dark:text-slate-200 hover:bg-[#F3F4F6] dark:hover:bg-slate-700 transition cursor-pointer"
                         >
                           <Edit className="h-3.5 w-3.5 text-slate-600" />
                           Edit Profile
@@ -709,7 +709,7 @@ export function CustomersView({
                         <button
                           onClick={() => openCustomerLedger(c.id)}
                           disabled={loadingLedger}
-                          className="inline-flex items-center gap-1 rounded-md border border-gray-300 bg-white px-2.5 py-1 text-xs font-semibold text-[#111827] hover:bg-[#F3F4F6] transition cursor-pointer"
+                          className="inline-flex items-center gap-1 rounded-md border border-gray-300 dark:border-slate-700 bg-white dark:bg-slate-800 px-2.5 py-1 text-xs font-semibold text-[#111827] dark:text-slate-200 hover:bg-[#F3F4F6] dark:hover:bg-slate-700 transition cursor-pointer"
                         >
                           <BookOpen className="h-3.5 w-3.5 text-[#2563EB]" />
                           Ledger &amp; History

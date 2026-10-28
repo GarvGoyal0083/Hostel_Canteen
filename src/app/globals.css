@@ -411,7 +411,8 @@ a.pos-link:hover {
 
 /* High-contrast brand & alert text in dark mode */
 .dark .text-emerald-700,
-.dark .text-emerald-800 {
+.dark .text-emerald-800,
+.dark .text-emerald-950 {
   color: #34D399 !important;
 }
 
@@ -423,22 +424,161 @@ a.pos-link:hover {
 }
 
 .dark .text-rose-700,
-.dark .text-rose-800 {
+.dark .text-rose-800,
+.dark .text-red-600,
+.dark .text-red-700,
+.dark .text-red-800,
+.dark .text-red-900 {
   color: #F87171 !important;
+}
+
+.dark .text-blue-700,
+.dark .text-blue-800,
+.dark .text-blue-900 {
+  color: #93C5FD !important;
+}
+
+/* Automatic Dark Surface Overrides: Eliminates ALL white boxes and light panels */
+.dark .bg-white:not(img):not(svg):not(canvas):not([data-keep-white]):not(#printable-receipt):not(#printable-receipt *),
+.dark .bg-white\/95:not(img):not(svg):not(canvas),
+.dark .bg-white\/90:not(img):not(svg):not(canvas),
+.dark .bg-white\/80:not(img):not(svg):not(canvas),
+.dark .bg-white\/70:not(img):not(svg):not(canvas),
+.dark .bg-white\/60:not(img):not(svg):not(canvas),
+.dark .bg-white\/50:not(img):not(svg):not(canvas),
+.dark .bg-white\/40:not(img):not(svg):not(canvas) {
+  background-color: #0F172A !important;
+  border-color: #1E293B !important;
+  color: #F8FAFC !important;
+}
+
+/* Light gray accent panels, summary cards, headers and filter pill bars */
+.dark .bg-\[\#F3F4F6\],
+.dark .bg-\[\#F3F4F6\]\/60,
+.dark .bg-\[\#F3F4F6\]\/80,
+.dark .bg-\[\#F3F4F6\]\/40,
+.dark .bg-gray-100,
+.dark .bg-gray-200,
+.dark .bg-slate-100,
+.dark .bg-slate-200 {
+  background-color: #1E293B !important;
+  border-color: #334155 !important;
+  color: #F8FAFC !important;
+}
+
+/* Light blue callout and payment panels */
+.dark .bg-\[\#EFF6FF\],
+.dark .bg-\[\#EFF6FF\]\/60,
+.dark .bg-\[\#EFF6FF\]\/40,
+.dark .bg-blue-50,
+.dark .bg-blue-100 {
+  background-color: rgba(30, 58, 138, 0.25) !important;
+  border-color: rgba(37, 99, 235, 0.4) !important;
+  color: #93C5FD !important;
+}
+
+.dark .bg-emerald-50,
+.dark .bg-emerald-100 {
+  background-color: rgba(6, 78, 59, 0.3) !important;
+  border-color: rgba(16, 185, 129, 0.35) !important;
+}
+
+.dark .bg-amber-50,
+.dark .bg-amber-100 {
+  background-color: rgba(120, 53, 15, 0.3) !important;
+  border-color: rgba(245, 158, 11, 0.35) !important;
+}
+
+.dark .bg-red-50,
+.dark .bg-red-100,
+.dark .bg-rose-50 {
+  background-color: rgba(136, 19, 55, 0.3) !important;
+  border-color: rgba(239, 68, 68, 0.35) !important;
+}
+
+/* Form Controls (Inputs, Selects, Textareas) in Dark Mode */
+.dark input:not([type="checkbox"]):not([type="radio"]):not([type="range"]):not([type="submit"]):not([type="button"]),
+.dark select,
+.dark textarea {
+  background-color: #1E293B !important;
+  border-color: #334155 !important;
+  color: #F8FAFC !important;
+}
+
+.dark input:disabled,
+.dark select:disabled,
+.dark textarea:disabled {
+  background-color: #0F172A !important;
+  color: #64748B !important;
+  border-color: #1E293B !important;
+}
+
+.dark select option {
+  background-color: #0F172A !important;
+  color: #F8FAFC !important;
+}
+
+/* Tables, headers, rows and dividers across all views */
+.dark table {
+  background-color: #0F172A !important;
+  color: #F8FAFC !important;
+}
+
+.dark thead tr {
+  background-color: #1E293B !important;
+  color: #CBD5E1 !important;
+  border-color: #334155 !important;
+}
+
+.dark thead th {
+  color: #94A3B8 !important;
+  border-color: #334155 !important;
+}
+
+.dark tbody tr {
+  background-color: #0F172A !important;
+  border-color: #1E293B !important;
+}
+
+.dark tbody tr:hover,
+.dark tbody tr.hover\:bg-gray-50:hover,
+.dark tbody tr.hover\:bg-slate-50\/80:hover,
+.dark .hover\:bg-gray-50:hover,
+.dark .hover\:bg-gray-100:hover,
+.dark .hover\:bg-slate-50:hover,
+.dark .hover\:bg-slate-100:hover {
+  background-color: #1E293B !important;
+}
+
+.dark .divide-gray-100 > :not([hidden]) ~ :not([hidden]),
+.dark .divide-gray-200 > :not([hidden]) ~ :not([hidden]),
+.dark .divide-slate-100 > :not([hidden]) ~ :not([hidden]),
+.dark .divide-slate-200 > :not([hidden]) ~ :not([hidden]) {
+  border-color: #1E293B !important;
+}
+
+/* Action buttons that have bg-white across tables and headers */
+.dark button.bg-white,
+.dark a.bg-white {
+  background-color: #1E293B !important;
+  border-color: #334155 !important;
+  color: #F8FAFC !important;
+}
+
+.dark button.bg-white:hover,
+.dark a.bg-white:hover {
+  background-color: #334155 !important;
+  border-color: #475569 !important;
+  color: #FFFFFF !important;
 }
 
 /* Automatic Border & Divider adjustments */
 .dark .border-slate-100,
 .dark .border-slate-200,
+.dark .border-slate-300,
 .dark .border-gray-100,
-.dark .border-gray-200 {
-  border-color: #1E293B !important;
-}
-
-.dark .divide-slate-100 > :not([hidden]) ~ :not([hidden]),
-.dark .divide-slate-200 > :not([hidden]) ~ :not([hidden]),
-.dark .divide-gray-100 > :not([hidden]) ~ :not([hidden]),
-.dark .divide-gray-200 > :not([hidden]) ~ :not([hidden]) {
+.dark .border-gray-200,
+.dark .border-gray-300 {
   border-color: #1E293B !important;
 }
 
@@ -448,20 +588,9 @@ a.pos-link:hover {
 .dark .bg-slate-50\/40,
 .dark .bg-slate-50\/50,
 .dark .bg-slate-50\/70,
-.dark .bg-slate-50\/80 {
+.dark .bg-slate-50\/80,
+.dark .bg-slate-50\/90 {
   background-color: #0B1120 !important;
-}
-
-.dark .bg-slate-100,
-.dark .bg-gray-100,
-.dark .bg-slate-100\/90 {
-  background-color: #1E293B !important;
-}
-
-.dark tr.hover\:bg-slate-50\/80:hover,
-.dark .hover\:bg-slate-50:hover,
-.dark .hover\:bg-slate-50\/80:hover {
-  background-color: rgba(30, 41, 59, 0.7) !important;
 }
 
 .dark ::-webkit-scrollbar-thumb {
