@@ -151,7 +151,7 @@ export function ThemeToggle({ compact = false, className = "" }: ThemeToggleProp
             {theme === "system" && <Check className="h-3.5 w-3.5 text-blue-600" />}
           </button>
 
-          {/* Liquid Glass Cursor Toggle */}
+          {/* Fluid Ribbon Cursor Toggle */}
           <div className="my-1 border-t border-slate-100 dark:border-slate-800" />
           <button
             type="button"
@@ -167,7 +167,7 @@ export function ThemeToggle({ compact = false, className = "" }: ThemeToggleProp
           >
             <div className="flex items-center gap-2">
               <Sparkles className="h-4 w-4 text-pink-500" />
-              <span>Glass Cursor</span>
+              <span>Fluid Ribbon</span>
             </div>
             <span
               className={`text-[9px] font-black px-1.5 py-0.5 rounded-full ${
@@ -311,13 +311,13 @@ export function AdminThemeSettingsCard() {
           </div>
           <div>
             <div className="font-extrabold text-xs text-slate-900 dark:text-slate-100 flex items-center gap-1.5">
-              <span>Liquid Glass Cursor Effect</span>
+              <span>Fluid Ribbon Trail Cursor</span>
               <span className="text-[10px] font-bold text-pink-600 dark:text-pink-400 bg-pink-50 dark:bg-pink-950/50 px-1.5 py-0.2 rounded-full border border-pink-200 dark:border-pink-800">
-                Desktop
+                Awwwards Style
               </span>
             </div>
             <div className="text-[10px] text-slate-500 dark:text-slate-400 mt-0.5 leading-snug">
-              Floating 3D glass refraction sphere with chromatic prism rim &amp; satellite droplets
+              Fluid multi-segment liquid ribbon stream tracking mouse motion with click ripples
             </div>
           </div>
         </div>

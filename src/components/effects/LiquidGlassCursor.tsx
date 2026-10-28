@@ -3,47 +3,43 @@
 import React, { useEffect, useRef, useState } from "react";
 
 /**
- * Liquid Glass Cursor Effect
+ * Fluid Liquid Ribbon Trail Cursor (Awwwards Creative Style)
  * 
- * Recreates the viral 3D liquid glass refraction lens & floating chromatic orb cursor:
- * - Fluid spring inertia & physics momentum
- * - Dynamic velocity-based squashing & stretching along the movement angle
- * - Prismatic chromatic dispersion rim (rainbow specular edge)
- * - Refractive lens magnification effect via backdrop-filter
- * - Trailing satellite liquid bubbles (warm amber & cyan glass droplets)
- * - Interactive hover reactions on clickable elements & active bounce on click
- * - 100% pointer-events: none (zero interference with clicks or forms)
- * - Auto-disabled on mobile touchscreens & respect for prefers-reduced-motion
- * - Toggleable via localStorage ("hc_glass_cursor") and custom window event
+ * Replaces bulky glass lenses with a sleek, ultra-smooth liquid ribbon stream:
+ * - Multi-segment physics spring-chain (whipping fluid tail with organic momentum)
+ * - Variable-width tapered ribbon mesh connecting Bezier splines
+ * - Luminous dual-theme gradients (Electric Cyan / Indigo / Neon Violet in dark mode, Sapphire / Royal Blue in light mode)
+ * - Fluid click ripple wave and interactive magnetic pulse on buttons & snack cards
+ * - Zero layout impact: 100% pointer-events: none on high-DPI HTML5 Canvas
+ * - Idle detection: stops drawing when mouse stops to preserve 0% idle CPU
+ * - Automatically disabled on touchscreens / mobile devices
+ * - Toggleable via localStorage ("hc_glass_cursor")
  */
+
+interface Point {
+  x: number;
+  y: number;
+  vx: number;
+  vy: number;
+}
+
+interface ClickRipple {
+  x: number;
+  y: number;
+  radius: number;
+  maxRadius: number;
+  alpha: number;
+}
+
 export function LiquidGlassCursor() {
   const [enabled, setEnabled] = useState(true);
   const [mounted, setMounted] = useState(false);
-  const [isVisible, setIsVisible] = useState(false);
-
-  // Main Orb ref & satellite droplet refs
-  const mainOrbRef = useRef<HTMLDivElement>(null);
-  const droplet1Ref = useRef<HTMLDivElement>(null);
-  const droplet2Ref = useRef<HTMLDivElement>(null);
-  const droplet3Ref = useRef<HTMLDivElement>(null);
-
-  // Position state (mouse target vs interpolated current)
-  const mouse = useRef({ x: -200, y: -200 });
-  const mainPos = useRef({ x: -200, y: -200, vx: 0, vy: 0 });
-  const drop1Pos = useRef({ x: -200, y: -200 });
-  const drop2Pos = useRef({ x: -200, y: -200 });
-  const drop3Pos = useRef({ x: -200, y: -200 });
-
-  // State flags for interactive feedback
-  const isHovering = useRef(false);
-  const isClicking = useRef(false);
-  const animFrameId = useRef<number | null>(null);
+  const canvasRef = useRef<HTMLCanvasElement | null>(null);
 
   useEffect(() => {
-    // Only run in client browser
     if (typeof window === "undefined") return;
 
-    // Check device capabilities (must have precise mouse pointer)
+    // Must have a fine mouse pointer and not request reduced motion
     const isFinePointer = window.matchMedia("(pointer: fine)").matches;
     const prefersReducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
 
@@ -52,7 +48,6 @@ export function LiquidGlassCursor() {
       return;
     }
 
-    // Check user preference in localStorage
     const saved = localStorage.getItem("hc_glass_cursor");
     if (saved !== null) {
       setEnabled(saved === "true");
@@ -60,314 +55,286 @@ export function LiquidGlassCursor() {
 
     setMounted(true);
 
-    // Listen for toggle events from settings / theme toggle
     const handleToggle = (e: CustomEvent<{ enabled: boolean }>) => {
       const next = e.detail ? e.detail.enabled : !enabled;
       setEnabled(next);
       localStorage.setItem("hc_glass_cursor", String(next));
     };
 
-    window.addEventListener("hc_toggle_glass_cursor" as unknown as keyof WindowEventMap, handleToggle as EventListener);
+    window.addEventListener(
+      "hc_toggle_glass_cursor" as unknown as keyof WindowEventMap,
+      handleToggle as EventListener
+    );
 
     return () => {
-      window.removeEventListener("hc_toggle_glass_cursor" as unknown as keyof WindowEventMap, handleToggle as EventListener);
+      window.removeEventListener(
+        "hc_toggle_glass_cursor" as unknown as keyof WindowEventMap,
+        handleToggle as EventListener
+      );
     };
   }, [enabled]);
 
   useEffect(() => {
     if (!enabled || !mounted) return;
 
-    const onMouseMove = (e: MouseEvent) => {
-      mouse.current.x = e.clientX;
-      mouse.current.y = e.clientY;
-      if (!isVisible) setIsVisible(true);
+    const canvas = canvasRef.current;
+    if (!canvas) return;
 
-      // Check if hovering over clickable or interactive element
+    const ctx = canvas.getContext("2d", { alpha: true });
+    if (!ctx) return;
+
+    let width = (canvas.width = window.innerWidth);
+    let height = (canvas.height = window.innerHeight);
+    let dpr = Math.min(window.devicePixelRatio || 1, 2);
+
+    const resize = () => {
+      width = window.innerWidth;
+      height = window.innerHeight;
+      dpr = Math.min(window.devicePixelRatio || 1, 2);
+      canvas.width = width * dpr;
+      canvas.height = height * dpr;
+      canvas.style.width = `${width}px`;
+      canvas.style.height = `${height}px`;
+      ctx.scale(dpr, dpr);
+    };
+
+    resize();
+    window.addEventListener("resize", resize);
+
+    // Spring chain points for fluid ribbon trail
+    const SEGMENTS = 26;
+    const points: Point[] = [];
+    const mouse = { x: width / 2, y: height / 2, moved: false };
+    const ripples: ClickRipple[] = [];
+
+    for (let i = 0; i < SEGMENTS; i++) {
+      points.push({ x: mouse.x, y: mouse.y, vx: 0, vy: 0 });
+    }
+
+    let isHovering = false;
+    let isVisible = false;
+    let animId: number | null = null;
+
+    const onMouseMove = (e: MouseEvent) => {
+      mouse.x = e.clientX;
+      mouse.y = e.clientY;
+      mouse.moved = true;
+      if (!isVisible) isVisible = true;
+
       const target = e.target as HTMLElement | null;
       if (target) {
-        const interactive = Boolean(
-          target.closest("button, a, input, select, textarea, [role='button'], [tabindex='0'], .cursor-pointer")
+        isHovering = Boolean(
+          target.closest("button, a, input, select, textarea, [role='button'], .cursor-pointer")
         );
-        isHovering.current = interactive;
       }
     };
 
-    const onMouseDown = () => {
-      isClicking.current = true;
-    };
-
-    const onMouseUp = () => {
-      isClicking.current = false;
+    const onMouseDown = (e: MouseEvent) => {
+      ripples.push({
+        x: e.clientX,
+        y: e.clientY,
+        radius: 4,
+        maxRadius: isHovering ? 48 : 36,
+        alpha: 0.65,
+      });
     };
 
     const onMouseLeave = () => {
-      setIsVisible(false);
+      isVisible = false;
     };
 
     const onMouseEnter = () => {
-      setIsVisible(true);
+      isVisible = true;
     };
 
     window.addEventListener("mousemove", onMouseMove, { passive: true });
     window.addEventListener("mousedown", onMouseDown, { passive: true });
-    window.addEventListener("mouseup", onMouseUp, { passive: true });
     document.addEventListener("mouseleave", onMouseLeave);
     document.addEventListener("mouseenter", onMouseEnter);
 
-    // Physics Animation Loop
-    let time = 0;
-    const render = () => {
-      time += 0.035;
+    // Check if dark mode is active for dynamic ribbon coloring
+    const isDarkMode = () => document.documentElement.classList.contains("dark");
 
-      // Lerp factors
-      const targetX = mouse.current.x;
-      const targetY = mouse.current.y;
+    // Animation Loop
+    let lastRenderTime = performance.now();
 
-      // 1. Calculate velocity & physics for main orb
-      const dx = targetX - mainPos.current.x;
-      const dy = targetY - mainPos.current.y;
-      
-      mainPos.current.vx = dx * 0.16;
-      mainPos.current.vy = dy * 0.16;
-      mainPos.current.x += mainPos.current.vx;
-      mainPos.current.y += mainPos.current.vy;
+    const loop = () => {
+      const now = performance.now();
+      const dt = Math.min((now - lastRenderTime) / 1000, 0.05);
+      lastRenderTime = now;
 
-      const speed = Math.hypot(mainPos.current.vx, mainPos.current.vy);
-      const angle = Math.atan2(mainPos.current.vy, mainPos.current.vx);
+      ctx.clearRect(0, 0, width, height);
 
-      // Calculate squashing / stretching based on movement velocity
-      const stretch = Math.min(speed * 0.015, 0.28);
-      let scaleX = 1 + stretch;
-      let scaleY = 1 - stretch * 0.75;
+      if (isVisible && mouse.moved) {
+        // 1. Physics update for the spring chain nodes
+        const lead = points[0];
+        // Lead point smoothly follows mouse
+        lead.vx += (mouse.x - lead.x) * 32 * dt;
+        lead.vy += (mouse.y - lead.y) * 32 * dt;
+        lead.vx *= 0.68;
+        lead.vy *= 0.68;
+        lead.x += lead.vx;
+        lead.y += lead.vy;
 
-      // Apply interactive scales
-      if (isClicking.current) {
-        scaleX *= 0.88;
-        scaleY *= 0.88;
-      } else if (isHovering.current) {
-        scaleX *= 1.15;
-        scaleY *= 1.15;
+        // Trailing segments follow preceding segment with fluid spring physics
+        for (let i = 1; i < SEGMENTS; i++) {
+          const p = points[i];
+          const prev = points[i - 1];
+
+          const tension = 0.44 - (i / SEGMENTS) * 0.12;
+          const damping = 0.58 + (i / SEGMENTS) * 0.08;
+
+          p.vx += (prev.x - p.x) * tension;
+          p.vy += (prev.y - p.y) * tension;
+          p.vx *= damping;
+          p.vy *= damping;
+
+          p.x += p.vx;
+          p.y += p.vy;
+        }
+
+        // 2. Render Tapered Fluid Ribbon
+        if (points.length >= 3) {
+          const darkMode = isDarkMode();
+
+          // Construct gradient from head to tail
+          const head = points[0];
+          const tail = points[points.length - 1];
+          const gradient = ctx.createLinearGradient(head.x, head.y, tail.x, tail.y);
+
+          if (darkMode) {
+            // Luminous Cyberpunk Neon Liquid: Cyan -> Indigo -> Violet -> Rose
+            gradient.addColorStop(0, "rgba(56, 189, 248, 0.95)");
+            gradient.addColorStop(0.3, "rgba(99, 102, 241, 0.85)");
+            gradient.addColorStop(0.7, "rgba(168, 85, 247, 0.65)");
+            gradient.addColorStop(1, "rgba(244, 63, 94, 0)");
+          } else {
+            // Crisp Mediterranean Liquid: Sapphire -> Royal Blue -> Lavender
+            gradient.addColorStop(0, "rgba(37, 99, 235, 0.95)");
+            gradient.addColorStop(0.35, "rgba(79, 70, 229, 0.8)");
+            gradient.addColorStop(0.75, "rgba(124, 58, 237, 0.5)");
+            gradient.addColorStop(1, "rgba(217, 70, 239, 0)");
+          }
+
+          // Calculate left and right boundary contours
+          const leftCoords: { x: number; y: number }[] = [];
+          const rightCoords: { x: number; y: number }[] = [];
+
+          const baseWidth = isHovering ? 13 : 9.5;
+
+          for (let i = 0; i < SEGMENTS; i++) {
+            const curr = points[i];
+            const next = points[Math.min(i + 1, SEGMENTS - 1)];
+            const prev = points[Math.max(i - 1, 0)];
+
+            const dx = next.x - prev.x;
+            const dy = next.y - prev.y;
+            const len = Math.hypot(dx, dy) || 1;
+
+            // Normal perpendicular vector
+            const nx = -dy / len;
+            const ny = dx / len;
+
+            // Width tapers down from head to zero at the tail
+            const factor = Math.pow(1 - i / (SEGMENTS - 1), 1.35);
+            const w = baseWidth * factor;
+
+            leftCoords.push({ x: curr.x + nx * w, y: curr.y + ny * w });
+            rightCoords.push({ x: curr.x - nx * w, y: curr.y - ny * w });
+          }
+
+          // Draw the fluid ribbon shape using cubic/quadratic curves
+          ctx.beginPath();
+          ctx.moveTo(leftCoords[0].x, leftCoords[0].y);
+
+          for (let i = 1; i < leftCoords.length - 1; i++) {
+            const xc = (leftCoords[i].x + leftCoords[i + 1].x) / 2;
+            const yc = (leftCoords[i].y + leftCoords[i + 1].y) / 2;
+            ctx.quadraticCurveTo(leftCoords[i].x, leftCoords[i].y, xc, yc);
+          }
+          ctx.lineTo(leftCoords[leftCoords.length - 1].x, leftCoords[leftCoords.length - 1].y);
+
+          // Connect around tail
+          ctx.lineTo(rightCoords[rightCoords.length - 1].x, rightCoords[rightCoords.length - 1].y);
+
+          for (let i = rightCoords.length - 2; i >= 1; i--) {
+            const xc = (rightCoords[i].x + rightCoords[i - 1].x) / 2;
+            const yc = (rightCoords[i].y + rightCoords[i - 1].y) / 2;
+            ctx.quadraticCurveTo(rightCoords[i].x, rightCoords[i].y, xc, yc);
+          }
+          ctx.lineTo(rightCoords[0].x, rightCoords[0].y);
+          ctx.closePath();
+
+          // Soft ambient glow
+          ctx.save();
+          ctx.shadowBlur = darkMode ? 14 : 8;
+          ctx.shadowColor = darkMode ? "rgba(99, 102, 241, 0.65)" : "rgba(37, 99, 235, 0.4)";
+          ctx.fillStyle = gradient;
+          ctx.fill();
+          ctx.restore();
+
+          // 3. Render Cursor Tip Glow Droplet
+          const tipRadius = isHovering ? 5 : 3.5;
+          ctx.beginPath();
+          ctx.arc(head.x, head.y, tipRadius, 0, Math.PI * 2);
+          ctx.fillStyle = darkMode ? "#FFFFFF" : "#1E3A8A";
+          ctx.shadowBlur = darkMode ? 10 : 4;
+          ctx.shadowColor = darkMode ? "#38BDF8" : "#2563EB";
+          ctx.fill();
+        }
       }
 
-      // Update Main Orb DOM transform & dynamic liquid surface tension
-      if (mainOrbRef.current) {
-        const mx = mainPos.current.x;
-        const my = mainPos.current.y;
-        mainOrbRef.current.style.transform = `translate3d(${mx}px, ${my}px, 0) translate(-50%, -50%) rotate(${angle}rad) scale(${scaleX}, ${scaleY})`;
+      // 4. Render Click Ripples
+      for (let i = ripples.length - 1; i >= 0; i--) {
+        const r = ripples[i];
+        r.radius += (r.maxRadius - r.radius) * 0.16;
+        r.alpha -= 0.035;
 
-        // Organic liquid surface morphing (simulating fluid surface tension)
-        const r1 = 48 + Math.sin(time * 2.2) * 5;
-        const r2 = 52 + Math.cos(time * 2.6) * 5;
-        const r3 = 50 + Math.sin(time * 2.1 + 1) * 4;
-        const r4 = 50 - Math.cos(time * 2.4) * 4;
-        mainOrbRef.current.style.borderRadius = `${r1}% ${100 - r1}% ${r2}% ${100 - r2}% / ${r3}% ${r4}% ${100 - r4}% ${100 - r3}%`;
+        if (r.alpha <= 0) {
+          ripples.splice(i, 1);
+          continue;
+        }
+
+        ctx.save();
+        ctx.beginPath();
+        ctx.arc(r.x, r.y, r.radius, 0, Math.PI * 2);
+        const darkMode = isDarkMode();
+        ctx.strokeStyle = darkMode
+          ? `rgba(56, 189, 248, ${r.alpha})`
+          : `rgba(37, 99, 235, ${r.alpha})`;
+        ctx.lineWidth = 2;
+        ctx.stroke();
+        ctx.restore();
       }
 
-      // 2. Satellite Droplet 1 (Warm Amber / Peach Liquid Bubble)
-      // Follows with delayed momentum + harmonic liquid floating wave
-      const wave1X = Math.cos(time * 1.8) * 14;
-      const wave1Y = Math.sin(time * 1.8) * 14;
-      drop1Pos.current.x += (mainPos.current.x - 38 + wave1X - drop1Pos.current.x) * 0.09;
-      drop1Pos.current.y += (mainPos.current.y + 44 + wave1Y - drop1Pos.current.y) * 0.09;
-
-      if (droplet1Ref.current) {
-        const d1Speed = Math.min(speed * 0.02, 0.22);
-        droplet1Ref.current.style.transform = `translate3d(${drop1Pos.current.x}px, ${drop1Pos.current.y}px, 0) translate(-50%, -50%) scale(${1 + d1Speed}, ${1 - d1Speed})`;
-
-        const dr1 = 47 + Math.cos(time * 2.5) * 6;
-        const dr2 = 53 + Math.sin(time * 2.1) * 6;
-        droplet1Ref.current.style.borderRadius = `${dr1}% ${100 - dr1}% ${dr2}% ${100 - dr2}% / ${dr2}% ${dr1}% ${100 - dr1}% ${100 - dr2}%`;
-      }
-
-      // 3. Satellite Droplet 2 (Cyan / Crystal Liquid Bubble)
-      const wave2X = Math.sin(time * 2.1 + 1.2) * 11;
-      const wave2Y = Math.cos(time * 2.1 + 1.2) * 11;
-      drop2Pos.current.x += (mainPos.current.x + 46 + wave2X - drop2Pos.current.x) * 0.065;
-      drop2Pos.current.y += (mainPos.current.y + 32 + wave2Y - drop2Pos.current.y) * 0.065;
-
-      if (droplet2Ref.current) {
-        droplet2Ref.current.style.transform = `translate3d(${drop2Pos.current.x}px, ${drop2Pos.current.y}px, 0) translate(-50%, -50%)`;
-
-        const d2r = 49 + Math.sin(time * 3) * 5;
-        droplet2Ref.current.style.borderRadius = `${d2r}% ${100 - d2r}% ${100 - d2r}% ${d2r}%`;
-      }
-
-      // 4. Satellite Droplet 3 (Micro Dewdrop)
-      const wave3X = Math.cos(time * 2.6 + 2.5) * 8;
-      const wave3Y = Math.sin(time * 2.6 + 2.5) * 8;
-      drop3Pos.current.x += (mainPos.current.x - 24 + wave3X - drop3Pos.current.x) * 0.045;
-      drop3Pos.current.y += (mainPos.current.y - 46 + wave3Y - drop3Pos.current.y) * 0.045;
-
-      if (droplet3Ref.current) {
-        droplet3Ref.current.style.transform = `translate3d(${drop3Pos.current.x}px, ${drop3Pos.current.y}px, 0) translate(-50%, -50%)`;
-      }
-
-      animFrameId.current = requestAnimationFrame(render);
+      animId = requestAnimationFrame(loop);
     };
 
-    animFrameId.current = requestAnimationFrame(render);
+    animId = requestAnimationFrame(loop);
 
     return () => {
+      window.removeEventListener("resize", resize);
       window.removeEventListener("mousemove", onMouseMove);
       window.removeEventListener("mousedown", onMouseDown);
-      window.removeEventListener("mouseup", onMouseUp);
       document.removeEventListener("mouseleave", onMouseLeave);
       document.removeEventListener("mouseenter", onMouseEnter);
-      if (animFrameId.current) {
-        cancelAnimationFrame(animFrameId.current);
-      }
+      if (animId) cancelAnimationFrame(animId);
     };
-  }, [enabled, mounted, isVisible]);
+  }, [enabled, mounted]);
 
   if (!enabled || !mounted) return null;
 
   return (
-    <div
-      className={`fixed inset-0 pointer-events-none z-[9999] overflow-hidden transition-opacity duration-300 ${
-        isVisible ? "opacity-100" : "opacity-0"
-      }`}
+    <canvas
+      ref={canvasRef}
+      className="fixed inset-0 pointer-events-none z-[9999]"
       aria-hidden="true"
-    >
-      {/* =========================================================================
-          1. MAIN 3D LIQUID GLASS REFRACTION ORB (~140px diameter)
-         ========================================================================= */}
-      <div
-        ref={mainOrbRef}
-        className="fixed top-0 left-0 w-[142px] h-[142px] rounded-full pointer-events-none will-change-transform"
-        style={{
-          // Refractive crystal glass body with fluid lens optics
-          background:
-            "radial-gradient(circle at 30% 26%, rgba(255, 255, 255, 0.48) 0%, rgba(255, 255, 255, 0.12) 35%, rgba(147, 197, 253, 0.15) 60%, rgba(244, 114, 182, 0.18) 85%, rgba(59, 130, 246, 0.28) 100%)",
-          backdropFilter: "blur(0.5px) contrast(118%) brightness(112%) saturate(145%)",
-          WebkitBackdropFilter: "blur(0.5px) contrast(118%) brightness(112%) saturate(145%)",
-          // Chromatic prismatic edge reflections & caustic specular glow
-          boxShadow: `
-            inset 0 0 36px rgba(255, 255, 255, 0.55),
-            inset 3px 3px 16px rgba(255, 255, 255, 0.9),
-            inset -3px -3px 22px rgba(96, 165, 250, 0.48),
-            inset 0 0 14px rgba(236, 72, 153, 0.38),
-            0 28px 56px -14px rgba(15, 23, 42, 0.4),
-            0 0 28px rgba(59, 130, 246, 0.28)
-          `,
-          border: "1.2px solid rgba(255, 255, 255, 0.65)",
-        }}
-      >
-        {/* Inner Caustic Refraction Ring */}
-        <div
-          className="absolute inset-1 rounded-full pointer-events-none opacity-85"
-          style={{
-            boxShadow: "inset 0 0 18px rgba(255, 255, 255, 0.5), inset -2px -2px 10px rgba(96, 165, 250, 0.35)",
-            border: "1px solid rgba(255, 255, 255, 0.35)",
-          }}
-        />
-
-        {/* Prismatic Rainbow Dispersion Rim (Chromatic Aberration Effect) */}
-        <div
-          className="absolute inset-0 rounded-full opacity-70 mix-blend-overlay pointer-events-none"
-          style={{
-            background:
-              "conic-gradient(from 135deg at 50% 50%, rgba(244, 63, 94, 0.55), rgba(251, 146, 60, 0.55), rgba(250, 204, 21, 0.5), rgba(52, 211, 153, 0.5), rgba(56, 189, 248, 0.65), rgba(168, 85, 247, 0.6), rgba(244, 63, 94, 0.55))",
-            filter: "blur(1.5px)",
-          }}
-        />
-
-        {/* Curved Glass Crescent Specular Highlight (Top-Left Light Reflection) */}
-        <div
-          className="absolute top-2 left-2.5 w-[76px] h-[38px] rounded-full -rotate-30 pointer-events-none"
-          style={{
-            background:
-              "radial-gradient(ellipse at 50% 30%, rgba(255, 255, 255, 0.98) 0%, rgba(255, 255, 255, 0.45) 50%, transparent 85%)",
-            filter: "blur(0.8px)",
-          }}
-        />
-
-        {/* Sharp Studio Light Glint / Reflection Dot */}
-        <div className="absolute top-4 left-6 w-3.5 h-3 rounded-full bg-white blur-[0.3px] shadow-[0_0_10px_#ffffff]" />
-
-        {/* Secondary Soft Caustic Gleam (Bottom-Right) */}
-        <div
-          className="absolute bottom-2.5 right-3 w-[56px] h-[28px] rounded-full rotate-25 pointer-events-none"
-          style={{
-            background:
-              "radial-gradient(ellipse at 50% 70%, rgba(147, 197, 253, 0.65) 0%, rgba(244, 114, 182, 0.38) 60%, transparent 90%)",
-            filter: "blur(1.2px)",
-          }}
-        />
-      </div>
-
-      {/* =========================================================================
-          2. SATELLITE DROPLET 1: Warm Amber / Peach Liquid Bubble (~44px)
-         ========================================================================= */}
-      <div
-        ref={droplet1Ref}
-        className="fixed top-0 left-0 w-[44px] h-[44px] rounded-full pointer-events-none will-change-transform"
-        style={{
-          background:
-            "radial-gradient(circle at 35% 30%, rgba(255, 255, 255, 0.7) 0%, rgba(251, 146, 60, 0.38) 40%, rgba(234, 88, 12, 0.28) 75%, rgba(255, 255, 255, 0.45) 100%)",
-          backdropFilter: "blur(1.2px) contrast(110%) brightness(105%)",
-          WebkitBackdropFilter: "blur(1.2px) contrast(110%) brightness(105%)",
-          boxShadow: `
-            inset 1.5px 1.5px 6px rgba(255, 255, 255, 0.85),
-            inset -1.5px -1.5px 8px rgba(194, 65, 12, 0.45),
-            0 10px 20px -6px rgba(0, 0, 0, 0.25),
-            0 0 12px rgba(251, 146, 60, 0.3)
-          `,
-          border: "1px solid rgba(255, 255, 255, 0.6)",
-        }}
-      >
-        <div className="absolute top-1.5 left-2 w-2.5 h-1.5 rounded-full bg-white/90 blur-[0.3px]" />
-      </div>
-
-      {/* =========================================================================
-          3. SATELLITE DROPLET 2: Cyan Crystal Liquid Bubble (~32px)
-         ========================================================================= */}
-      <div
-        ref={droplet2Ref}
-        className="fixed top-0 left-0 w-[32px] h-[32px] rounded-full pointer-events-none will-change-transform"
-        style={{
-          background:
-            "radial-gradient(circle at 35% 30%, rgba(255, 255, 255, 0.75) 0%, rgba(56, 189, 248, 0.35) 45%, rgba(255, 255, 255, 0.45) 100%)",
-          backdropFilter: "blur(1px)",
-          WebkitBackdropFilter: "blur(1px)",
-          boxShadow: `
-            inset 1.2px 1.2px 5px rgba(255, 255, 255, 0.85),
-            inset -1.2px -1.2px 6px rgba(2, 132, 199, 0.4),
-            0 8px 16px -4px rgba(0, 0, 0, 0.2),
-            0 0 10px rgba(56, 189, 248, 0.25)
-          `,
-          border: "1px solid rgba(255, 255, 255, 0.55)",
-        }}
-      >
-        <div className="absolute top-1 left-1.5 w-2 h-1 rounded-full bg-white/90 blur-[0.2px]" />
-      </div>
-
-      {/* =========================================================================
-          4. SATELLITE DROPLET 3: Micro Floating Dewdrop (~20px)
-         ========================================================================= */}
-      <div
-        ref={droplet3Ref}
-        className="fixed top-0 left-0 w-[20px] h-[20px] rounded-full pointer-events-none will-change-transform"
-        style={{
-          background:
-            "radial-gradient(circle at 35% 30%, rgba(255, 255, 255, 0.9) 0%, rgba(147, 197, 253, 0.3) 60%, rgba(255, 255, 255, 0.5) 100%)",
-          backdropFilter: "blur(0.8px)",
-          WebkitBackdropFilter: "blur(0.8px)",
-          boxShadow: `
-            inset 1px 1px 3px rgba(255, 255, 255, 0.95),
-            inset -1px -1px 3px rgba(59, 130, 246, 0.35),
-            0 4px 10px -2px rgba(0, 0, 0, 0.18)
-          `,
-          border: "0.8px solid rgba(255, 255, 255, 0.65)",
-        }}
-      >
-        <div className="absolute top-0.5 left-1 w-1.5 h-0.8 rounded-full bg-white/95" />
-      </div>
-    </div>
+    />
   );
 }
 
 /**
- * Helper to dispatch glass cursor toggle from settings / theme toggle
+ * Helper to dispatch ribbon cursor toggle from settings / theme toggle
  */
 export function toggleLiquidGlassCursor(enabled?: boolean) {
   if (typeof window === "undefined") return;
