@@ -210,12 +210,6 @@ export function CustomerPortalView({
       setOrderError("Please enter your hostel room number for room delivery.");
       return;
     }
-    if (orderPaymentMethod === "UPI" && !orderUpiRef.trim()) {
-      setOrderError(
-        "Please enter the 12-digit UPI reference (UTR) after completing payment."
-      );
-      return;
-    }
 
     setOrderError(null);
     setPlacingOrder(true);
@@ -270,7 +264,7 @@ export function CustomerPortalView({
           notes: deliveryNotes.trim() || undefined,
           payment_method: orderPaymentMethod,
           upi_reference:
-            orderPaymentMethod === "UPI" ? orderUpiRef.trim() : undefined,
+            orderPaymentMethod === "UPI" ? (orderUpiRef.trim() || undefined) : undefined,
           push_subscription: pushSubJson,
         }),
       });
@@ -1411,14 +1405,14 @@ export function CustomerPortalView({
       {/* Floating Bottom Cart Bar */}
       {cart.length > 0 && !isCartOpen && (
         <div className="fixed bottom-4 inset-x-4 max-w-xl mx-auto z-40 animate-in slide-in-from-bottom duration-200">
-          <div className="card-3d bg-slate-900 text-white p-3.5 sm:p-4 rounded-2xl shadow-2xl border border-slate-700 flex items-center justify-between gap-3">
+          <div className="bg-slate-900 dark:bg-slate-900 text-white p-3.5 sm:p-4 rounded-2xl shadow-2xl border border-slate-800 dark:border-slate-700 flex items-center justify-between gap-3">
             <div className="flex items-center gap-3 min-w-0">
               <div className="h-10 w-10 rounded-xl bg-blue-600 flex items-center justify-center text-white shrink-0 shadow-md">
                 <ShoppingBag className="h-5 w-5" />
               </div>
               <div className="truncate">
                 <div className="font-extrabold text-sm flex items-center gap-2">
-                  <span>
+                  <span className="text-white font-extrabold">
                     {totalCartItems} {totalCartItems === 1 ? "Item" : "Items"}
                   </span>
                   <span className="text-slate-400 font-normal">•</span>
@@ -1817,18 +1811,17 @@ export function CustomerPortalView({
                         {/* 12-Digit UTR Input Form */}
                         <div className="space-y-1.5 pt-1">
                           <label className="text-[11px] font-black text-white block">
-                            Enter 12-Digit UPI Reference (UTR) *
+                            Enter 12-Digit UPI Reference (UTR) <span className="font-normal opacity-80">(Optional)</span>
                           </label>
                           <input
                             type="text"
-                            required
                             value={orderUpiRef}
                             onChange={(e) => setOrderUpiRef(e.target.value)}
-                            placeholder="e.g. 331298457610 (from payment receipt)"
+                            placeholder="e.g. 331298457610 (optional, from payment receipt)"
                             className="w-full rounded-xl border border-white/40 bg-white px-3 py-2 text-xs font-mono font-bold text-slate-900 focus:outline-none focus:ring-2 focus:ring-white shadow-sm placeholder:font-sans placeholder:font-normal placeholder:text-slate-400"
                           />
                           <p className="text-[10px] text-blue-100 font-medium">
-                            ✓ Open GPay/PhonePe/Paytm &rarr; scan QR &rarr; pay {formatINR(cartGrandTotal)} &rarr; copy UTR number here.
+                            ✓ Open GPay/PhonePe/Paytm &rarr; scan QR &rarr; pay {formatINR(cartGrandTotal)} &rarr; you can enter UTR number if available.
                           </p>
                         </div>
                       </div>
