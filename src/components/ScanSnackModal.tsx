@@ -517,7 +517,13 @@ export function ScanSnackModal({
                       <div className="h-14 w-14 shrink-0 rounded-lg bg-slate-50 border border-slate-100 flex items-center justify-center overflow-hidden p-1">
                         {m.product.image_url ? (
                           // eslint-disable-next-line @next/next/no-img-element
-                          <img src={m.product.image_url} alt={m.product.name} className="h-full w-full object-contain" />
+                          <img
+                            src={m.product.image_url}
+                            alt={m.product.name}
+                            className="h-full w-full object-contain"
+                            loading="lazy"
+                            decoding="async"
+                          />
                         ) : (
                           <Package className="h-6 w-6 text-slate-300" />
                         )}

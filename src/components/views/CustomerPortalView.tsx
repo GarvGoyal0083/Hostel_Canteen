@@ -867,6 +867,7 @@ export function CustomerPortalView({
                               alt={product.name}
                               className="h-full w-full object-contain transition-transform duration-300 group-hover:scale-105 select-none"
                               loading="lazy"
+                              decoding="async"
                             />
                           ) : (
                             <div className="flex flex-col items-center justify-center text-slate-300 py-6">
@@ -1519,6 +1520,8 @@ export function CustomerPortalView({
                                   src={item.product.image_url}
                                   alt={item.product.name}
                                   className="h-full w-full object-contain"
+                                  loading="lazy"
+                                  decoding="async"
                                 />
                               ) : (
                                 <Package className="h-5 w-5 text-slate-400 dark:text-slate-500" />

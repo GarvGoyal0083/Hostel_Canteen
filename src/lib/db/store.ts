@@ -44,6 +44,11 @@ import {
   getLastSyncError,
   pushRemoteDatabase,
 } from "@/lib/db/supabaseSync";
+import {
+  saveProductImage,
+  deleteProductImage,
+  extractAndMigrateInlineImages,
+} from "@/lib/images/store";
 
 export { getCloudPersistenceStatus, getLastSyncError };
 
@@ -93,16 +98,43 @@ export async function withTransactionLock<T>(fn: () => Promise<T> | T): Promise<
  * Call this in API GET routes before listing or calculating data.
  */
 export async function ensureDatabaseSync(): Promise<DatabaseSchema> {
+  let db: DatabaseSchema | null = null;
   try {
     const remote = await fetchRemoteDatabase();
     if (remote) {
       writeDatabaseLocal(remote);
-      return remote;
+      db = remote;
     }
   } catch {
     // ignore
   }
-  return readDatabase();
+  if (!db) {
+    db = readDatabase();
+  }
+
+  // Auto-migrate any inline Base64 product images to dedicated image storage
+  if (db && Array.isArray(db.products)) {
+    const hasInlineImages = db.products.some(
+      (p) => p.image_url && p.image_url.startsWith("data:image/")
+    );
+    if (hasInlineImages) {
+      try {
+        const migrated = await extractAndMigrateInlineImages(db.products);
+        if (migrated) {
+          writeDatabaseLocal(db);
+          try {
+            await pushRemoteDatabase(db);
+          } catch {
+            // ignore
+          }
+        }
+      } catch (err) {
+        console.warn("[store] Error during image migration:", err);
+      }
+    }
+  }
+
+  return db;
 }
 
 function ensureDataDir(): void {
@@ -268,7 +300,7 @@ export async function createProduct(
   },
   adminName: string
 ): Promise<Product> {
-  return withTransactionLock(() => {
+  return withTransactionLock(async () => {
     const db = readDatabase();
     const name = (input.name || "").trim();
     const sku = (input.sku || "").trim().toUpperCase();
@@ -301,12 +333,22 @@ export async function createProduct(
     }
 
     const now = new Date().toISOString();
+    const productId = `prod-${crypto.randomUUID().slice(0, 12)}`;
+    let imageUrl = input.image_url?.trim() || null;
+    if (imageUrl && imageUrl.startsWith("data:image/")) {
+      try {
+        imageUrl = await saveProductImage(productId, imageUrl);
+      } catch (err) {
+        console.warn(`[store] Failed to save image for ${productId}:`, err);
+      }
+    }
+
     const product: Product = {
-      id: `prod-${crypto.randomUUID().slice(0, 12)}`,
+      id: productId,
       name,
       sku,
       category,
-      image_url: input.image_url?.trim() || null,
+      image_url: imageUrl,
       purchase_price: purchasePrice,
       selling_price: sellingPrice,
       estimated_unit_profit: round2(sellingPrice - purchasePrice),
@@ -373,7 +415,7 @@ export async function updateProduct(
   }>,
   adminName: string
 ): Promise<Product> {
-  return withTransactionLock(() => {
+  return withTransactionLock(async () => {
     const db = readDatabase();
     const idx = db.products.findIndex((p) => p.id === productId);
     if (idx === -1) throw new Error("Product not found.");
@@ -409,14 +451,29 @@ export async function updateProduct(
     if (sellingPrice < 0) throw new Error("Selling price cannot be negative.");
     if (minStock < 0) throw new Error("Minimum stock alert level cannot be negative.");
 
+    let imageUrl =
+      input.image_url !== undefined ? input.image_url : existing.image_url;
+    if (imageUrl && imageUrl.startsWith("data:image/")) {
+      try {
+        imageUrl = await saveProductImage(existing.id, imageUrl);
+      } catch (err) {
+        console.warn(`[store] Failed to save image for ${existing.id}:`, err);
+      }
+    } else if (input.image_url === null && existing.image_url?.startsWith("/api/images/")) {
+      try {
+        await deleteProductImage(existing.id);
+      } catch {
+        // ignore
+      }
+    }
+
     const updated: Product = {
       ...existing,
       name: input.name !== undefined ? input.name.trim() : existing.name,
       sku: newSku,
       category:
         input.category !== undefined ? input.category.trim() : existing.category,
-      image_url:
-        input.image_url !== undefined ? input.image_url : existing.image_url,
+      image_url: imageUrl,
       purchase_price: purchasePrice,
       selling_price: sellingPrice,
       estimated_unit_profit: round2(sellingPrice - purchasePrice),

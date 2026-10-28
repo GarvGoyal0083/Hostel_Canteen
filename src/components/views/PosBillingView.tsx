@@ -625,6 +625,7 @@ export function PosBillingView({
                           alt={product.name}
                           className="h-full w-full object-contain group-hover:scale-105 transition-transform select-none"
                           loading="lazy"
+                          decoding="async"
                         />
                       ) : (
                         <Package className="h-8 w-8 text-slate-300 stroke-[1.5]" />
@@ -711,6 +712,8 @@ export function PosBillingView({
                           src={item.product.image_url}
                           alt={item.product.name}
                           className="h-full w-full object-contain"
+                          loading="lazy"
+                          decoding="async"
                         />
                       ) : (
                         <Package className="h-5 w-5 text-slate-400 stroke-[1.5]" />

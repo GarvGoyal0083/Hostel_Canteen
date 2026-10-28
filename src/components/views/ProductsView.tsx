@@ -55,7 +55,7 @@ const PRESET_PRODUCT_IMAGES = [
   { name: "KitKat", url: "/products/kitkat.jpg" },
 ];
 
-function processImageFile(file: File, maxSide = 640): Promise<string> {
+function processImageFile(file: File, maxSide = 280): Promise<string> {
   return new Promise((resolve, reject) => {
     if (!file.type.startsWith("image/")) {
       reject(new Error("Please upload a valid image file."));
@@ -69,15 +69,24 @@ function processImageFile(file: File, maxSide = 640): Promise<string> {
       img.onload = () => {
         const scale = Math.min(1, maxSide / Math.max(img.width, img.height));
         const canvas = document.createElement("canvas");
-        canvas.width = Math.round(img.width * scale);
-        canvas.height = Math.round(img.height * scale);
+        canvas.width = Math.max(1, Math.round(img.width * scale));
+        canvas.height = Math.max(1, Math.round(img.height * scale));
         const ctx = canvas.getContext("2d");
         if (!ctx) {
           resolve(reader.result as string);
           return;
         }
         ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
-        resolve(canvas.toDataURL("image/jpeg", 0.85));
+        try {
+          const webpData = canvas.toDataURL("image/webp", 0.75);
+          if (webpData.startsWith("data:image/webp")) {
+            resolve(webpData);
+            return;
+          }
+        } catch {
+          // ignore
+        }
+        resolve(canvas.toDataURL("image/jpeg", 0.75));
       };
       img.src = reader.result as string;
     };
@@ -168,7 +177,7 @@ export function ProductsView({
     if (!file) return;
     setProcessingImage(true);
     try {
-      const dataUrl = await processImageFile(file, 640);
+      const dataUrl = await processImageFile(file, 280);
       setForm((p) => ({ ...p, image_url: dataUrl }));
     } catch (err) {
       setErrorMsg(
@@ -235,18 +244,27 @@ export function ProductsView({
   const capturePhoto = () => {
     if (!cameraVideoRef.current) return;
     const video = cameraVideoRef.current;
-    const maxSide = 640;
+    const maxSide = 280;
     const w = video.videoWidth || 640;
     const h = video.videoHeight || 480;
     const scale = Math.min(1, maxSide / Math.max(w, h));
 
     const canvas = document.createElement("canvas");
-    canvas.width = Math.round(w * scale);
-    canvas.height = Math.round(h * scale);
+    canvas.width = Math.max(1, Math.round(w * scale));
+    canvas.height = Math.max(1, Math.round(h * scale));
     const ctx = canvas.getContext("2d");
     if (!ctx) return;
     ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
-    const jpegUrl = canvas.toDataURL("image/jpeg", 0.85);
+    try {
+      const webpUrl = canvas.toDataURL("image/webp", 0.75);
+      if (webpUrl.startsWith("data:image/webp")) {
+        setCapturedPreview(webpUrl);
+        return;
+      }
+    } catch {
+      // ignore
+    }
+    const jpegUrl = canvas.toDataURL("image/jpeg", 0.75);
     setCapturedPreview(jpegUrl);
   };
 

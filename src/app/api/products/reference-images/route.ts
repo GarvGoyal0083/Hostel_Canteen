@@ -53,7 +53,7 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({ error: "Not found." }, { status: 404 });
   }
   const data = fs.readFileSync(fullPath);
-  return new NextResponse(data, {
+  return new NextResponse(new Uint8Array(data), {
     headers: {
       "Content-Type": "image/jpeg",
       "Cache-Control": "private, max-age=31536000, immutable",
