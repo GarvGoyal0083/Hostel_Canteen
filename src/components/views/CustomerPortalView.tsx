@@ -1443,18 +1443,18 @@ export function CustomerPortalView({
       {/* Shopping Cart & Room Delivery Drawer Modal */}
       {isCartOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-xs p-3 sm:p-4 overflow-y-auto">
-          <div className="w-full max-w-lg rounded-2xl bg-white border border-slate-200 shadow-2xl overflow-hidden my-6 animate-in fade-in zoom-in-95 duration-150">
+          <div className="w-full max-w-lg rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-2xl overflow-hidden my-6 animate-in fade-in zoom-in-95 duration-150">
             {/* Modal Header */}
-            <div className="flex items-center justify-between border-b border-slate-100 bg-[#F8FAFC] px-5 py-4">
+            <div className="flex items-center justify-between border-b border-slate-100 dark:border-slate-800 bg-slate-50 dark:bg-slate-800/80 px-5 py-4">
               <div className="flex items-center gap-2.5">
                 <div className="h-9 w-9 rounded-xl bg-blue-600 text-white flex items-center justify-center shadow-xs">
                   <ShoppingCart className="h-5 w-5" />
                 </div>
                 <div>
-                  <h3 className="text-base font-extrabold text-slate-900 leading-tight">
+                  <h3 className="text-base font-extrabold text-slate-900 dark:text-white leading-tight">
                     My Snack Cart
                   </h3>
-                  <p className="text-xs text-slate-500 font-medium">
+                  <p className="text-xs text-slate-500 dark:text-slate-400 font-medium">
                     {totalCartItems}{" "}
                     {totalCartItems === 1 ? "snack item" : "snack items"} selected
                   </p>
@@ -1463,7 +1463,7 @@ export function CustomerPortalView({
               <button
                 type="button"
                 onClick={() => setIsCartOpen(false)}
-                className="rounded-xl p-2 text-slate-400 hover:text-slate-700 hover:bg-slate-100 transition cursor-pointer"
+                className="rounded-xl p-2 text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-700 transition cursor-pointer"
               >
                 <X className="h-5 w-5" />
               </button>
@@ -1472,14 +1472,14 @@ export function CustomerPortalView({
             <div className="p-5 space-y-5 max-h-[75vh] overflow-y-auto">
               {cart.length === 0 ? (
                 <div className="py-10 text-center space-y-3">
-                  <div className="h-16 w-16 rounded-2xl bg-blue-50 text-[#2563EB] flex items-center justify-center mx-auto">
+                  <div className="h-16 w-16 rounded-2xl bg-blue-50 dark:bg-blue-950/40 text-[#2563EB] dark:text-blue-400 flex items-center justify-center mx-auto">
                     <ShoppingBag className="h-8 w-8" />
                   </div>
                   <div>
-                    <h4 className="text-sm font-bold text-slate-800">
+                    <h4 className="text-sm font-bold text-slate-800 dark:text-slate-200">
                       Your cart is empty
                     </h4>
-                    <p className="text-xs text-slate-500 mt-1">
+                    <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">
                       Browse our live snack catalog and click &quot;Add to Cart&quot; to order!
                     </p>
                   </div>
@@ -1495,25 +1495,25 @@ export function CustomerPortalView({
                 <>
                   {/* Cart Items List */}
                   <div className="space-y-2.5">
-                    <div className="flex items-center justify-between text-xs font-bold text-slate-500 uppercase tracking-wider">
+                    <div className="flex items-center justify-between text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider">
                       <span>Selected Items</span>
                       <button
                         type="button"
                         onClick={clearCart}
-                        className="text-red-600 hover:text-red-700 cursor-pointer font-bold lowercase text-xs"
+                        className="text-red-600 hover:text-red-700 dark:text-red-400 dark:hover:text-red-300 cursor-pointer font-bold lowercase text-xs"
                       >
                         clear cart
                       </button>
                     </div>
 
-                    <div className="divide-y divide-slate-100 border border-slate-200/80 rounded-xl bg-slate-50/50 overflow-hidden">
+                    <div className="divide-y divide-slate-100 dark:divide-slate-800 border border-slate-200/80 dark:border-slate-800 rounded-xl bg-slate-50/50 dark:bg-slate-800/40 overflow-hidden">
                       {cart.map((item) => (
                         <div
                           key={item.product.id}
-                          className="p-3 flex items-center justify-between gap-3 bg-white first:border-t-0"
+                          className="p-3 flex items-center justify-between gap-3 bg-white dark:bg-slate-900 first:border-t-0"
                         >
                           <div className="flex items-center gap-3 min-w-0">
-                            <div className="h-10 w-10 rounded-lg bg-slate-50 border border-slate-100 flex items-center justify-center shrink-0 p-1">
+                            <div className="h-10 w-10 rounded-lg bg-slate-50 dark:bg-slate-800 border border-slate-100 dark:border-slate-700 flex items-center justify-center shrink-0 p-1">
                               {item.product.image_url ? (
                                 <img
                                   src={item.product.image_url}
@@ -1521,14 +1521,14 @@ export function CustomerPortalView({
                                   className="h-full w-full object-contain"
                                 />
                               ) : (
-                                <Package className="h-5 w-5 text-slate-400" />
+                                <Package className="h-5 w-5 text-slate-400 dark:text-slate-500" />
                               )}
                             </div>
                             <div className="truncate">
-                              <div className="font-bold text-xs text-slate-900 truncate">
+                              <div className="font-bold text-xs text-slate-900 dark:text-slate-100 truncate">
                                 {item.product.name}
                               </div>
-                              <div className="text-[11px] text-slate-500">
+                              <div className="text-[11px] text-slate-500 dark:text-slate-400">
                                 {formatINR(item.product.selling_price)} each
                               </div>
                             </div>
@@ -1536,7 +1536,7 @@ export function CustomerPortalView({
 
                           <div className="flex items-center gap-3 shrink-0">
                             {/* Stepper */}
-                            <div className="flex items-center gap-1.5 bg-slate-100 rounded-lg p-0.5 border border-slate-200">
+                            <div className="flex items-center gap-1.5 bg-slate-100 dark:bg-slate-800 rounded-lg p-0.5 border border-slate-200 dark:border-slate-700">
                               <button
                                 type="button"
                                 onClick={() =>
@@ -1545,11 +1545,11 @@ export function CustomerPortalView({
                                     item.quantity - 1
                                   )
                                 }
-                                className="h-6 w-6 rounded bg-white text-slate-700 flex items-center justify-center font-bold text-xs hover:bg-slate-200 cursor-pointer shadow-2xs"
+                                className="h-6 w-6 rounded bg-white dark:bg-slate-700 text-slate-700 dark:text-slate-200 flex items-center justify-center font-bold text-xs hover:bg-slate-200 dark:hover:bg-slate-600 cursor-pointer shadow-2xs"
                               >
                                 -
                               </button>
-                              <span className="w-5 text-center font-black text-xs text-slate-900">
+                              <span className="w-5 text-center font-black text-xs text-slate-900 dark:text-white">
                                 {item.quantity}
                               </span>
                               <button
@@ -1563,7 +1563,7 @@ export function CustomerPortalView({
                                     item.quantity + 1
                                   )
                                 }
-                                className={`h-6 w-6 rounded bg-white text-slate-700 flex items-center justify-center font-bold text-xs hover:bg-slate-200 shadow-2xs ${
+                                className={`h-6 w-6 rounded bg-white dark:bg-slate-700 text-slate-700 dark:text-slate-200 flex items-center justify-center font-bold text-xs hover:bg-slate-200 dark:hover:bg-slate-600 shadow-2xs ${
                                   item.quantity >= item.product.stock_quantity
                                     ? "opacity-40 cursor-not-allowed"
                                     : "cursor-pointer"
@@ -1573,7 +1573,7 @@ export function CustomerPortalView({
                               </button>
                             </div>
 
-                            <span className="font-black text-xs text-slate-900 w-14 text-right">
+                            <span className="font-black text-xs text-slate-900 dark:text-emerald-400 w-14 text-right">
                               {formatINR(
                                 item.product.selling_price * item.quantity
                               )}
@@ -1584,7 +1584,7 @@ export function CustomerPortalView({
                               onClick={() =>
                                 updateCartQuantity(item.product.id, 0)
                               }
-                              className="text-slate-400 hover:text-red-600 transition cursor-pointer p-1"
+                              className="text-slate-400 hover:text-red-600 dark:hover:text-red-400 transition cursor-pointer p-1"
                               title="Remove item"
                             >
                               <Trash2 className="h-3.5 w-3.5" />
@@ -1596,8 +1596,8 @@ export function CustomerPortalView({
                   </div>
 
                   {/* ROOM DELIVERY OPTION - 20 RUPEES CHARGE */}
-                  <div className="space-y-3 pt-2 border-t border-slate-100">
-                    <span className="text-xs font-bold text-slate-500 uppercase tracking-wider block">
+                  <div className="space-y-3 pt-2 border-t border-slate-100 dark:border-slate-800">
+                    <span className="text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider block">
                       Delivery Option
                     </span>
 
@@ -1608,8 +1608,8 @@ export function CustomerPortalView({
                         onClick={() => setRoomDelivery(true)}
                         className={`text-left p-3.5 rounded-xl border-2 transition cursor-pointer relative ${
                           roomDelivery
-                            ? "border-blue-600 bg-blue-50/70 shadow-sm ring-2 ring-blue-500/20"
-                            : "border-slate-200 bg-white hover:border-slate-300"
+                            ? "border-blue-600 bg-blue-50/70 dark:bg-blue-950/40 dark:border-blue-500 shadow-sm ring-2 ring-blue-500/20"
+                            : "border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 hover:border-slate-300 dark:hover:border-slate-700"
                         }`}
                       >
                         <div className="flex items-center justify-between">
@@ -1617,11 +1617,11 @@ export function CustomerPortalView({
                             <Truck
                               className={`h-4 w-4 ${
                                 roomDelivery
-                                  ? "text-blue-600"
-                                  : "text-slate-500"
+                                  ? "text-blue-600 dark:text-blue-400"
+                                  : "text-slate-500 dark:text-slate-400"
                               }`}
                             />
-                            <span className="font-extrabold text-xs text-slate-900">
+                            <span className="font-extrabold text-xs text-slate-900 dark:text-white">
                               Room Delivery
                             </span>
                           </div>
@@ -1629,7 +1629,7 @@ export function CustomerPortalView({
                             +₹20
                           </span>
                         </div>
-                        <p className="text-[11px] text-slate-500 mt-1.5 leading-snug">
+                        <p className="text-[11px] text-slate-500 dark:text-slate-400 mt-1.5 leading-snug">
                           Delivered straight to your hostel room door (+₹20 fee).
                         </p>
                       </button>
@@ -1640,8 +1640,8 @@ export function CustomerPortalView({
                         onClick={() => setRoomDelivery(false)}
                         className={`text-left p-3.5 rounded-xl border-2 transition cursor-pointer relative ${
                           !roomDelivery
-                            ? "border-emerald-600 bg-emerald-50/70 shadow-sm ring-2 ring-emerald-500/20"
-                            : "border-slate-200 bg-white hover:border-slate-300"
+                            ? "border-emerald-600 bg-emerald-50/70 dark:bg-emerald-950/40 dark:border-emerald-500 shadow-sm ring-2 ring-emerald-500/20"
+                            : "border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 hover:border-slate-300 dark:hover:border-slate-700"
                         }`}
                       >
                         <div className="flex items-center justify-between">
@@ -1649,19 +1649,19 @@ export function CustomerPortalView({
                             <DoorOpen
                               className={`h-4 w-4 ${
                                 !roomDelivery
-                                  ? "text-emerald-600"
-                                  : "text-slate-500"
+                                  ? "text-emerald-600 dark:text-emerald-400"
+                                  : "text-slate-500 dark:text-slate-400"
                               }`}
                             />
-                            <span className="font-extrabold text-xs text-slate-900">
+                            <span className="font-extrabold text-xs text-slate-900 dark:text-white">
                               Self Pickup
                             </span>
                           </div>
-                          <span className="rounded-full bg-emerald-100 text-emerald-800 border border-emerald-300 px-2 py-0.5 text-[10px] font-bold">
+                          <span className="rounded-full bg-emerald-100 dark:bg-emerald-950/60 text-emerald-800 dark:text-emerald-300 border border-emerald-300 dark:border-emerald-800 px-2 py-0.5 text-[10px] font-bold">
                             FREE
                           </span>
                         </div>
-                        <p className="text-[11px] text-slate-500 mt-1.5 leading-snug">
+                        <p className="text-[11px] text-slate-500 dark:text-slate-400 mt-1.5 leading-snug">
                           Collect in person directly from the canteen counter.
                         </p>
                       </button>
@@ -1669,9 +1669,9 @@ export function CustomerPortalView({
 
                     {/* Room Number & Delivery Notes (if Room Delivery selected) */}
                     {roomDelivery && (
-                      <div className="rounded-xl bg-blue-50/80 border border-blue-200/80 p-3.5 space-y-2.5 animate-in fade-in duration-150">
+                      <div className="rounded-xl bg-blue-50/80 dark:bg-blue-950/30 border border-blue-200/80 dark:border-blue-900/40 p-3.5 space-y-2.5 animate-in fade-in duration-150">
                         <div>
-                          <label className="text-[11px] font-extrabold text-blue-950 block mb-1">
+                          <label className="text-[11px] font-extrabold text-blue-950 dark:text-blue-300 block mb-1">
                             Hostel Room Number *
                           </label>
                           <input
@@ -1680,12 +1680,12 @@ export function CustomerPortalView({
                             value={deliveryRoom}
                             onChange={(e) => setDeliveryRoom(e.target.value)}
                             placeholder="e.g. Room 110, B-204"
-                            className="w-full rounded-lg border border-blue-300 bg-white px-3 py-2 text-xs font-bold text-slate-900 focus:outline-none focus:ring-2 focus:ring-blue-500 shadow-xs"
+                            className="w-full rounded-lg border border-blue-300 dark:border-blue-700/60 bg-white dark:bg-slate-900 px-3 py-2 text-xs font-bold text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500 shadow-xs placeholder:text-slate-400 dark:placeholder:text-slate-500"
                           />
                         </div>
 
                         <div>
-                          <label className="text-[11px] font-medium text-slate-600 block mb-1">
+                          <label className="text-[11px] font-medium text-slate-600 dark:text-slate-300 block mb-1">
                             Delivery Instructions (Optional)
                           </label>
                           <input
@@ -1693,7 +1693,7 @@ export function CustomerPortalView({
                             value={deliveryNotes}
                             onChange={(e) => setDeliveryNotes(e.target.value)}
                             placeholder="e.g. Call upon arrival / knock on door"
-                            className="w-full rounded-lg border border-slate-300 bg-white px-3 py-1.5 text-xs text-slate-900 focus:outline-none"
+                            className="w-full rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 px-3 py-1.5 text-xs text-slate-900 dark:text-white focus:outline-none placeholder:text-slate-400 dark:placeholder:text-slate-500"
                           />
                         </div>
                       </div>
@@ -1701,8 +1701,8 @@ export function CustomerPortalView({
                   </div>
 
                   {/* Payment Method Selection */}
-                  <div className="space-y-3 pt-2 border-t border-slate-100">
-                    <span className="text-xs font-bold text-slate-500 uppercase tracking-wider block">
+                  <div className="space-y-3 pt-2 border-t border-slate-100 dark:border-slate-800">
+                    <span className="text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider block">
                       Payment Mode
                     </span>
 
@@ -1712,13 +1712,13 @@ export function CustomerPortalView({
                         onClick={() => setOrderPaymentMethod("Cash")}
                         className={`p-3 rounded-xl border text-center transition cursor-pointer ${
                           orderPaymentMethod === "Cash"
-                            ? "bg-emerald-50 border-emerald-400 text-emerald-950 font-extrabold ring-2 ring-emerald-400/30 shadow-xs"
-                            : "bg-white border-slate-200 text-slate-700 hover:bg-slate-50"
+                            ? "bg-emerald-50 dark:bg-emerald-950/40 border-emerald-400 dark:border-emerald-500 text-emerald-950 dark:text-emerald-300 font-extrabold ring-2 ring-emerald-400/30 shadow-xs"
+                            : "bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800 text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800"
                         }`}
                       >
-                        <CreditCard className="h-5 w-5 mx-auto mb-1 text-emerald-700" />
+                        <CreditCard className="h-5 w-5 mx-auto mb-1 text-emerald-700 dark:text-emerald-400" />
                         <span className="text-xs font-extrabold">Cash on Delivery</span>
-                        <div className="text-[10px] text-emerald-800 font-medium mt-0.5">
+                        <div className="text-[10px] text-emerald-800 dark:text-emerald-400 font-medium mt-0.5">
                           {roomDelivery ? "Pay at room door" : "Pay at counter"}
                         </div>
                       </button>
@@ -1728,16 +1728,16 @@ export function CustomerPortalView({
                         onClick={() => setOrderPaymentMethod("UPI")}
                         className={`p-3 rounded-xl border text-center transition cursor-pointer relative ${
                           orderPaymentMethod === "UPI"
-                            ? "bg-gradient-to-br from-blue-50 to-indigo-50 border-blue-500 text-blue-950 font-extrabold ring-2 ring-blue-500/40 shadow-sm"
-                            : "bg-white border-slate-200 text-slate-700 hover:bg-slate-50"
+                            ? "bg-gradient-to-br from-blue-50 to-indigo-50 dark:from-blue-950/50 dark:to-indigo-950/50 border-blue-500 dark:border-blue-400 text-blue-950 dark:text-blue-300 font-extrabold ring-2 ring-blue-500/40 shadow-sm"
+                            : "bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800 text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800"
                         }`}
                       >
                         <span className="absolute -top-2 right-2 rounded-full bg-blue-600 text-white text-[9px] font-black px-2 py-0.5 shadow-xs uppercase tracking-wider animate-pulse">
                           QR Available
                         </span>
-                        <QrCode className="h-5 w-5 mx-auto mb-1 text-blue-700" />
+                        <QrCode className="h-5 w-5 mx-auto mb-1 text-blue-700 dark:text-blue-400" />
                         <span className="text-xs font-extrabold">UPI Payment</span>
-                        <div className="text-[10px] text-blue-700 font-bold mt-0.5">
+                        <div className="text-[10px] text-blue-700 dark:text-blue-400 font-bold mt-0.5">
                           Pay now via QR Code
                         </div>
                       </button>
@@ -1829,28 +1829,28 @@ export function CustomerPortalView({
                   </div>
 
                   {/* Bill Summary */}
-                  <div className="rounded-xl bg-slate-50 border border-slate-200/80 p-3.5 space-y-1.5 text-xs">
-                    <div className="flex items-center justify-between text-slate-600">
+                  <div className="rounded-xl bg-slate-50 dark:bg-slate-800/60 border border-slate-200/80 dark:border-slate-800 p-3.5 space-y-1.5 text-xs">
+                    <div className="flex items-center justify-between text-slate-600 dark:text-slate-400">
                       <span>Items Subtotal</span>
-                      <span className="font-bold text-slate-800">
+                      <span className="font-bold text-slate-800 dark:text-slate-200">
                         {formatINR(cartSubtotal)}
                       </span>
                     </div>
 
-                    <div className="flex items-center justify-between text-slate-600">
+                    <div className="flex items-center justify-between text-slate-600 dark:text-slate-400">
                       <span>Room Delivery Fee</span>
                       {roomDelivery ? (
-                        <span className="font-bold text-blue-700">+₹20.00</span>
+                        <span className="font-bold text-blue-700 dark:text-blue-400">+₹20.00</span>
                       ) : (
-                        <span className="font-bold text-emerald-700">FREE</span>
+                        <span className="font-bold text-emerald-700 dark:text-emerald-400">FREE</span>
                       )}
                     </div>
 
-                    <div className="pt-2 border-t border-slate-200 flex items-center justify-between text-sm">
-                      <span className="font-black text-slate-900">
+                    <div className="pt-2 border-t border-slate-200 dark:border-slate-700 flex items-center justify-between text-sm">
+                      <span className="font-black text-slate-900 dark:text-white">
                         Total Payable
                       </span>
-                      <span className="font-black text-base text-[#2563EB]">
+                      <span className="font-black text-base text-[#2563EB] dark:text-blue-400">
                         {formatINR(cartGrandTotal)}
                       </span>
                     </div>
@@ -1896,61 +1896,61 @@ export function CustomerPortalView({
       {/* Order Confirmation Modal */}
       {orderSuccessSale && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-xs p-4 overflow-y-auto">
-          <div className="w-full max-w-md rounded-2xl bg-white border border-slate-200 shadow-2xl p-6 text-center space-y-4 animate-in zoom-in-95 duration-150">
-            <div className="h-16 w-16 rounded-full bg-emerald-100 text-emerald-600 flex items-center justify-center mx-auto shadow-sm">
+          <div className="w-full max-w-md rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-2xl p-6 text-center space-y-4 animate-in zoom-in-95 duration-150">
+            <div className="h-16 w-16 rounded-full bg-emerald-100 dark:bg-emerald-950/60 text-emerald-600 dark:text-emerald-400 flex items-center justify-center mx-auto shadow-sm">
               <CheckCircle2 className="h-9 w-9" />
             </div>
 
             <div>
-              <span className="rounded-full bg-emerald-50 border border-emerald-200 px-3 py-1 text-xs font-bold text-emerald-800 uppercase tracking-wider">
+              <span className="rounded-full bg-emerald-50 dark:bg-emerald-950/60 border border-emerald-200 dark:border-emerald-800 px-3 py-1 text-xs font-bold text-emerald-800 dark:text-emerald-300 uppercase tracking-wider">
                 Order Confirmed
               </span>
-              <h3 className="text-xl font-black text-slate-900 mt-2">
+              <h3 className="text-xl font-black text-slate-900 dark:text-white mt-2">
                 Order #{orderSuccessSale.bill_number}
               </h3>
-              <p className="text-xs text-slate-600 mt-1">
+              <p className="text-xs text-slate-600 dark:text-slate-400 mt-1">
                 {orderSuccessSale.notes?.includes("ROOM DELIVERY")
                   ? "Your snacks are being prepared and will be delivered to your room shortly!"
                   : "Your order is confirmed! Please collect your snacks from the canteen counter."}
               </p>
             </div>
 
-            <div className="rounded-xl bg-slate-50 border border-slate-200 p-3.5 text-xs text-left space-y-1.5">
-              <div className="flex justify-between text-slate-600">
+            <div className="rounded-xl bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-800 p-3.5 text-xs text-left space-y-1.5">
+              <div className="flex justify-between text-slate-600 dark:text-slate-400">
                 <span>Student:</span>
-                <span className="font-bold text-slate-900">
+                <span className="font-bold text-slate-900 dark:text-white">
                   {orderSuccessSale.customer_name_snapshot}
                 </span>
               </div>
               {orderSuccessSale.room_number_snapshot && (
-                <div className="flex justify-between text-slate-600">
+                <div className="flex justify-between text-slate-600 dark:text-slate-400">
                   <span>Room:</span>
-                  <span className="font-bold text-blue-700">
+                  <span className="font-bold text-blue-700 dark:text-blue-400">
                     Room {orderSuccessSale.room_number_snapshot}
                   </span>
                 </div>
               )}
-              <div className="flex justify-between text-slate-600">
+              <div className="flex justify-between text-slate-600 dark:text-slate-400">
                 <span>Total Amount:</span>
-                <span className="font-black text-slate-900">
+                <span className="font-black text-slate-900 dark:text-white">
                   {formatINR(orderSuccessSale.payable_amount)}
                 </span>
               </div>
-              <div className="flex justify-between text-slate-600">
+              <div className="flex justify-between text-slate-600 dark:text-slate-400">
                 <span>Payment:</span>
-                <span className="font-semibold text-slate-800">
+                <span className="font-semibold text-slate-800 dark:text-slate-200">
                   {orderSuccessSale.payment_methods_summary}
                 </span>
               </div>
             </div>
 
             {/* Live Order Alerts Prompt */}
-            <div className="rounded-2xl bg-blue-50 border border-blue-200 p-3 text-left flex items-center justify-between gap-2.5">
+            <div className="rounded-2xl bg-blue-50 dark:bg-blue-950/40 border border-blue-200 dark:border-blue-900/50 p-3 text-left flex items-center justify-between gap-2.5">
               <div className="flex items-center gap-2 min-w-0">
-                <BellRing className="h-4 w-4 text-blue-600 shrink-0" />
-                <div className="text-[11px] text-blue-900 leading-tight">
+                <BellRing className="h-4 w-4 text-blue-600 dark:text-blue-400 shrink-0" />
+                <div className="text-[11px] text-blue-900 dark:text-blue-200 leading-tight">
                   <span className="block font-black">Enable Order Alerts</span>
-                  <span className="text-[10px] text-blue-700">Get notified when food is ready / delivered</span>
+                  <span className="text-[10px] text-blue-700 dark:text-blue-400">Get notified when food is ready / delivered</span>
                 </div>
               </div>
               <StudentNotificationButton
@@ -1967,9 +1967,9 @@ export function CustomerPortalView({
                   setReceiptSale(orderSuccessSale);
                   setOrderSuccessSale(null);
                 }}
-                className="btn-3d-secondary flex-1 py-2.5 px-3 rounded-xl text-xs font-bold text-slate-800 flex items-center justify-center gap-1.5 cursor-pointer"
+                className="btn-3d-secondary flex-1 py-2.5 px-3 rounded-xl text-xs font-bold text-slate-800 dark:text-slate-200 flex items-center justify-center gap-1.5 cursor-pointer"
               >
-                <ReceiptText className="h-4 w-4 text-blue-600" />
+                <ReceiptText className="h-4 w-4 text-blue-600 dark:text-blue-400" />
                 <span>View Receipt</span>
               </button>
               <button
@@ -1987,39 +1987,39 @@ export function CustomerPortalView({
       {/* Full-Screen High-Visibility UPI QR Modal */}
       {showPortalQrModal && (
         <div className="fixed inset-0 z-60 bg-black/75 backdrop-blur-sm flex items-center justify-center p-4">
-          <div className="card-3d bg-white rounded-3xl max-w-sm w-full p-6 shadow-2xl border border-slate-200 text-center relative animate-in fade-in zoom-in-95 duration-200">
+          <div className="bg-white dark:bg-slate-900 rounded-3xl max-w-sm w-full p-6 shadow-2xl border border-slate-200 dark:border-slate-800 text-center relative animate-in fade-in zoom-in-95 duration-200">
             <button
               type="button"
               onClick={() => setShowPortalQrModal(false)}
-              className="absolute top-4 right-4 p-2 rounded-full text-slate-400 hover:text-slate-700 hover:bg-slate-100 transition cursor-pointer"
+              className="absolute top-4 right-4 p-2 rounded-full text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800 transition cursor-pointer"
               title="Close"
             >
               <X className="h-5 w-5" />
             </button>
-            <div className="inline-flex items-center justify-center h-12 w-12 rounded-2xl bg-blue-50 text-blue-600 mb-3 border border-blue-200 shadow-xs">
+            <div className="inline-flex items-center justify-center h-12 w-12 rounded-2xl bg-blue-50 dark:bg-blue-950/40 text-blue-600 dark:text-blue-400 mb-3 border border-blue-200 dark:border-blue-800 shadow-xs">
               <QrCode className="h-6 w-6" />
             </div>
-            <h3 className="text-lg font-black text-slate-900">Hostel Canteen UPI QR</h3>
-            <div className="mt-1 inline-block rounded-full bg-emerald-100 border border-emerald-300 text-emerald-800 text-xs font-black px-3 py-1">
+            <h3 className="text-lg font-black text-slate-900 dark:text-white">Hostel Canteen UPI QR</h3>
+            <div className="mt-1 inline-block rounded-full bg-emerald-100 dark:bg-emerald-950/60 border border-emerald-300 dark:border-emerald-800 text-emerald-800 dark:text-emerald-300 text-xs font-black px-3 py-1">
               Amount to Pay: {formatINR(cartGrandTotal)}
             </div>
-            <div className="mt-4 bg-slate-50 p-3.5 rounded-2xl border border-slate-200/90 shadow-inner inline-block">
+            <div className="mt-4 bg-slate-50 dark:bg-slate-800 p-3.5 rounded-2xl border border-slate-200/90 dark:border-slate-700 shadow-inner inline-block">
               <img
                 src="/canteen-upi-qr.jpg"
                 alt="Hostel Canteen UPI QR Code"
                 className="w-64 h-64 mx-auto rounded-xl object-contain shadow-xs bg-white p-1"
               />
             </div>
-            <div className="mt-3 text-[11px] font-black text-slate-600 bg-slate-100 rounded-xl py-1.5 px-3">
+            <div className="mt-3 text-[11px] font-black text-slate-600 dark:text-slate-400 bg-slate-100 dark:bg-slate-800 rounded-xl py-1.5 px-3">
               PhonePe • Google Pay • Paytm • BHIM UPI
             </div>
             <div className="mt-4 flex gap-2">
               <a
                 href="/canteen-upi-qr.jpg"
                 download="Hostel_Canteen_UPI_QR.jpg"
-                className="btn-3d-secondary flex-1 inline-flex items-center justify-center gap-1.5 py-2.5 text-xs font-bold text-slate-800 cursor-pointer"
+                className="btn-3d-secondary flex-1 inline-flex items-center justify-center gap-1.5 py-2.5 text-xs font-bold text-slate-800 dark:text-slate-200 cursor-pointer"
               >
-                <Download className="h-3.5 w-3.5 text-blue-600" />
+                <Download className="h-3.5 w-3.5 text-blue-600 dark:text-blue-400" />
                 <span>Save Image</span>
               </a>
               <button
