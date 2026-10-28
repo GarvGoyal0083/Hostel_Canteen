@@ -36,6 +36,7 @@ import {
   BellRing,
 } from "lucide-react";
 import { StudentNotificationButton } from "@/components/StudentNotificationButton";
+import { StudentFcmNotificationButton } from "@/components/StudentFcmNotificationButton";
 import { urlBase64ToUint8Array } from "@/lib/push/usePushNotifications";
 import {
   Customer,
@@ -458,8 +459,8 @@ export function CustomerPortalView({
               )}
             </button>
 
-            {/* Web Push Live Order Notification Button */}
-            <StudentNotificationButton
+            {/* FCM Web Push Notification Permission Button in Student Dashboard */}
+            <StudentFcmNotificationButton
               customerId={currentCustomer?.id}
               customerName={currentCustomer?.name}
             />
