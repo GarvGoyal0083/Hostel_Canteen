@@ -33,7 +33,9 @@ import {
   Download,
   Maximize2,
   X,
+  BellRing,
 } from "lucide-react";
+import { StudentNotificationButton } from "@/components/StudentNotificationButton";
 import {
   Customer,
   CustomerLedgerEntry,
@@ -419,6 +421,12 @@ export function CustomerPortalView({
                 <span>Select Room / Student Login</span>
               )}
             </button>
+
+            {/* Web Push Live Order Notification Button */}
+            <StudentNotificationButton
+              customerId={currentCustomer?.id}
+              customerName={currentCustomer?.name}
+            />
 
             {/* Shopping Cart Pill Button */}
             <button
@@ -1900,6 +1908,22 @@ export function CustomerPortalView({
                   {orderSuccessSale.payment_methods_summary}
                 </span>
               </div>
+            </div>
+
+            {/* Live Order Alerts Prompt */}
+            <div className="rounded-2xl bg-blue-50 border border-blue-200 p-3 text-left flex items-center justify-between gap-2.5">
+              <div className="flex items-center gap-2 min-w-0">
+                <BellRing className="h-4 w-4 text-blue-600 shrink-0" />
+                <div className="text-[11px] text-blue-900 leading-tight">
+                  <span className="block font-black">Enable Order Alerts</span>
+                  <span className="text-[10px] text-blue-700">Get notified when food is ready / delivered</span>
+                </div>
+              </div>
+              <StudentNotificationButton
+                customerId={currentCustomer?.id || orderSuccessSale.customer_id}
+                customerName={currentCustomer?.name || orderSuccessSale.customer_name_snapshot}
+                compact
+              />
             </div>
 
             <div className="flex gap-2 pt-1">

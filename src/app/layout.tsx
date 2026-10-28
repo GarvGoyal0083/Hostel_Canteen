@@ -9,6 +9,7 @@ export const metadata: Metadata = {
     icon: [{ url: "/logo.svg", type: "image/svg+xml" }],
     apple: "/logo.svg",
   },
+  manifest: "/manifest.json",
 };
 
 export default function RootLayout({

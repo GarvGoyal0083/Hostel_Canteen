@@ -17,6 +17,7 @@ import {
   PaymentStatus,
   Product,
   ProductStockSummary,
+  PushSubscriptionRecord,
   RefundCancellationRecord,
   SaleItem,
   SaleRecord,
@@ -126,6 +127,9 @@ export function readDatabase(): DatabaseSchema {
         try {
           const raw = fs.readFileSync(candidate, "utf8");
           const parsed = JSON.parse(raw) as DatabaseSchema;
+          if (!Array.isArray(parsed.push_subscriptions)) {
+            parsed.push_subscriptions = [];
+          }
           writeDatabase(parsed);
           return parsed;
         } catch {
@@ -148,7 +152,11 @@ export function readDatabase(): DatabaseSchema {
 
   try {
     const raw = fs.readFileSync(DB_FILE_PATH, "utf8");
-    return JSON.parse(raw) as DatabaseSchema;
+    const parsed = JSON.parse(raw) as DatabaseSchema;
+    if (!Array.isArray(parsed.push_subscriptions)) {
+      parsed.push_subscriptions = [];
+    }
+    return parsed;
   } catch (err) {
     console.warn(`[store] Failed to parse ${DB_FILE_PATH}, falling back to default seed:`, err);
     const initial = createDevelopmentSampleDatabase();
@@ -3507,3 +3515,95 @@ export function getExecutivePerformance(period: ExecutivePeriod): {
     .sort((a, b) => b.total_sales - a.total_sales);
   return { commission_rate_percent: commissionRateOf(db), period, executives };
 }
+
+// =============================================================================
+// WEB PUSH NOTIFICATION SUBSCRIPTIONS
+// =============================================================================
+
+export function listPushSubscriptions(filter?: {
+  role?: "admin" | "staff" | "customer";
+  customer_id?: string;
+}): PushSubscriptionRecord[] {
+  const db = readDatabase();
+  let subs = db.push_subscriptions || [];
+  if (filter?.role) {
+    subs = subs.filter((s) => s.role === filter.role || (filter.role === "staff" && s.role === "admin"));
+  }
+  if (filter?.customer_id) {
+    subs = subs.filter((s) => s.customer_id === filter.customer_id);
+  }
+  return subs;
+}
+
+export async function savePushSubscription(input: {
+  endpoint: string;
+  keys: { p256dh: string; auth: string };
+  role?: "admin" | "staff" | "customer";
+  customer_id?: string | null;
+  user_name?: string | null;
+  user_agent?: string | null;
+}): Promise<PushSubscriptionRecord> {
+  return withTransactionLock(async () => {
+    const db = readDatabase();
+    db.push_subscriptions = db.push_subscriptions || [];
+    const nowIso = new Date().toISOString();
+
+    const existingIndex = db.push_subscriptions.findIndex((s) => s.endpoint === input.endpoint);
+    let record: PushSubscriptionRecord;
+
+    if (existingIndex >= 0) {
+      record = {
+        ...db.push_subscriptions[existingIndex],
+        keys: input.keys,
+        role: input.role || db.push_subscriptions[existingIndex].role || "customer",
+        customer_id: input.customer_id !== undefined ? input.customer_id : db.push_subscriptions[existingIndex].customer_id,
+        user_name: input.user_name || db.push_subscriptions[existingIndex].user_name,
+        user_agent: input.user_agent || db.push_subscriptions[existingIndex].user_agent,
+        updated_at: nowIso,
+      };
+      db.push_subscriptions[existingIndex] = record;
+    } else {
+      record = {
+        id: crypto.randomUUID(),
+        endpoint: input.endpoint,
+        keys: input.keys,
+        role: input.role || "customer",
+        customer_id: input.customer_id || null,
+        user_name: input.user_name || null,
+        user_agent: input.user_agent || null,
+        created_at: nowIso,
+        updated_at: nowIso,
+      };
+      db.push_subscriptions.push(record);
+    }
+
+    writeDatabase(db);
+    return record;
+  });
+}
+
+export async function removePushSubscription(endpoint: string): Promise<boolean> {
+  return withTransactionLock(async () => {
+    const db = readDatabase();
+    if (!db.push_subscriptions) return false;
+    const initialLen = db.push_subscriptions.length;
+    db.push_subscriptions = db.push_subscriptions.filter((s) => s.endpoint !== endpoint);
+    if (db.push_subscriptions.length !== initialLen) {
+      writeDatabase(db);
+      return true;
+    }
+    return false;
+  });
+}
+
+export async function cleanupExpiredPushSubscriptions(endpointsToRemove: string[]): Promise<void> {
+  if (!endpointsToRemove.length) return;
+  return withTransactionLock(async () => {
+    const db = readDatabase();
+    if (!db.push_subscriptions) return;
+    const toRemoveSet = new Set(endpointsToRemove);
+    db.push_subscriptions = db.push_subscriptions.filter((s) => !toRemoveSet.has(s.endpoint));
+    writeDatabase(db);
+  });
+}
+

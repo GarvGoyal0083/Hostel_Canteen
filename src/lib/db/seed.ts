@@ -9,6 +9,7 @@ import {
   Product,
   RefundCancellationRecord,
   SaleRecord,
+  PushSubscriptionRecord,
 } from "@/types/pos";
 import { getISTCompactDateKey, getISTDateString } from "@/lib/format";
 
@@ -31,6 +32,7 @@ export interface DatabaseSchema {
   expenses: ExpenseRecord[];
   refunds_cancellations: RefundCancellationRecord[];
   audit_logs: AuditLogRecord[];
+  push_subscriptions?: PushSubscriptionRecord[];
 }
 
 export function createDefaultAdminUsers(): AdminUser[] {
@@ -75,6 +77,7 @@ export function createCleanProductionDatabase(): DatabaseSchema {
     inventory_movements: [],
     expenses: [],
     refunds_cancellations: [],
+    push_subscriptions: [],
     audit_logs: [
       {
         id: "audit-init-prod",
@@ -970,6 +973,7 @@ export function createDevelopmentSampleDatabase(): DatabaseSchema {
     inventory_movements,
     expenses,
     refunds_cancellations: [],
+    push_subscriptions: [],
     audit_logs: [
       {
         id: "audit-seed-001",

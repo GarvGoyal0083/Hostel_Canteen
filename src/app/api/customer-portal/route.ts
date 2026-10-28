@@ -10,6 +10,7 @@ import {
   listProducts,
 } from "@/lib/db/store";
 import { PaymentMethod, PaymentStatus } from "@/types/pos";
+import { notifyStaffOfNewOrder } from "@/lib/push/webPush";
 
 function normalizePhone(p?: string | null): string {
   if (!p) return "";
@@ -225,6 +226,11 @@ export async function POST(req: NextRequest) {
         },
         "Student Self-Portal",
         { id: "customer-portal" }
+      );
+
+      // Trigger Web Push Notification to Canteen Staff & Admin devices
+      notifyStaffOfNewOrder(sale).catch((err) =>
+        console.warn("[push] Failed to deliver staff push notification:", err)
       );
 
       return NextResponse.json({

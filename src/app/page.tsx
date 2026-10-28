@@ -26,6 +26,7 @@ import {
   EyeOff,
   UserCog,
 } from "lucide-react";
+import { StaffNotificationBell } from "@/components/StaffNotificationBell";
 import {
   AdminUser,
   AuditLogRecord,
@@ -369,6 +370,11 @@ export default function HostelCanteenPosApp() {
           </div>
 
           <div className="flex items-center gap-2 shrink-0">
+            <StaffNotificationBell
+              userName={admin.full_name}
+              role={admin.role === "admin" ? "admin" : "staff"}
+            />
+
             <button
               onClick={() => setActiveTab("pos")}
               className="btn-3d-primary rounded-xl px-3 py-1.5 text-xs font-black text-white shadow-xs flex items-center gap-1.5 cursor-pointer"
@@ -712,6 +718,12 @@ export default function HostelCanteenPosApp() {
                 <GraduationCap className="h-4 w-4 text-[#2563EB]" />
                 <span>Customer / Student View</span>
               </button>
+
+              {/* Web Push Order Notification Bell */}
+              <StaffNotificationBell
+                userName={admin.full_name}
+                role={admin.role === "admin" ? "admin" : "staff"}
+              />
 
               {/* Highlighted Fast Billing Primary Action */}
               <button

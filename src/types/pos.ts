@@ -325,3 +325,30 @@ export interface CreateSaleInput {
   }>;
   notes?: string;
 }
+
+export interface PushSubscriptionKeys {
+  p256dh: string;
+  auth: string;
+}
+
+export interface PushSubscriptionRecord {
+  id: string;
+  endpoint: string;
+  keys: PushSubscriptionKeys;
+  role: "admin" | "staff" | "customer";
+  customer_id?: string | null;
+  user_name?: string | null;
+  user_agent?: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface PushNotificationPayload {
+  title: string;
+  body: string;
+  icon?: string;
+  badge?: string;
+  url?: string;
+  tag?: string;
+  data?: Record<string, unknown>;
+}

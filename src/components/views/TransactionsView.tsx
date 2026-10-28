@@ -13,6 +13,9 @@ import {
   ChevronDown,
   ChevronUp,
   TrendingUp,
+  BellRing,
+  Send,
+  Check,
 } from "lucide-react";
 import { PaymentMethod, SaleRecord } from "@/types/pos";
 import {
@@ -126,6 +129,48 @@ export function TransactionsView({
 
   const [submitting, setSubmitting] = useState(false);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
+
+  // Web Push Student Notification Modal State
+  const [notifySale, setNotifySale] = useState<SaleRecord | null>(null);
+  const [notifyType, setNotifyType] = useState<"READY" | "OUT_FOR_DELIVERY" | "DELIVERED">("READY");
+  const [customNotifyMsg, setCustomNotifyMsg] = useState("");
+  const [notifyLoading, setNotifyLoading] = useState(false);
+  const [notifyResult, setNotifyResult] = useState<string | null>(null);
+
+  const handleSendNotification = async () => {
+    if (!notifySale || !notifySale.customer_id) return;
+    setNotifyLoading(true);
+    setNotifyResult(null);
+    try {
+      const res = await fetch("/api/push/notify-order", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          customer_id: notifySale.customer_id,
+          customer_name: notifySale.customer_name_snapshot,
+          bill_number: notifySale.bill_number,
+          room_number: notifySale.room_number_snapshot,
+          status_type: notifyType,
+          custom_message: customNotifyMsg.trim() || undefined,
+        }),
+      });
+      const data = await res.json();
+      if (res.ok) {
+        setNotifyResult(data.message || "Notification sent!");
+        setTimeout(() => {
+          setNotifySale(null);
+          setNotifyResult(null);
+          setCustomNotifyMsg("");
+        }, 2500);
+      } else {
+        setNotifyResult(`Error: ${data.error || "Failed to deliver"}`);
+      }
+    } catch {
+      setNotifyResult("Failed to send notification.");
+    } finally {
+      setNotifyLoading(false);
+    }
+  };
 
   const filteredSales = useMemo(() => {
     const list = sales.filter((s) => {
@@ -906,6 +951,24 @@ export function TransactionsView({
                     </button>
                   )}
 
+                {sale.customer_id &&
+                  sale.sale_status !== "Cancelled" &&
+                  sale.sale_status !== "Refunded" && (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setNotifySale(sale);
+                        setNotifyType(sale.room_number_snapshot ? "OUT_FOR_DELIVERY" : "READY");
+                        setNotifyResult(null);
+                      }}
+                      className="inline-flex items-center justify-center gap-1 py-2 px-2.5 text-xs font-bold text-blue-700 bg-blue-50 border border-blue-200 rounded-xl hover:bg-blue-100 cursor-pointer transition shrink-0"
+                      title="Send Web Push alert to student"
+                    >
+                      <BellRing className="h-3.5 w-3.5 text-blue-600" />
+                      <span>Notify</span>
+                    </button>
+                  )}
+
                 {sale.sale_status !== "Cancelled" &&
                   sale.sale_status !== "Refunded" && (
                     <button
@@ -1131,6 +1194,23 @@ export function TransactionsView({
                             >
                               <CreditCard className="h-3.5 w-3.5" />
                               Record Payment
+                            </button>
+                          )}
+
+                        {sale.customer_id &&
+                          sale.sale_status !== "Cancelled" &&
+                          sale.sale_status !== "Refunded" && (
+                            <button
+                              onClick={() => {
+                                setNotifySale(sale);
+                                setNotifyType(sale.room_number_snapshot ? "OUT_FOR_DELIVERY" : "READY");
+                                setNotifyResult(null);
+                              }}
+                              className="inline-flex items-center gap-1 rounded-md border border-blue-200 bg-blue-50 px-2 py-1 text-[11px] font-semibold text-blue-700 hover:bg-blue-100 cursor-pointer"
+                              title="Send Push Notification to Student"
+                            >
+                              <BellRing className="h-3 w-3 text-blue-600" />
+                              Notify
                             </button>
                           )}
 
@@ -1481,6 +1561,156 @@ export function TransactionsView({
                 </button>
               </div>
             </form>
+          </div>
+        </div>
+      )}
+
+      {/* Web Push Order Notification Modal */}
+      {notifySale && (
+        <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs flex items-center justify-center p-4">
+          <div className="card-3d bg-white rounded-3xl max-w-md w-full p-6 shadow-2xl border border-slate-200 relative animate-in fade-in zoom-in-95 duration-150">
+            <button
+              type="button"
+              onClick={() => {
+                setNotifySale(null);
+                setNotifyResult(null);
+              }}
+              className="absolute top-4 right-4 p-2 rounded-full text-slate-400 hover:text-slate-700 hover:bg-slate-100 transition cursor-pointer"
+            >
+              <X className="h-5 w-5" />
+            </button>
+
+            <div className="flex items-center gap-3 mb-4">
+              <div className="h-10 w-10 rounded-2xl bg-blue-100 text-blue-700 flex items-center justify-center shrink-0">
+                <BellRing className="h-5 w-5" />
+              </div>
+              <div>
+                <h3 className="text-base font-black text-slate-900">Notify Student</h3>
+                <p className="text-xs text-slate-500">
+                  Send native Web Push alert to {notifySale.customer_name_snapshot}
+                </p>
+              </div>
+            </div>
+
+            {/* Order Details Brief */}
+            <div className="rounded-xl bg-slate-50 border border-slate-200 p-3 mb-4 text-xs space-y-1">
+              <div className="flex justify-between text-slate-600">
+                <span>Bill Number:</span>
+                <span className="font-mono font-bold text-slate-900">{notifySale.bill_number}</span>
+              </div>
+              <div className="flex justify-between text-slate-600">
+                <span>Destination:</span>
+                <span className="font-bold text-blue-700">
+                  {notifySale.room_number_snapshot
+                    ? `Room ${notifySale.room_number_snapshot} (Delivery)`
+                    : "Canteen Counter (Self-Pickup)"}
+                </span>
+              </div>
+              <div className="flex justify-between text-slate-600">
+                <span>Amount:</span>
+                <span className="font-black text-slate-900">{formatINR(notifySale.payable_amount)}</span>
+              </div>
+            </div>
+
+            {/* Status Type Selection */}
+            <div className="space-y-2 mb-4">
+              <label className="text-xs font-bold text-slate-700 block">Select Order Status Alert:</label>
+              <div className="grid grid-cols-3 gap-2">
+                <button
+                  type="button"
+                  onClick={() => setNotifyType("READY")}
+                  className={`p-2.5 rounded-xl border text-center transition cursor-pointer text-xs font-bold ${
+                    notifyType === "READY"
+                      ? "bg-blue-50 border-blue-500 text-blue-900 ring-2 ring-blue-500/20"
+                      : "bg-white border-slate-200 text-slate-700 hover:bg-slate-50"
+                  }`}
+                >
+                  <div className="text-base mb-0.5">🍽️</div>
+                  <div>Food Ready</div>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => setNotifyType("OUT_FOR_DELIVERY")}
+                  className={`p-2.5 rounded-xl border text-center transition cursor-pointer text-xs font-bold ${
+                    notifyType === "OUT_FOR_DELIVERY"
+                      ? "bg-purple-50 border-purple-500 text-purple-900 ring-2 ring-purple-500/20"
+                      : "bg-white border-slate-200 text-slate-700 hover:bg-slate-50"
+                  }`}
+                >
+                  <div className="text-base mb-0.5">🛵</div>
+                  <div>Out for Delivery</div>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => setNotifyType("DELIVERED")}
+                  className={`p-2.5 rounded-xl border text-center transition cursor-pointer text-xs font-bold ${
+                    notifyType === "DELIVERED"
+                      ? "bg-emerald-50 border-emerald-500 text-emerald-900 ring-2 ring-emerald-500/20"
+                      : "bg-white border-slate-200 text-slate-700 hover:bg-slate-50"
+                  }`}
+                >
+                  <div className="text-base mb-0.5">✅</div>
+                  <div>Delivered</div>
+                </button>
+              </div>
+            </div>
+
+            {/* Custom Note */}
+            <div className="mb-4">
+              <label className="text-xs font-bold text-slate-700 block mb-1">
+                Custom Message (Optional)
+              </label>
+              <input
+                type="text"
+                value={customNotifyMsg}
+                onChange={(e) => setCustomNotifyMsg(e.target.value)}
+                placeholder={
+                  notifyType === "READY"
+                    ? "Your order is hot and ready at the counter!"
+                    : notifyType === "OUT_FOR_DELIVERY"
+                    ? `Delivery on the way to Room ${notifySale.room_number_snapshot || ""}`
+                    : "Delivered to room. Enjoy your food!"
+                }
+                className="w-full rounded-xl border border-slate-300 px-3 py-2 text-xs text-slate-900 focus:outline-none focus:ring-2 focus:ring-blue-500 placeholder:text-slate-400"
+              />
+            </div>
+
+            {notifyResult && (
+              <div
+                className={`mb-4 p-3 rounded-xl text-xs font-bold flex items-center gap-2 ${
+                  notifyResult.includes("Error") || notifyResult.includes("not enabled")
+                    ? "bg-amber-50 border border-amber-200 text-amber-900"
+                    : "bg-emerald-50 border border-emerald-200 text-emerald-900"
+                }`}
+              >
+                <Check className="h-4 w-4 shrink-0 text-emerald-600" />
+                <span>{notifyResult}</span>
+              </div>
+            )}
+
+            <div className="flex gap-2">
+              <button
+                type="button"
+                onClick={() => {
+                  setNotifySale(null);
+                  setNotifyResult(null);
+                }}
+                className="btn-3d-secondary flex-1 py-2.5 px-3 rounded-xl text-xs font-bold text-slate-700 cursor-pointer"
+              >
+                Close
+              </button>
+              <button
+                type="button"
+                onClick={handleSendNotification}
+                disabled={notifyLoading}
+                className="btn-3d-primary flex-1 py-2.5 px-3 rounded-xl text-xs font-black text-white flex items-center justify-center gap-1.5 cursor-pointer disabled:opacity-50"
+              >
+                <Send className="h-3.5 w-3.5" />
+                <span>{notifyLoading ? "Sending..." : "Send Web Push Alert"}</span>
+              </button>
+            </div>
           </div>
         </div>
       )}
