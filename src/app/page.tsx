@@ -27,6 +27,7 @@ import {
   UserCog,
 } from "lucide-react";
 import { StaffNotificationBell } from "@/components/StaffNotificationBell";
+import { ThemeToggle } from "@/components/ThemeToggle";
 import {
   AdminUser,
   AuditLogRecord,
@@ -353,7 +354,7 @@ export default function HostelCanteenPosApp() {
   }
 
   return (
-    <div className="min-h-screen flex flex-col lg:flex-row bg-[#F1F5F9] text-[#111827] w-full max-w-full overflow-x-hidden">
+    <div className="min-h-screen flex flex-col lg:flex-row bg-[#F1F5F9] dark:bg-[#090D16] text-[#111827] dark:text-[#F1F5F9] w-full max-w-full overflow-x-hidden">
       {/* Mobile Top Header Bar */}
       <div className="bg-[#090D16] text-white lg:hidden border-b border-slate-800 shadow-md sticky top-0 z-30">
         <div className="flex items-center justify-between px-3.5 py-2.5">
@@ -370,6 +371,8 @@ export default function HostelCanteenPosApp() {
           </div>
 
           <div className="flex items-center gap-2 shrink-0">
+            <ThemeToggle compact />
+
             <StaffNotificationBell
               userName={admin.full_name}
               role={admin.role === "admin" ? "admin" : "staff"}
@@ -445,17 +448,17 @@ export default function HostelCanteenPosApp() {
       <aside
         className={`${
           mobileMenuOpen
-            ? "fixed inset-y-0 left-0 w-72 max-w-[85vw] z-40 flex flex-col bg-white shadow-2xl overflow-y-auto"
+            ? "fixed inset-y-0 left-0 w-72 max-w-[85vw] z-40 flex flex-col bg-white dark:bg-[#0F172A] shadow-2xl overflow-y-auto"
             : "hidden"
-        } lg:flex lg:w-68 lg:flex-col lg:fixed lg:inset-y-0 bg-white border-r border-slate-200 shadow-xs z-20`}
+        } lg:flex lg:w-68 lg:flex-col lg:fixed lg:inset-y-0 bg-white dark:bg-[#0F172A] border-r border-slate-200 dark:border-slate-800 shadow-xs z-20`}
       >
         {/* Brand Header */}
-        <div className="flex items-center justify-between gap-3 px-5 py-4 border-b border-slate-100">
+        <div className="flex items-center justify-between gap-3 px-5 py-4 border-b border-slate-100 dark:border-slate-800">
           <div className="flex items-center gap-3">
             <CanteenLogo className="h-9 w-9 shadow-sm" size={36} />
             <div>
               <div className="flex items-center gap-1.5">
-                <span className="text-sm font-bold text-slate-900 leading-tight">
+                <span className="text-sm font-bold text-slate-900 dark:text-slate-100 leading-tight">
                   Hostel Canteen
                 </span>
                 <span className="rounded-md bg-blue-50 border border-blue-200 px-1.5 py-0.5 text-[10px] font-bold text-blue-700">
@@ -646,26 +649,26 @@ export default function HostelCanteenPosApp() {
         )}
 
         {/* Top Context & Quick Stats Bar */}
-        <div className="hidden lg:block sticky top-0 z-20 bg-white/95 backdrop-blur-md border-b border-slate-200 px-6 py-2.5 shadow-xs">
+        <div className="hidden lg:block sticky top-0 z-20 bg-white/95 dark:bg-[#0F172A]/95 backdrop-blur-md border-b border-slate-200 dark:border-slate-800 px-6 py-2.5 shadow-xs">
           <div className="max-w-7xl mx-auto flex items-center justify-between gap-4">
             <div className="flex items-center gap-3">
-              <span className="inline-flex items-center gap-1.5 rounded-lg bg-blue-50 border border-blue-200 px-3 py-1 text-xs font-bold text-blue-700">
+              <span className="inline-flex items-center gap-1.5 rounded-lg bg-blue-50 dark:bg-blue-950/60 border border-blue-200 dark:border-blue-800 px-3 py-1 text-xs font-bold text-blue-700 dark:text-blue-300">
                 <Sparkles className="h-3.5 w-3.5 text-[#2563EB]" />
                 {SIDEBAR_ITEMS.find((i) => i.id === activeTab)?.label ||
                   "Dashboard"}
               </span>
               {appData && (
-                <div className="flex items-center gap-2.5 text-xs text-slate-500 pl-1">
+                <div className="flex items-center gap-2.5 text-xs text-slate-500 dark:text-slate-400 pl-1">
                   <span>
                     Today:{" "}
-                    <strong className="text-slate-900 font-bold">
+                    <strong className="text-slate-900 dark:text-slate-100 font-bold">
                       {privacyMode ? "₹••••" : formatINR(appData.kpis.today_sales)}
                     </strong>
                   </span>
-                  <span className="text-slate-300">•</span>
+                  <span className="text-slate-300 dark:text-slate-700">•</span>
                   <span>
                     Pending Udhaar:{" "}
-                    <strong className="text-blue-600 font-bold">
+                    <strong className="text-blue-600 dark:text-blue-400 font-bold">
                       {privacyMode ? "₹••••" : formatINR(appData.kpis.customer_udhaar_total)}
                     </strong>
                   </span>
@@ -678,7 +681,7 @@ export default function HostelCanteenPosApp() {
               <button
                 type="button"
                 onClick={handleOpenScan}
-                className="rounded-xl bg-blue-50/80 border border-blue-200 px-3.5 py-1.5 text-xs font-bold text-blue-700 hover:bg-blue-100/80 flex items-center gap-2 cursor-pointer transition shadow-2xs hover:scale-[1.02] active:scale-95"
+                className="rounded-xl bg-blue-50/80 dark:bg-blue-950/40 border border-blue-200 dark:border-blue-800 px-3.5 py-1.5 text-xs font-bold text-blue-700 dark:text-blue-300 hover:bg-blue-100/80 cursor-pointer transition shadow-2xs hover:scale-[1.02] active:scale-95"
                 title="Scan a snack photo with camera or file upload"
               >
                 <ScanLine className="h-4 w-4 text-blue-600" />
@@ -690,8 +693,8 @@ export default function HostelCanteenPosApp() {
                 onClick={() => setStatusModalOpen(true)}
                 className={`rounded-xl px-3 py-1.5 text-xs font-extrabold flex items-center gap-2 cursor-pointer border transition shadow-xs ${
                   canteenStatus.is_open
-                    ? "bg-emerald-50 border-emerald-300 text-emerald-800 hover:bg-emerald-100"
-                    : "bg-red-50 border-red-300 text-red-800 hover:bg-red-100"
+                    ? "bg-emerald-50 dark:bg-emerald-950/40 border-emerald-300 dark:border-emerald-800 text-emerald-800 dark:text-emerald-200 hover:bg-emerald-100"
+                    : "bg-red-50 dark:bg-red-950/40 border-red-300 dark:border-red-800 text-red-800 dark:text-red-200 hover:bg-red-100"
                 }`}
                 title="Click to change shop status (closed for today, custom time, or open)"
               >
@@ -702,11 +705,11 @@ export default function HostelCanteenPosApp() {
                 />
                 <span>{canteenStatus.is_open ? "Shop: Open" : "Shop: Closed"}</span>
                 {!canteenStatus.is_open && canteenStatus.reopen_at && (
-                  <span className="text-[10px] text-red-700 font-semibold hidden xl:inline">
+                  <span className="text-[10px] text-red-700 dark:text-red-300 font-semibold hidden xl:inline">
                     ({canteenStatus.reopen_at})
                   </span>
                 )}
-                <span className="rounded bg-white/90 px-1.5 py-0.2 text-[9px] font-extrabold border border-slate-200">
+                <span className="rounded bg-white/90 dark:bg-slate-800 px-1.5 py-0.2 text-[9px] font-extrabold border border-slate-200 dark:border-slate-700">
                   Manage
                 </span>
               </button>
@@ -716,8 +719,11 @@ export default function HostelCanteenPosApp() {
                 className="btn-3d-secondary rounded-xl px-3.5 py-1.5 text-xs font-extrabold flex items-center gap-1.5 cursor-pointer"
               >
                 <GraduationCap className="h-4 w-4 text-[#2563EB]" />
-                <span>Customer / Student View</span>
+                <span>Customer View</span>
               </button>
+
+              {/* Theme Selector */}
+              <ThemeToggle />
 
               {/* Web Push Order Notification Bell */}
               <StaffNotificationBell

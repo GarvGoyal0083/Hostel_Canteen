@@ -1,4 +1,5 @@
 @import "tailwindcss";
+@custom-variant dark (&:where(.dark, .dark *));
 
 :root {
   --bg-white: #FFFFFF;
@@ -7,6 +8,14 @@
   --brand-dark-blue: #1D4ED8;
   --brand-light-blue: #EFF6FF;
   --surface-grey: #F8FAFC;
+}
+
+.dark {
+  --bg-white: #0F172A;
+  --text-black: #F8FAFC;
+  --brand-light-blue: rgba(37, 99, 235, 0.15);
+  --surface-grey: #090D16;
+  color-scheme: dark;
 }
 
 html {
@@ -299,3 +308,80 @@ a.pos-link:hover {
     border: none !important;
   }
 }
+
+/* ============================================================================
+   DARK MODE SYSTEM OVERRIDES
+   ============================================================================ */
+
+.dark body {
+  background-color: #090D16;
+  color: #F8FAFC;
+}
+
+.dark body::before {
+  background-image: 
+    radial-gradient(at 15% 15%, rgba(37, 99, 235, 0.08) 0px, transparent 45%),
+    radial-gradient(at 85% 10%, rgba(59, 130, 246, 0.06) 0px, transparent 40%),
+    radial-gradient(at 50% 90%, rgba(16, 185, 129, 0.06) 0px, transparent 45%);
+}
+
+.dark .card-3d {
+  background: #0F172A;
+  border-color: #1E293B;
+  color: #F8FAFC;
+  box-shadow: 0 4px 14px -2px rgba(0, 0, 0, 0.5);
+}
+
+.dark .card-3d:hover {
+  border-color: #334155;
+  box-shadow: 0 8px 24px -4px rgba(0, 0, 0, 0.7);
+}
+
+.dark .card-3d-static {
+  background: #0F172A;
+  border-color: #1E293B;
+  color: #F8FAFC;
+  box-shadow: 0 2px 8px -2px rgba(0, 0, 0, 0.5);
+}
+
+.dark .btn-3d-secondary {
+  background: #1E293B;
+  color: #F8FAFC;
+  border-color: #334155;
+}
+
+.dark .btn-3d-secondary:hover {
+  background: #334155;
+  border-color: #475569;
+  color: #FFFFFF;
+}
+
+.dark .input-3d {
+  background: #1E293B;
+  border-color: #334155;
+  color: #F8FAFC;
+}
+
+.dark .nav-item-3d {
+  color: #94A3B8;
+}
+
+.dark .nav-item-3d:hover {
+  background: #1E293B;
+  color: #F8FAFC;
+}
+
+.dark .nav-item-3d-active {
+  background: rgba(37, 99, 235, 0.2);
+  color: #60A5FA;
+  border-color: rgba(96, 165, 250, 0.35);
+}
+
+.dark ::-webkit-scrollbar-thumb {
+  background: #334155;
+}
+
+.dark ::-webkit-scrollbar-thumb:hover {
+  background: #475569;
+}
+

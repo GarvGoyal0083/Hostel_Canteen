@@ -23,6 +23,7 @@ import {
   formatIST,
 } from "@/lib/format";
 import { CommissionRateCard } from "@/components/views/CommissionRateCard";
+import { AdminThemeSettingsCard } from "@/components/ThemeToggle";
 
 interface SettingsViewProps {
   admin: AdminUser;
@@ -198,14 +199,17 @@ ON public.canteen_store FOR ALL USING (true) WITH CHECK (true);`;
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div className="bg-white p-5 rounded-xl border border-gray-200 shadow-xs">
-        <h1 className="text-xl font-bold text-[#111827]">
+      <div className="bg-white dark:bg-[#0F172A] p-5 rounded-xl border border-gray-200 dark:border-slate-800 shadow-xs">
+        <h1 className="text-xl font-bold text-[#111827] dark:text-[#F1F5F9]">
           System Settings, Security, Backup &amp; Audit Trail
         </h1>
-        <p className="text-xs text-gray-600 mt-0.5">
-          Manage database environment separation, full data backups, Supabase PostgreSQL configuration, and immutable audit logs.
+        <p className="text-xs text-gray-600 dark:text-slate-400 mt-0.5">
+          Manage appearance themes, database environment separation, full data backups, Supabase PostgreSQL configuration, and immutable audit logs.
         </p>
       </div>
+
+      {/* Theme Appearance Mode Setting Card */}
+      <AdminThemeSettingsCard />
 
       {/* Cards Row */}
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">

@@ -37,6 +37,7 @@ import {
 } from "lucide-react";
 import { StudentNotificationButton } from "@/components/StudentNotificationButton";
 import { StudentFcmNotificationButton } from "@/components/StudentFcmNotificationButton";
+import { ThemeToggle } from "@/components/ThemeToggle";
 import { urlBase64ToUint8Array } from "@/lib/push/usePushNotifications";
 import {
   Customer,
@@ -464,6 +465,9 @@ export function CustomerPortalView({
               customerId={currentCustomer?.id}
               customerName={currentCustomer?.name}
             />
+
+            {/* Dark / Light / System Mode Toggle at Top of Customer Portal */}
+            <ThemeToggle />
 
             {/* Shopping Cart Pill Button */}
             <button
