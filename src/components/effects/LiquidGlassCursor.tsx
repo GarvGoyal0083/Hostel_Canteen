@@ -149,40 +149,54 @@ export function LiquidGlassCursor() {
         scaleY *= 1.15;
       }
 
-      // Update Main Orb DOM transform
+      // Update Main Orb DOM transform & dynamic liquid surface tension
       if (mainOrbRef.current) {
         const mx = mainPos.current.x;
         const my = mainPos.current.y;
         mainOrbRef.current.style.transform = `translate3d(${mx}px, ${my}px, 0) translate(-50%, -50%) rotate(${angle}rad) scale(${scaleX}, ${scaleY})`;
+
+        // Organic liquid surface morphing (simulating fluid surface tension)
+        const r1 = 48 + Math.sin(time * 2.2) * 5;
+        const r2 = 52 + Math.cos(time * 2.6) * 5;
+        const r3 = 50 + Math.sin(time * 2.1 + 1) * 4;
+        const r4 = 50 - Math.cos(time * 2.4) * 4;
+        mainOrbRef.current.style.borderRadius = `${r1}% ${100 - r1}% ${r2}% ${100 - r2}% / ${r3}% ${r4}% ${100 - r4}% ${100 - r3}%`;
       }
 
-      // 2. Satellite Droplet 1 (Amber / Peach Liquid Bubble)
+      // 2. Satellite Droplet 1 (Warm Amber / Peach Liquid Bubble)
       // Follows with delayed momentum + harmonic liquid floating wave
       const wave1X = Math.cos(time * 1.8) * 14;
       const wave1Y = Math.sin(time * 1.8) * 14;
-      drop1Pos.current.x += (mainPos.current.x - 36 + wave1X - drop1Pos.current.x) * 0.09;
-      drop1Pos.current.y += (mainPos.current.y + 40 + wave1Y - drop1Pos.current.y) * 0.09;
+      drop1Pos.current.x += (mainPos.current.x - 38 + wave1X - drop1Pos.current.x) * 0.09;
+      drop1Pos.current.y += (mainPos.current.y + 44 + wave1Y - drop1Pos.current.y) * 0.09;
 
       if (droplet1Ref.current) {
-        const d1Speed = Math.min(speed * 0.02, 0.2);
+        const d1Speed = Math.min(speed * 0.02, 0.22);
         droplet1Ref.current.style.transform = `translate3d(${drop1Pos.current.x}px, ${drop1Pos.current.y}px, 0) translate(-50%, -50%) scale(${1 + d1Speed}, ${1 - d1Speed})`;
+
+        const dr1 = 47 + Math.cos(time * 2.5) * 6;
+        const dr2 = 53 + Math.sin(time * 2.1) * 6;
+        droplet1Ref.current.style.borderRadius = `${dr1}% ${100 - dr1}% ${dr2}% ${100 - dr2}% / ${dr2}% ${dr1}% ${100 - dr1}% ${100 - dr2}%`;
       }
 
       // 3. Satellite Droplet 2 (Cyan / Crystal Liquid Bubble)
-      const wave2X = Math.sin(time * 2.1 + 1.2) * 10;
-      const wave2Y = Math.cos(time * 2.1 + 1.2) * 10;
-      drop2Pos.current.x += (mainPos.current.x + 42 + wave2X - drop2Pos.current.x) * 0.065;
-      drop2Pos.current.y += (mainPos.current.y + 28 + wave2Y - drop2Pos.current.y) * 0.065;
+      const wave2X = Math.sin(time * 2.1 + 1.2) * 11;
+      const wave2Y = Math.cos(time * 2.1 + 1.2) * 11;
+      drop2Pos.current.x += (mainPos.current.x + 46 + wave2X - drop2Pos.current.x) * 0.065;
+      drop2Pos.current.y += (mainPos.current.y + 32 + wave2Y - drop2Pos.current.y) * 0.065;
 
       if (droplet2Ref.current) {
         droplet2Ref.current.style.transform = `translate3d(${drop2Pos.current.x}px, ${drop2Pos.current.y}px, 0) translate(-50%, -50%)`;
+
+        const d2r = 49 + Math.sin(time * 3) * 5;
+        droplet2Ref.current.style.borderRadius = `${d2r}% ${100 - d2r}% ${100 - d2r}% ${d2r}%`;
       }
 
       // 4. Satellite Droplet 3 (Micro Dewdrop)
       const wave3X = Math.cos(time * 2.6 + 2.5) * 8;
       const wave3Y = Math.sin(time * 2.6 + 2.5) * 8;
-      drop3Pos.current.x += (mainPos.current.x - 22 + wave3X - drop3Pos.current.x) * 0.045;
-      drop3Pos.current.y += (mainPos.current.y - 42 + wave3Y - drop3Pos.current.y) * 0.045;
+      drop3Pos.current.x += (mainPos.current.x - 24 + wave3X - drop3Pos.current.x) * 0.045;
+      drop3Pos.current.y += (mainPos.current.y - 46 + wave3Y - drop3Pos.current.y) * 0.045;
 
       if (droplet3Ref.current) {
         droplet3Ref.current.style.transform = `translate3d(${drop3Pos.current.x}px, ${drop3Pos.current.y}px, 0) translate(-50%, -50%)`;
@@ -219,54 +233,63 @@ export function LiquidGlassCursor() {
          ========================================================================= */}
       <div
         ref={mainOrbRef}
-        className="fixed top-0 left-0 w-[138px] h-[138px] rounded-full pointer-events-none will-change-transform"
+        className="fixed top-0 left-0 w-[142px] h-[142px] rounded-full pointer-events-none will-change-transform"
         style={{
-          // Refractive convex glass body
+          // Refractive crystal glass body with fluid lens optics
           background:
-            "radial-gradient(circle at 32% 28%, rgba(255, 255, 255, 0.42) 0%, rgba(255, 255, 255, 0.12) 35%, rgba(147, 197, 253, 0.15) 60%, rgba(244, 114, 182, 0.18) 85%, rgba(59, 130, 246, 0.28) 100%)",
-          backdropFilter: "blur(1.6px) contrast(115%) brightness(108%) saturate(145%)",
-          WebkitBackdropFilter: "blur(1.6px) contrast(115%) brightness(108%) saturate(145%)",
+            "radial-gradient(circle at 30% 26%, rgba(255, 255, 255, 0.48) 0%, rgba(255, 255, 255, 0.12) 35%, rgba(147, 197, 253, 0.15) 60%, rgba(244, 114, 182, 0.18) 85%, rgba(59, 130, 246, 0.28) 100%)",
+          backdropFilter: "blur(0.5px) contrast(118%) brightness(112%) saturate(145%)",
+          WebkitBackdropFilter: "blur(0.5px) contrast(118%) brightness(112%) saturate(145%)",
           // Chromatic prismatic edge reflections & caustic specular glow
           boxShadow: `
-            inset 0 0 32px rgba(255, 255, 255, 0.48),
-            inset 3px 3px 14px rgba(255, 255, 255, 0.75),
-            inset -3px -3px 20px rgba(96, 165, 250, 0.45),
-            inset 0 0 12px rgba(236, 72, 153, 0.35),
-            0 24px 48px -12px rgba(15, 23, 42, 0.35),
-            0 0 24px rgba(59, 130, 246, 0.22)
+            inset 0 0 36px rgba(255, 255, 255, 0.55),
+            inset 3px 3px 16px rgba(255, 255, 255, 0.9),
+            inset -3px -3px 22px rgba(96, 165, 250, 0.48),
+            inset 0 0 14px rgba(236, 72, 153, 0.38),
+            0 28px 56px -14px rgba(15, 23, 42, 0.4),
+            0 0 28px rgba(59, 130, 246, 0.28)
           `,
-          border: "1px solid rgba(255, 255, 255, 0.55)",
+          border: "1.2px solid rgba(255, 255, 255, 0.65)",
         }}
       >
+        {/* Inner Caustic Refraction Ring */}
+        <div
+          className="absolute inset-1 rounded-full pointer-events-none opacity-85"
+          style={{
+            boxShadow: "inset 0 0 18px rgba(255, 255, 255, 0.5), inset -2px -2px 10px rgba(96, 165, 250, 0.35)",
+            border: "1px solid rgba(255, 255, 255, 0.35)",
+          }}
+        />
+
         {/* Prismatic Rainbow Dispersion Rim (Chromatic Aberration Effect) */}
         <div
-          className="absolute inset-0 rounded-full opacity-65 mix-blend-overlay pointer-events-none"
+          className="absolute inset-0 rounded-full opacity-70 mix-blend-overlay pointer-events-none"
           style={{
             background:
-              "conic-gradient(from 135deg at 50% 50%, rgba(244, 63, 94, 0.45), rgba(251, 146, 60, 0.45), rgba(250, 204, 21, 0.4), rgba(52, 211, 153, 0.45), rgba(56, 189, 248, 0.55), rgba(168, 85, 247, 0.5), rgba(244, 63, 94, 0.45))",
+              "conic-gradient(from 135deg at 50% 50%, rgba(244, 63, 94, 0.55), rgba(251, 146, 60, 0.55), rgba(250, 204, 21, 0.5), rgba(52, 211, 153, 0.5), rgba(56, 189, 248, 0.65), rgba(168, 85, 247, 0.6), rgba(244, 63, 94, 0.55))",
             filter: "blur(1.5px)",
           }}
         />
 
         {/* Curved Glass Crescent Specular Highlight (Top-Left Light Reflection) */}
         <div
-          className="absolute top-2 left-2.5 w-[72px] h-[36px] rounded-full -rotate-30 pointer-events-none"
+          className="absolute top-2 left-2.5 w-[76px] h-[38px] rounded-full -rotate-30 pointer-events-none"
           style={{
             background:
-              "radial-gradient(ellipse at 50% 30%, rgba(255, 255, 255, 0.95) 0%, rgba(255, 255, 255, 0.35) 55%, transparent 85%)",
+              "radial-gradient(ellipse at 50% 30%, rgba(255, 255, 255, 0.98) 0%, rgba(255, 255, 255, 0.45) 50%, transparent 85%)",
             filter: "blur(0.8px)",
           }}
         />
 
         {/* Sharp Studio Light Glint / Reflection Dot */}
-        <div className="absolute top-4 left-6 w-3 h-2.5 rounded-full bg-white/95 blur-[0.4px] shadow-[0_0_8px_rgba(255,255,255,0.9)]" />
+        <div className="absolute top-4 left-6 w-3.5 h-3 rounded-full bg-white blur-[0.3px] shadow-[0_0_10px_#ffffff]" />
 
         {/* Secondary Soft Caustic Gleam (Bottom-Right) */}
         <div
-          className="absolute bottom-2.5 right-3 w-[52px] h-[26px] rounded-full rotate-25 pointer-events-none"
+          className="absolute bottom-2.5 right-3 w-[56px] h-[28px] rounded-full rotate-25 pointer-events-none"
           style={{
             background:
-              "radial-gradient(ellipse at 50% 70%, rgba(147, 197, 253, 0.55) 0%, rgba(244, 114, 182, 0.3) 60%, transparent 90%)",
+              "radial-gradient(ellipse at 50% 70%, rgba(147, 197, 253, 0.65) 0%, rgba(244, 114, 182, 0.38) 60%, transparent 90%)",
             filter: "blur(1.2px)",
           }}
         />

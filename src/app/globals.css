@@ -298,6 +298,9 @@ a.pos-link:hover {
   #printable-receipt,
   #printable-receipt * {
     visibility: visible;
+    color: #000000 !important;
+    background: #FFFFFF !important;
+    border-color: #CBD5E1 !important;
   }
   #printable-receipt {
     position: absolute;
@@ -440,7 +443,7 @@ a.pos-link:hover {
 }
 
 /* Automatic Dark Surface Overrides: Eliminates ALL white boxes and light panels */
-.dark .bg-white:not(img):not(svg):not(canvas):not([data-keep-white]):not(#printable-receipt):not(#printable-receipt *),
+.dark .bg-white:not(img):not(svg):not(canvas):not([data-keep-white]),
 .dark .bg-white\/95:not(img):not(svg):not(canvas),
 .dark .bg-white\/90:not(img):not(svg):not(canvas),
 .dark .bg-white\/80:not(img):not(svg):not(canvas),
