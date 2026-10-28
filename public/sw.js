@@ -1,6 +1,9 @@
-// =============================================================================
-// HOSTEL CANTEEN POS & STUDENT PORTAL — SERVICE WORKER FOR WEB PUSH NOTIFICATIONS
-// =============================================================================
+// ==============================================================================
+// HOSTEL CANTEEN — UNIFIED WEB PUSH & FIREBASE CLOUD MESSAGING (FCM) SERVICE WORKER
+// ==============================================================================
+
+importScripts("https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js");
+importScripts("https://www.gstatic.com/firebasejs/10.12.0/firebase-messaging-compat.js");
 
 self.addEventListener("install", (event) => {
   self.skipWaiting();
@@ -10,71 +13,118 @@ self.addEventListener("activate", (event) => {
   event.waitUntil(self.clients.claim());
 });
 
-self.addEventListener("push", (event) => {
-  let title = "Hostel Canteen";
-  let options = {
-    body: "You have a new update from Hostel Canteen.",
-    icon: "/logo.svg",
-    badge: "/logo.svg",
-    vibrate: [200, 100, 200, 100, 200],
-    data: { url: "/" },
-    tag: "hostel-canteen-" + Date.now(),
-    renotify: true,
-    requireInteraction: true,
-  };
+let isFirebaseInitialized = false;
 
-  if (event.data) {
-    try {
-      const payload = event.data.json();
-      title = payload.title || title;
-      options.body = payload.body || options.body;
-      if (payload.icon) options.icon = payload.icon;
-      if (payload.badge) options.badge = payload.badge;
-      if (payload.tag) options.tag = payload.tag;
-      if (payload.data && typeof payload.data === "object") {
-        options.data = payload.data;
-      } else if (payload.url) {
-        options.data = { url: payload.url };
-      }
-      if (payload.actions && Array.isArray(payload.actions)) {
-        options.actions = payload.actions;
-      }
-    } catch (err) {
-      try {
-        const text = event.data.text();
-        if (text) options.body = text;
-      } catch {
-        // fallback to default options
-      }
-    }
+function initFirebaseInSW(config) {
+  if (isFirebaseInitialized || !config || !config.apiKey || !config.projectId) {
+    return;
   }
+  try {
+    firebase.initializeApp(config);
+    isFirebaseInitialized = true;
+    const messaging = firebase.messaging();
 
-  event.waitUntil(self.registration.showNotification(title, options));
+    messaging.onBackgroundMessage((payload) => {
+      if (payload.notification) {
+        return;
+      }
+
+      const title = (payload.data && payload.data.title) || "Hostel Canteen";
+      const options = {
+        body: (payload.data && payload.data.body) || "New notification from Hostel Canteen",
+        icon: (payload.data && payload.data.icon) || "/logo.svg",
+        badge: (payload.data && payload.data.badge) || "/logo.svg",
+        vibrate: [200, 100, 200, 100, 200],
+        data: {
+          url: (payload.data && payload.data.url) || "/customer",
+        },
+        tag: (payload.data && payload.data.tag) || `fcm-${Date.now()}`,
+        renotify: true,
+        requireInteraction: true,
+      };
+
+      self.registration.showNotification(title, options);
+    });
+  } catch (err) {
+    console.warn("[sw] Firebase init error:", err);
+  }
+}
+
+fetch("/api/firebase/config")
+  .then((res) => res.json())
+  .then((data) => {
+    if (data && data.configured && data.config) {
+      initFirebaseInSW(data.config);
+    }
+  })
+  .catch(() => undefined);
+
+self.addEventListener("message", (event) => {
+  if (event.data && event.data.type === "INIT_FIREBASE_CONFIG") {
+    initFirebaseInSW(event.data.config);
+  }
+});
+
+self.addEventListener("push", (event) => {
+  if (!event.data) return;
+
+  try {
+    const rawText = event.data.text();
+    let payload = null;
+    try {
+      payload = JSON.parse(rawText);
+    } catch {
+      payload = { body: rawText };
+    }
+
+    if (payload.from && payload.fcmMessageId && payload.notification) {
+      return;
+    }
+
+    const title = payload.title || "Hostel Canteen";
+    const options = {
+      body: payload.body || "You have a new update from Hostel Canteen.",
+      icon: payload.icon || "/logo.svg",
+      badge: payload.badge || "/logo.svg",
+      vibrate: [200, 100, 200, 100, 200],
+      data: payload.data || { url: payload.url || "/" },
+      tag: payload.tag || `hc-push-${Date.now()}`,
+      renotify: true,
+      requireInteraction: true,
+    };
+
+    event.waitUntil(self.registration.showNotification(title, options));
+  } catch (err) {
+    console.warn("[sw] Push display error:", err);
+  }
 });
 
 self.addEventListener("notificationclick", (event) => {
   event.notification.close();
 
-  const targetUrl =
-    (event.notification.data && event.notification.data.url) || "/";
+  const clickUrl =
+    (event.notification.data && event.notification.data.url) ||
+    (event.notification.data &&
+      event.notification.data.FCM_MSG &&
+      event.notification.data.FCM_MSG.data &&
+      event.notification.data.FCM_MSG.data.url) ||
+    "/";
 
   event.waitUntil(
-    self.clients
-      .matchAll({ type: "window", includeUncontrolled: true })
-      .then((clientList) => {
-        for (const client of clientList) {
-          if ("focus" in client) {
-            client.focus();
-            if (client.url && "navigate" in client) {
-              return client.navigate(targetUrl);
-            }
-            return;
+    self.clients.matchAll({ type: "window", includeUncontrolled: true }).then((clientList) => {
+      for (const client of clientList) {
+        if ("focus" in client) {
+          client.focus();
+          if (client.url && "navigate" in client) {
+            return client.navigate(clickUrl);
           }
+          return;
         }
-        if (self.clients.openWindow) {
-          return self.clients.openWindow(targetUrl);
-        }
-      })
+      }
+      if (self.clients.openWindow) {
+        return self.clients.openWindow(clickUrl);
+      }
+    })
   );
 });
 
