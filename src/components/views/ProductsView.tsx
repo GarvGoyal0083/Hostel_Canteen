@@ -13,7 +13,7 @@ import {
   Package,
   ImageIcon,
 } from "lucide-react";
-import { Product } from "@/types/pos";
+import { Product, isServiceProduct } from "@/types/pos";
 import {
   downloadCSV,
   downloadRawCSV,
@@ -457,15 +457,21 @@ export function ProductsView({
                       </span>
                     </td>
                     <td className="px-4 py-3 text-center">
-                      <div className="flex flex-col items-center gap-0.5">
-                        <StockStatusBadge
-                          quantity={p.stock_quantity}
-                          minLevel={p.min_stock_level}
-                        />
-                        <span className="text-[10px] text-gray-500">
-                          Min Alert: {p.min_stock_level}
+                      {isServiceProduct(p) ? (
+                        <span className="inline-flex items-center gap-1 rounded-full bg-blue-50 dark:bg-blue-950/60 border border-blue-200 dark:border-blue-800 px-2.5 py-0.5 text-[10px] font-bold text-blue-700 dark:text-blue-300 shadow-2xs">
+                          Service (No Stock)
                         </span>
-                      </div>
+                      ) : (
+                        <div className="flex flex-col items-center gap-0.5">
+                          <StockStatusBadge
+                            quantity={p.stock_quantity}
+                            minLevel={p.min_stock_level}
+                          />
+                          <span className="text-[10px] text-gray-500">
+                            Min Alert: {p.min_stock_level}
+                          </span>
+                        </div>
+                      )}
                     </td>
                     <td className="px-4 py-3 text-[11px] text-gray-600">
                       <div>{p.supplier_name || "—"}</div>
@@ -476,12 +482,14 @@ export function ProductsView({
                     </td>
                     <td className="px-4 py-3 text-right">
                       <div className="inline-flex items-center gap-1.5">
-                        <button
-                          onClick={() => onNavigateToInventory(p.id)}
-                          className="rounded-md bg-[#EFF6FF] px-2.5 py-1 text-xs font-semibold text-[#2563EB] hover:bg-blue-100 transition cursor-pointer"
-                        >
-                          Update Stock
-                        </button>
+                        {!isServiceProduct(p) && (
+                          <button
+                            onClick={() => onNavigateToInventory(p.id)}
+                            className="rounded-md bg-[#EFF6FF] dark:bg-blue-950/60 border border-transparent dark:border-blue-800 px-2.5 py-1 text-xs font-semibold text-[#2563EB] dark:text-blue-300 hover:bg-blue-100 transition cursor-pointer"
+                          >
+                            Update Stock
+                          </button>
+                        )}
                         <button
                           onClick={() => openEditModal(p)}
                           className="rounded-md border border-gray-300 bg-white p-1.5 text-gray-700 hover:bg-gray-100 transition cursor-pointer"

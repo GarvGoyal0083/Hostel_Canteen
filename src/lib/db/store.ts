@@ -22,6 +22,7 @@ import {
   SaleItem,
   SaleRecord,
   StockMovementType,
+  isServiceProduct,
 } from "@/types/pos";
 import {
   createCleanProductionDatabase,
@@ -114,6 +115,29 @@ function ensureDataDir(): void {
   }
 }
 
+function sanitizeLoadedDatabase(parsed: DatabaseSchema): DatabaseSchema {
+  if (!Array.isArray(parsed.push_subscriptions)) {
+    parsed.push_subscriptions = [];
+  }
+  // Sanitize service products (e.g. Room Delivery Charge): services do not hold physical stock
+  if (Array.isArray(parsed.products)) {
+    for (const p of parsed.products) {
+      if (isServiceProduct(p)) {
+        p.is_service = true;
+        p.stock_quantity = 0;
+        p.min_stock_level = 0;
+      }
+    }
+  }
+  // Purge any historical inventory movements for services so physical stock ledgers stay 100% clean
+  if (Array.isArray(parsed.inventory_movements)) {
+    parsed.inventory_movements = parsed.inventory_movements.filter(
+      (m) => !isServiceProduct({ id: m.product_id, sku: m.sku_snapshot })
+    );
+  }
+  return parsed;
+}
+
 export function readDatabase(): DatabaseSchema {
   ensureDataDir();
   if (!fs.existsSync(DB_FILE_PATH)) {
@@ -126,10 +150,7 @@ export function readDatabase(): DatabaseSchema {
       if (fs.existsSync(candidate)) {
         try {
           const raw = fs.readFileSync(candidate, "utf8");
-          const parsed = JSON.parse(raw) as DatabaseSchema;
-          if (!Array.isArray(parsed.push_subscriptions)) {
-            parsed.push_subscriptions = [];
-          }
+          const parsed = sanitizeLoadedDatabase(JSON.parse(raw) as DatabaseSchema);
           writeDatabase(parsed);
           return parsed;
         } catch {
@@ -146,20 +167,18 @@ export function readDatabase(): DatabaseSchema {
     const initial = seedDev
       ? createDevelopmentSampleDatabase()
       : createCleanProductionDatabase();
+    sanitizeLoadedDatabase(initial);
     writeDatabase(initial);
     return initial;
   }
 
   try {
     const raw = fs.readFileSync(DB_FILE_PATH, "utf8");
-    const parsed = JSON.parse(raw) as DatabaseSchema;
-    if (!Array.isArray(parsed.push_subscriptions)) {
-      parsed.push_subscriptions = [];
-    }
+    const parsed = sanitizeLoadedDatabase(JSON.parse(raw) as DatabaseSchema);
     return parsed;
   } catch (err) {
     console.warn(`[store] Failed to parse ${DB_FILE_PATH}, falling back to default seed:`, err);
-    const initial = createDevelopmentSampleDatabase();
+    const initial = sanitizeLoadedDatabase(createDevelopmentSampleDatabase());
     try {
       writeDatabase(initial);
     } catch {
@@ -500,6 +519,11 @@ export async function recordStockMovement(
     if (prodIdx === -1) throw new Error("Product not found.");
 
     const product = db.products[prodIdx];
+    if (isServiceProduct(product)) {
+      throw new Error(
+        `Cannot record stock movements for "${product.name}". Services do not have physical inventory stock.`
+      );
+    }
     const rawQty = Math.floor(Math.abs(Number(input.quantity)));
     if (!Number.isFinite(rawQty) || rawQty <= 0) {
       throw new Error("Stock movement quantity must be a positive whole number.");
@@ -609,7 +633,9 @@ export function listInventoryMovements(filters?: {
   endDate?: string;
 }): InventoryMovement[] {
   const db = readDatabase();
-  let list = [...db.inventory_movements];
+  let list = db.inventory_movements.filter(
+    (m) => !isServiceProduct({ id: m.product_id, sku: m.sku_snapshot })
+  );
 
   if (filters?.product_id && filters.product_id !== "ALL") {
     list = list.filter((m) => m.product_id === filters.product_id);
@@ -649,7 +675,9 @@ export function listInventoryMovements(filters?: {
  */
 export function getProductStockSummaries(): ProductStockSummary[] {
   const db = readDatabase();
-  return db.products.map((product) => {
+  return db.products
+    .filter((product) => !isServiceProduct(product))
+    .map((product) => {
     const movs = db.inventory_movements.filter((m) => m.product_id === product.id);
 
     let opening = 0;
@@ -1143,8 +1171,15 @@ function recalculateSalePaymentSummary(db: DatabaseSchema, sale: SaleRecord): vo
 export const DELIVERY_PRODUCT_ID = "prod-room-delivery";
 
 export function ensureDeliveryProduct(db: DatabaseSchema): Product {
-  const existing = db.products.find((p) => p.id === DELIVERY_PRODUCT_ID);
-  if (existing) return existing;
+  const existing = db.products.find(
+    (p) => p.id === DELIVERY_PRODUCT_ID || p.sku === "SRV-DELIVERY"
+  );
+  if (existing) {
+    existing.is_service = true;
+    existing.stock_quantity = 0;
+    existing.min_stock_level = 0;
+    return existing;
+  }
 
   const nowIso = new Date().toISOString();
   const prod: Product = {
@@ -1155,9 +1190,10 @@ export function ensureDeliveryProduct(db: DatabaseSchema): Product {
     selling_price: 20,
     purchase_price: 0,
     estimated_unit_profit: 20,
-    stock_quantity: 999999,
+    stock_quantity: 0,
     min_stock_level: 0,
     is_active: true,
+    is_service: true,
     created_at: nowIso,
     updated_at: nowIso,
   };
@@ -1240,7 +1276,7 @@ export async function createSaleTransaction(
       if (!product.is_active) {
         throw new Error(`Product "${product.name}" is deactivated and cannot be sold.`);
       }
-      if (totalReqQty > product.stock_quantity) {
+      if (!isServiceProduct(product) && totalReqQty > product.stock_quantity) {
         throw new Error(
           `Insufficient stock for "${product.name}". Available: ${product.stock_quantity}, Requested: ${totalReqQty}.`
         );
@@ -1375,9 +1411,13 @@ export async function createSaleTransaction(
     // 7. Generate Unique Server-Side Bill ID (`HC-YYYYMMDD-NNN`)
     const billNumber = generateNextBillNumberInLock(db, new Date());
 
-    // 8. Atomically deduct inventory & log movements
+    // 8. Atomically deduct inventory & log movements (physical products only)
     for (const sItem of saleItems) {
       const product = db.products.find((p) => p.id === sItem.product_id)!;
+      if (isServiceProduct(product)) {
+        // Services (like Room Delivery Charge) do not hold physical stock or generate inventory movements
+        continue;
+      }
       const prevStock = product.stock_quantity;
       const newStock = prevStock - sItem.quantity;
       product.stock_quantity = newStock;
@@ -1893,7 +1933,7 @@ export async function cancelOrRefundSale(
 
         if (input.restock_items) {
           const product = db.products.find((p) => p.id === sItem.product_id);
-          if (product) {
+          if (product && !isServiceProduct(product)) {
             const prevStock = product.stock_quantity;
             const newStock = prevStock + remainingQty;
             product.stock_quantity = newStock;
@@ -1982,7 +2022,7 @@ export async function cancelOrRefundSale(
 
         if (input.restock_items) {
           const product = db.products.find((p) => p.id === sItem.product_id);
-          if (product) {
+          if (product && !isServiceProduct(product)) {
             const prevStock = product.stock_quantity;
             const newStock = prevStock + qtyToRefund;
             product.stock_quantity = newStock;
@@ -2464,8 +2504,9 @@ export function computeFinancialMetrics(filters?: {
     db.customers.reduce((acc, c) => acc + c.outstanding_dues, 0)
   );
 
-  // Inventory metrics
-  const activeProducts = db.products.filter((p) => p.is_active);
+  // Inventory metrics (physical products only; services like delivery do not have physical stock)
+  const physicalProducts = db.products.filter((p) => !isServiceProduct(p));
+  const activeProducts = physicalProducts.filter((p) => p.is_active);
   const currentInventoryValue = round2(
     activeProducts.reduce(
       (acc, p) => acc + p.stock_quantity * p.purchase_price,
@@ -2658,7 +2699,7 @@ export function computeFinancialMetrics(filters?: {
       pending_payments_amount: totalPendingPaymentsAmount,
       pending_bills_count: pendingBills.length,
       customer_udhaar_total: totalCustomerUdhaar,
-      total_products: db.products.length,
+      total_products: physicalProducts.length,
       active_products: activeProducts.length,
       current_inventory_value: currentInventoryValue,
       current_retail_inventory_value: currentRetailInventoryValue,
@@ -3199,7 +3240,7 @@ export async function editExecutiveSale(
         throw new Error(`Product "${product.name}" is deactivated and cannot be sold.`);
       }
       const available = product.stock_quantity + alreadyOnBill;
-      if (qty > available) {
+      if (!isServiceProduct(product) && qty > available) {
         throw new Error(
           `Insufficient stock for "${product.name}". Available: ${available}, Requested: ${qty}.`
         );
@@ -3240,7 +3281,7 @@ export async function editExecutiveSale(
     // 4. Put the old items back into stock
     for (const [productId, qty] of oldQtyByProduct.entries()) {
       const product = db.products.find((p) => p.id === productId);
-      if (!product) continue;
+      if (!product || isServiceProduct(product)) continue;
       const prev = product.stock_quantity;
       product.stock_quantity = prev + qty;
       product.updated_at = nowIso;
@@ -3297,25 +3338,27 @@ export async function editExecutiveSale(
         created_at: sale.created_at,
       });
 
-      // 6. Deduct the new quantities
-      const prev = product.stock_quantity;
-      product.stock_quantity = prev - qty;
-      product.updated_at = nowIso;
-      db.inventory_movements.unshift({
-        id: `mov-${crypto.randomUUID().slice(0, 12)}`,
-        product_id: product.id,
-        product_name_snapshot: product.name,
-        sku_snapshot: product.sku,
-        movement_type: "SALE",
-        quantity_change: -qty,
-        previous_stock: prev,
-        new_stock: product.stock_quantity,
-        unit_cost: purchasePrice,
-        reference_id: sale.bill_number,
-        reason: `Sold in Bill ${sale.bill_number} (edited by ${executive.full_name})`,
-        recorded_by: executive.full_name,
-        created_at: nowIso,
-      });
+      // 6. Deduct the new quantities (physical products only)
+      if (!isServiceProduct(product)) {
+        const prev = product.stock_quantity;
+        product.stock_quantity = prev - qty;
+        product.updated_at = nowIso;
+        db.inventory_movements.unshift({
+          id: `mov-${crypto.randomUUID().slice(0, 12)}`,
+          product_id: product.id,
+          product_name_snapshot: product.name,
+          sku_snapshot: product.sku,
+          movement_type: "SALE",
+          quantity_change: -qty,
+          previous_stock: prev,
+          new_stock: product.stock_quantity,
+          unit_cost: purchasePrice,
+          reference_id: sale.bill_number,
+          reason: `Sold in Bill ${sale.bill_number} (edited by ${executive.full_name})`,
+          recorded_by: executive.full_name,
+          created_at: nowIso,
+        });
+      }
     }
 
     // 7. Update the sale and student dues

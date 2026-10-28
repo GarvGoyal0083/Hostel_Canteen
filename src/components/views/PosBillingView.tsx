@@ -24,6 +24,7 @@ import {
   PaymentMethod,
   Product,
   SaleRecord,
+  isServiceProduct,
 } from "@/types/pos";
 import { formatINR, round2 } from "@/lib/format";
 import { PaymentStatusBadge, StockStatusBadge } from "@/components/StatusBadge";
@@ -258,7 +259,7 @@ export function PosBillingView({
   // Add product to cart with 1 click
   const handleAddToCart = (product: Product) => {
     setErrorMsg(null);
-    if (product.stock_quantity <= 0) {
+    if (!isServiceProduct(product) && product.stock_quantity <= 0) {
       setErrorMsg(`"${product.name}" is out of stock (0 available).`);
       return;
     }
@@ -278,7 +279,7 @@ export function PosBillingView({
         ];
       }
       const existing = prev[idx];
-      if (existing.quantity + 1 > product.stock_quantity) {
+      if (!isServiceProduct(product) && existing.quantity + 1 > product.stock_quantity) {
         setErrorMsg(
           `Cannot add more "${product.name}". Only ${product.stock_quantity} available in stock.`
         );
@@ -298,7 +299,7 @@ export function PosBillingView({
           if (item.product.id !== productId) return item;
           const nextQty = item.quantity + delta;
           if (nextQty <= 0) return null;
-          if (nextQty > item.product.stock_quantity) {
+          if (!isServiceProduct(item.product) && nextQty > item.product.stock_quantity) {
             setErrorMsg(
               `Maximum available stock for "${item.product.name}" is ${item.product.stock_quantity}.`
             );
@@ -587,7 +588,7 @@ export function PosBillingView({
           ) : (
             filteredProducts.map((product) => {
               const inCartItem = cart.find((c) => c.product.id === product.id);
-              const isOutOfStock = product.stock_quantity <= 0;
+              const isOutOfStock = !isServiceProduct(product) && product.stock_quantity <= 0;
               const isSelected = Boolean(inCartItem);
 
               return (
@@ -642,10 +643,16 @@ export function PosBillingView({
                     <span className="text-base font-black text-[#111827]">
                       {formatINR(product.selling_price)}
                     </span>
-                    <StockStatusBadge
-                      quantity={product.stock_quantity}
-                      minLevel={product.min_stock_level}
-                    />
+                    {isServiceProduct(product) ? (
+                      <span className="inline-flex items-center gap-1 rounded-full bg-blue-50 dark:bg-blue-950/60 border border-blue-200 dark:border-blue-800 px-2 py-0.5 text-[10px] font-bold text-blue-700 dark:text-blue-300">
+                        Service
+                      </span>
+                    ) : (
+                      <StockStatusBadge
+                        quantity={product.stock_quantity}
+                        minLevel={product.min_stock_level}
+                      />
+                    )}
                   </div>
                 </button>
               );
@@ -714,8 +721,10 @@ export function PosBillingView({
                         {item.product.name}
                       </div>
                       <div className="text-[11px] text-gray-500">
-                        {formatINR(item.product.selling_price)} each • Stock:{" "}
-                        {item.product.stock_quantity}
+                        {formatINR(item.product.selling_price)} each •{" "}
+                        {isServiceProduct(item.product)
+                          ? "Service Fee"
+                          : `Stock: ${item.product.stock_quantity}`}
                       </div>
                     </div>
 

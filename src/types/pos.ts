@@ -46,8 +46,24 @@ export interface Product {
   expiry_date?: string | null; // YYYY-MM-DD
   batch_info?: string | null;
   is_active: boolean;
+  is_service?: boolean; // Services (e.g. Room Delivery Charge) do not have physical inventory or stock deductions
   created_at: string;
   updated_at: string;
+}
+
+export function isServiceProduct(product?: {
+  id?: string;
+  sku?: string;
+  category?: string;
+  is_service?: boolean;
+} | null): boolean {
+  if (!product) return false;
+  return Boolean(
+    product.is_service === true ||
+    product.id === "prod-room-delivery" ||
+    product.sku === "SRV-DELIVERY" ||
+    product.category === "Delivery Service"
+  );
 }
 
 export type StockMovementType =
@@ -87,6 +103,7 @@ export interface ProductStockSummary {
   sku: string;
   category: string;
   is_active: boolean;
+  is_service?: boolean;
   opening_stock: number;
   purchases: number;
   sales: number;

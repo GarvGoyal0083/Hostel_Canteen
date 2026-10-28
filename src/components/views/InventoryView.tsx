@@ -16,6 +16,7 @@ import {
   Product,
   ProductStockSummary,
   StockMovementType,
+  isServiceProduct,
 } from "@/types/pos";
 import {
   downloadCSV,
@@ -78,12 +79,31 @@ export function InventoryView({
     expiry_date: "",
   });
 
+  // Services (like Room Delivery Charge) do not carry physical inventory stock
+  const physicalSummaries = useMemo(
+    () => summaries.filter((s) => !isServiceProduct(s)),
+    [summaries]
+  );
+
+  const physicalMovements = useMemo(
+    () =>
+      movements.filter(
+        (m) => !isServiceProduct({ id: m.product_id, sku: m.sku_snapshot })
+      ),
+    [movements]
+  );
+
+  const physicalProducts = useMemo(
+    () => products.filter((p) => !isServiceProduct(p)),
+    [products]
+  );
+
   const openUpdateStockModal = (
     productId?: string,
     defaultType: StockMovementType = "PURCHASE"
   ) => {
     const targetProd =
-      products.find((p) => p.id === productId) || products[0] || null;
+      physicalProducts.find((p) => p.id === productId) || physicalProducts[0] || null;
     setErrorMsg(null);
     setForm({
       product_id: targetProd?.id || "",
@@ -106,17 +126,17 @@ export function InventoryView({
   };
 
   const totalInventoryCostValue = useMemo(
-    () => round2(summaries.reduce((acc, s) => acc + s.inventory_value, 0)),
-    [summaries]
+    () => round2(physicalSummaries.reduce((acc, s) => acc + s.inventory_value, 0)),
+    [physicalSummaries]
   );
 
   const totalClosingUnits = useMemo(
-    () => summaries.reduce((acc, s) => acc + s.closing_stock, 0),
-    [summaries]
+    () => physicalSummaries.reduce((acc, s) => acc + s.closing_stock, 0),
+    [physicalSummaries]
   );
 
   const filteredSummaries = useMemo(() => {
-    return summaries.filter((s) => {
+    return physicalSummaries.filter((s) => {
       if (productFilter !== "ALL" && s.product_id !== productFilter) {
         return false;
       }
@@ -130,10 +150,10 @@ export function InventoryView({
       }
       return true;
     });
-  }, [summaries, productFilter, searchQuery]);
+  }, [physicalSummaries, productFilter, searchQuery]);
 
   const filteredMovements = useMemo(() => {
-    return movements.filter((m) => {
+    return physicalMovements.filter((m) => {
       if (productFilter !== "ALL" && m.product_id !== productFilter) {
         return false;
       }
@@ -390,7 +410,7 @@ export function InventoryView({
             {totalClosingUnits} Units
           </span>
           <span className="text-[11px] text-slate-500">
-            Across {summaries.length} products
+            Across {physicalSummaries.length} products
           </span>
         </div>
 
@@ -399,7 +419,7 @@ export function InventoryView({
             Low Stock Products
           </span>
           <span className="text-2xl font-black text-amber-600 mt-1 block">
-            {summaries.filter((s) => s.stock_status === "LOW_STOCK").length}
+            {physicalSummaries.filter((s) => s.stock_status === "LOW_STOCK").length}
           </span>
           <span className="text-[11px] text-slate-500">
             At or below minimum alert level
@@ -411,7 +431,7 @@ export function InventoryView({
             Out-of-Stock Products
           </span>
           <span className="text-2xl font-black text-red-600 mt-1 block">
-            {summaries.filter((s) => s.stock_status === "OUT_OF_STOCK").length}
+            {physicalSummaries.filter((s) => s.stock_status === "OUT_OF_STOCK").length}
           </span>
           <span className="text-[11px] text-slate-500">
             Blocked from POS sales until restocked
@@ -464,7 +484,7 @@ export function InventoryView({
             className="rounded-lg border border-gray-300 bg-white px-2.5 py-1.5 text-xs text-[#111827]"
           >
             <option value="ALL">All Products</option>
-            {products.map((p) => (
+            {physicalProducts.map((p) => (
               <option key={p.id} value={p.id}>
                 {p.name} ({p.sku})
               </option>
@@ -728,7 +748,7 @@ export function InventoryView({
                   }}
                   className="w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-[#111827]"
                 >
-                  {products.map((p) => (
+                  {physicalProducts.map((p) => (
                     <option key={p.id} value={p.id}>
                       {p.name} ({p.sku}) — Current Stock: {p.stock_quantity}
                     </option>
