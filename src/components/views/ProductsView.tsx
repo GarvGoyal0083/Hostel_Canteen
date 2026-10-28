@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useMemo } from "react";
+import React, { useState, useMemo, useRef } from "react";
 import {
   Plus,
   Search,
@@ -12,6 +12,11 @@ import {
   CheckCircle2,
   Package,
   ImageIcon,
+  Camera,
+  Upload,
+  RotateCcw,
+  SwitchCamera,
+  Trash2,
 } from "lucide-react";
 import { Product, isServiceProduct } from "@/types/pos";
 import {
@@ -50,6 +55,36 @@ const PRESET_PRODUCT_IMAGES = [
   { name: "KitKat", url: "/products/kitkat.jpg" },
 ];
 
+function processImageFile(file: File, maxSide = 640): Promise<string> {
+  return new Promise((resolve, reject) => {
+    if (!file.type.startsWith("image/")) {
+      reject(new Error("Please upload a valid image file."));
+      return;
+    }
+    const reader = new FileReader();
+    reader.onerror = () => reject(new Error("Failed to read image file."));
+    reader.onload = () => {
+      const img = new Image();
+      img.onerror = () => reject(new Error("Failed to process image."));
+      img.onload = () => {
+        const scale = Math.min(1, maxSide / Math.max(img.width, img.height));
+        const canvas = document.createElement("canvas");
+        canvas.width = Math.round(img.width * scale);
+        canvas.height = Math.round(img.height * scale);
+        const ctx = canvas.getContext("2d");
+        if (!ctx) {
+          resolve(reader.result as string);
+          return;
+        }
+        ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+        resolve(canvas.toDataURL("image/jpeg", 0.85));
+      };
+      img.src = reader.result as string;
+    };
+    reader.readAsDataURL(file);
+  });
+}
+
 interface ProductsViewProps {
   products: Product[];
   onRefresh: () => void;
@@ -69,6 +104,19 @@ export function ProductsView({
   const [editingProduct, setEditingProduct] = useState<Product | null>(null);
   const [submitting, setSubmitting] = useState(false);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
+
+  // File upload and camera capture state
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const cameraInputRef = useRef<HTMLInputElement>(null);
+  const cameraVideoRef = useRef<HTMLVideoElement>(null);
+  const cameraStreamRef = useRef<MediaStream | null>(null);
+
+  const [cameraModalOpen, setCameraModalOpen] = useState(false);
+  const [facingMode, setFacingMode] = useState<"environment" | "user">("environment");
+  const [capturedPreview, setCapturedPreview] = useState<string | null>(null);
+  const [cameraLoading, setCameraLoading] = useState(false);
+  const [cameraError, setCameraError] = useState<string | null>(null);
+  const [processingImage, setProcessingImage] = useState(false);
 
   const [form, setForm] = useState({
     name: "",
@@ -114,6 +162,106 @@ export function ProductsView({
     const sell = parseFloat(form.selling_price) || 0;
     return round2(sell - buy);
   }, [form.purchase_price, form.selling_price]);
+
+  const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setProcessingImage(true);
+    try {
+      const dataUrl = await processImageFile(file, 640);
+      setForm((p) => ({ ...p, image_url: dataUrl }));
+    } catch (err) {
+      setErrorMsg(
+        err instanceof Error ? err.message : "Failed to load image file."
+      );
+    } finally {
+      setProcessingImage(false);
+      if (e.target) e.target.value = "";
+    }
+  };
+
+  const startCamera = async (mode: "environment" | "user" = facingMode) => {
+    setCameraError(null);
+    setCameraLoading(true);
+    setCapturedPreview(null);
+    if (cameraStreamRef.current) {
+      cameraStreamRef.current.getTracks().forEach((t) => t.stop());
+      cameraStreamRef.current = null;
+    }
+    setCameraModalOpen(true);
+    try {
+      if (!navigator.mediaDevices?.getUserMedia) {
+        throw new Error(
+          "Live camera is not supported in this browser. Opening device camera..."
+        );
+      }
+      const stream = await navigator.mediaDevices.getUserMedia({
+        video: {
+          facingMode: mode,
+          width: { ideal: 1280 },
+          height: { ideal: 720 },
+        },
+        audio: false,
+      });
+      cameraStreamRef.current = stream;
+      if (cameraVideoRef.current) {
+        cameraVideoRef.current.srcObject = stream;
+        await cameraVideoRef.current.play();
+      }
+    } catch (err) {
+      if (cameraInputRef.current) {
+        cameraInputRef.current.click();
+        setCameraModalOpen(false);
+      } else {
+        setCameraError(
+          err instanceof Error ? err.message : "Could not start camera."
+        );
+      }
+    } finally {
+      setCameraLoading(false);
+    }
+  };
+
+  const stopCamera = () => {
+    if (cameraStreamRef.current) {
+      cameraStreamRef.current.getTracks().forEach((t) => t.stop());
+      cameraStreamRef.current = null;
+    }
+    setCameraModalOpen(false);
+    setCapturedPreview(null);
+    setCameraError(null);
+  };
+
+  const capturePhoto = () => {
+    if (!cameraVideoRef.current) return;
+    const video = cameraVideoRef.current;
+    const maxSide = 640;
+    const w = video.videoWidth || 640;
+    const h = video.videoHeight || 480;
+    const scale = Math.min(1, maxSide / Math.max(w, h));
+
+    const canvas = document.createElement("canvas");
+    canvas.width = Math.round(w * scale);
+    canvas.height = Math.round(h * scale);
+    const ctx = canvas.getContext("2d");
+    if (!ctx) return;
+    ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+    const jpegUrl = canvas.toDataURL("image/jpeg", 0.85);
+    setCapturedPreview(jpegUrl);
+  };
+
+  const confirmCapturedPhoto = () => {
+    if (capturedPreview) {
+      setForm((p) => ({ ...p, image_url: capturedPreview }));
+    }
+    stopCamera();
+  };
+
+  const toggleCameraFacing = () => {
+    const nextMode = facingMode === "environment" ? "user" : "environment";
+    setFacingMode(nextMode);
+    startCamera(nextMode);
+  };
 
   const openAddModal = () => {
     setEditingProduct(null);
@@ -605,26 +753,28 @@ export function ProductsView({
                   </datalist>
                 </div>
 
-                {/* Product Image & Quick Presets */}
-                <div className="sm:col-span-2 space-y-2 rounded-xl bg-slate-50 border border-slate-200 p-3.5">
+                {/* Product Image, File Upload & Camera Options */}
+                <div className="sm:col-span-2 space-y-2.5 rounded-xl bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700/80 p-3.5">
                   <div className="flex items-center justify-between">
-                    <label className="font-bold text-[#111827] flex items-center gap-1.5 text-xs">
+                    <label className="font-bold text-[#111827] dark:text-slate-100 flex items-center gap-1.5 text-xs">
                       <ImageIcon className="h-4 w-4 text-[#2563EB]" />
-                      <span>Product Image (Local Path or Online URL)</span>
+                      <span>Product Image (Upload, Camera, URL or Preset)</span>
                     </label>
                     {form.image_url && (
                       <button
                         type="button"
                         onClick={() => setForm((p) => ({ ...p, image_url: "" }))}
-                        className="text-[10px] font-bold text-red-600 hover:underline cursor-pointer"
+                        className="text-[10px] font-bold text-red-600 hover:underline cursor-pointer flex items-center gap-1"
                       >
-                        Clear Image
+                        <Trash2 className="h-3 w-3" />
+                        Remove Image
                       </button>
                     )}
                   </div>
 
-                  <div className="flex items-center gap-3">
-                    <div className="h-14 w-14 shrink-0 rounded-xl border border-slate-200 bg-white flex items-center justify-center overflow-hidden p-1 shadow-inner">
+                  <div className="flex flex-col sm:flex-row items-center gap-3">
+                    {/* Image Preview Box */}
+                    <div className="h-20 w-20 shrink-0 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 flex items-center justify-center overflow-hidden p-1 shadow-inner relative group">
                       {form.image_url ? (
                         <img
                           src={form.image_url}
@@ -635,28 +785,98 @@ export function ProductsView({
                           }}
                         />
                       ) : (
-                        <Package className="h-6 w-6 text-slate-400 stroke-[1.5]" />
+                        <div className="flex flex-col items-center justify-center text-slate-400">
+                          <Package className="h-7 w-7 stroke-[1.5]" />
+                          <span className="text-[9px] mt-0.5">No Image</span>
+                        </div>
+                      )}
+                      {processingImage && (
+                        <div className="absolute inset-0 bg-black/60 flex items-center justify-center text-white text-[10px] font-bold">
+                          Resizing...
+                        </div>
                       )}
                     </div>
-                    <div className="flex-1">
-                      <input
-                        type="text"
-                        value={form.image_url}
-                        onChange={(e) =>
-                          setForm((p) => ({ ...p, image_url: e.target.value }))
-                        }
-                        placeholder="e.g. /products/kurkure.jpg or https://image-url..."
-                        className="w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-[#111827]"
-                      />
+
+                    {/* Action Buttons: Upload & Camera */}
+                    <div className="flex-1 w-full space-y-2">
+                      <div className="flex flex-wrap items-center gap-2">
+                        {/* Hidden inputs */}
+                        <input
+                          ref={fileInputRef}
+                          type="file"
+                          accept="image/*"
+                          onChange={handleFileChange}
+                          className="hidden"
+                        />
+                        <input
+                          ref={cameraInputRef}
+                          type="file"
+                          accept="image/*"
+                          capture="environment"
+                          onChange={handleFileChange}
+                          className="hidden"
+                        />
+
+                        {/* Upload Button */}
+                        <button
+                          type="button"
+                          onClick={() => fileInputRef.current?.click()}
+                          disabled={processingImage}
+                          className="flex-1 inline-flex items-center justify-center gap-1.5 rounded-xl border border-blue-200 dark:border-blue-800 bg-blue-50 dark:bg-blue-950/60 hover:bg-blue-100 dark:hover:bg-blue-900/60 px-3 py-2 text-xs font-bold text-blue-700 dark:text-blue-300 transition cursor-pointer shadow-2xs"
+                        >
+                          <Upload className="h-3.5 w-3.5" />
+                          <span>Upload Image</span>
+                        </button>
+
+                        {/* Take Photo Button */}
+                        <button
+                          type="button"
+                          onClick={() => startCamera()}
+                          disabled={processingImage}
+                          className="flex-1 inline-flex items-center justify-center gap-1.5 rounded-xl border border-emerald-200 dark:border-emerald-800 bg-emerald-50 dark:bg-emerald-950/60 hover:bg-emerald-100 dark:hover:bg-emerald-900/60 px-3 py-2 text-xs font-bold text-emerald-700 dark:text-emerald-300 transition cursor-pointer shadow-2xs"
+                        >
+                          <Camera className="h-3.5 w-3.5" />
+                          <span>Take Photo</span>
+                        </button>
+                      </div>
+
+                      {/* Manual URL Input */}
+                      <div className="relative">
+                        <input
+                          type="text"
+                          value={
+                            form.image_url.startsWith("data:")
+                              ? "[Captured/Uploaded Image Base64]"
+                              : form.image_url
+                          }
+                          readOnly={form.image_url.startsWith("data:")}
+                          onChange={(e) => {
+                            if (!form.image_url.startsWith("data:")) {
+                              setForm((p) => ({ ...p, image_url: e.target.value }));
+                            }
+                          }}
+                          placeholder="Or paste online URL (https://...)"
+                          className="w-full rounded-xl border border-gray-300 dark:border-slate-700 bg-white dark:bg-slate-800 px-3 py-1.5 text-xs text-[#111827] dark:text-slate-100 placeholder:text-slate-400"
+                        />
+                        {form.image_url.startsWith("data:") && (
+                          <button
+                            type="button"
+                            onClick={() => setForm((p) => ({ ...p, image_url: "" }))}
+                            className="absolute right-2 top-1.5 text-[10px] text-blue-600 dark:text-blue-400 hover:underline font-bold"
+                          >
+                            Change
+                          </button>
+                        )}
+                      </div>
                     </div>
                   </div>
 
                   {/* Quick Preset Selector */}
                   <div>
-                    <span className="text-[10px] font-extrabold uppercase tracking-wider text-slate-500 block mb-1.5">
-                      Select Online Preset Image:
+                    <span className="text-[10px] font-extrabold uppercase tracking-wider text-slate-500 dark:text-slate-400 block mb-1.5">
+                      Or Select Online Preset Image:
                     </span>
-                    <div className="flex items-center gap-1.5 flex-wrap max-h-28 overflow-y-auto pr-1">
+                    <div className="flex items-center gap-1.5 flex-wrap max-h-24 overflow-y-auto pr-1">
                       {PRESET_PRODUCT_IMAGES.map((preset) => (
                         <button
                           key={preset.url}
@@ -664,10 +884,10 @@ export function ProductsView({
                           onClick={() =>
                             setForm((p) => ({ ...p, image_url: preset.url }))
                           }
-                          className={`rounded-lg border px-2.5 py-1 text-[11px] font-bold transition cursor-pointer flex items-center gap-1.5 ${
+                          className={`rounded-lg border px-2 py-1 text-[11px] font-bold transition cursor-pointer flex items-center gap-1.5 ${
                             form.image_url === preset.url
-                              ? "bg-blue-100 border-blue-400 text-blue-800 shadow-2xs"
-                              : "bg-white border-slate-200 text-slate-700 hover:bg-slate-100"
+                              ? "bg-blue-100 dark:bg-blue-900/60 border-blue-400 dark:border-blue-700 text-blue-800 dark:text-blue-200 shadow-2xs"
+                              : "bg-white dark:bg-slate-800 border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700"
                           }`}
                         >
                           <img
@@ -821,11 +1041,14 @@ export function ProductsView({
                 </div>
               </div>
 
-              <div className="flex items-center justify-end gap-2 pt-3 border-t border-gray-200">
+              <div className="flex items-center justify-end gap-2 pt-3 border-t border-gray-200 dark:border-slate-800">
                 <button
                   type="button"
-                  onClick={() => setModalOpen(false)}
-                  className="rounded-lg border border-gray-300 bg-white px-4 py-2 text-xs font-semibold text-[#111827] hover:bg-gray-50 cursor-pointer"
+                  onClick={() => {
+                    stopCamera();
+                    setModalOpen(false);
+                  }}
+                  className="rounded-lg border border-gray-300 dark:border-slate-700 bg-white dark:bg-slate-800 px-4 py-2 text-xs font-semibold text-[#111827] dark:text-slate-300 hover:bg-gray-50 dark:hover:bg-slate-750 cursor-pointer"
                 >
                   Cancel
                 </button>
@@ -843,6 +1066,138 @@ export function ProductsView({
                 </button>
               </div>
             </form>
+          </div>
+        </div>
+      )}
+
+      {/* Live Camera Viewfinder Modal */}
+      {cameraModalOpen && (
+        <div className="fixed inset-0 z-60 flex items-center justify-center bg-black/85 backdrop-blur-sm p-4">
+          <div className="w-full max-w-md rounded-2xl bg-slate-900 border border-slate-800 shadow-2xl overflow-hidden flex flex-col text-slate-100 animate-in fade-in zoom-in-95 duration-150">
+            {/* Header */}
+            <div className="flex items-center justify-between px-4 py-3 border-b border-slate-800 bg-slate-950">
+              <div className="flex items-center gap-2">
+                <Camera className="h-4 w-4 text-emerald-400" />
+                <span className="text-xs font-bold text-white">
+                  Capture Product Photo
+                </span>
+              </div>
+              <button
+                type="button"
+                onClick={stopCamera}
+                className="p-1 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800 cursor-pointer"
+              >
+                <X className="h-4 w-4" />
+              </button>
+            </div>
+
+            {/* Video / Preview Viewport */}
+            <div className="relative aspect-4/3 w-full bg-black flex items-center justify-center overflow-hidden">
+              {capturedPreview ? (
+                <img
+                  src={capturedPreview}
+                  alt="Captured"
+                  className="h-full w-full object-contain"
+                />
+              ) : (
+                <video
+                  ref={cameraVideoRef}
+                  playsInline
+                  muted
+                  autoPlay
+                  className="h-full w-full object-cover"
+                />
+              )}
+
+              {/* Viewfinder Guide Overlay */}
+              {!capturedPreview && !cameraError && (
+                <div className="pointer-events-none absolute inset-6 border-2 border-dashed border-white/40 rounded-2xl flex items-center justify-center">
+                  <span className="text-[11px] font-semibold text-white/90 bg-black/60 px-3 py-1 rounded-full backdrop-blur-xs shadow-md">
+                    Align snack or drink inside frame
+                  </span>
+                </div>
+              )}
+
+              {cameraLoading && (
+                <div className="absolute inset-0 bg-black/70 flex items-center justify-center text-xs font-bold text-white gap-2">
+                  <Camera className="h-5 w-5 animate-spin text-emerald-400" />
+                  <span>Starting camera...</span>
+                </div>
+              )}
+
+              {cameraError && (
+                <div className="absolute inset-0 bg-black/90 flex flex-col items-center justify-center p-4 text-center text-xs text-red-400 gap-2">
+                  <AlertTriangle className="h-6 w-6 text-red-500" />
+                  <span>{cameraError}</span>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      stopCamera();
+                      cameraInputRef.current?.click();
+                    }}
+                    className="mt-2 px-3.5 py-1.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs cursor-pointer shadow-md"
+                  >
+                    Open Device Camera Directly
+                  </button>
+                </div>
+              )}
+            </div>
+
+            {/* Controls */}
+            <div className="p-4 bg-slate-950 border-t border-slate-800 flex items-center justify-between gap-3">
+              {capturedPreview ? (
+                <>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setCapturedPreview(null);
+                      startCamera(facingMode);
+                    }}
+                    className="flex-1 py-2.5 px-3 rounded-xl border border-slate-700 bg-slate-800 hover:bg-slate-700 text-xs font-bold text-slate-200 flex items-center justify-center gap-1.5 cursor-pointer"
+                  >
+                    <RotateCcw className="h-3.5 w-3.5" />
+                    <span>Retake</span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={confirmCapturedPhoto}
+                    className="flex-1 py-2.5 px-3 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-xs font-bold text-white flex items-center justify-center gap-1.5 cursor-pointer shadow-lg"
+                  >
+                    <CheckCircle2 className="h-3.5 w-3.5" />
+                    <span>Use Photo</span>
+                  </button>
+                </>
+              ) : (
+                <>
+                  <button
+                    type="button"
+                    onClick={toggleCameraFacing}
+                    className="p-2.5 rounded-xl border border-slate-800 bg-slate-900 hover:bg-slate-800 text-slate-300 text-xs font-bold flex items-center gap-1.5 cursor-pointer"
+                    title="Flip Camera (Front / Rear)"
+                  >
+                    <SwitchCamera className="h-4 w-4" />
+                    <span className="hidden sm:inline">Flip</span>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={capturePhoto}
+                    className="flex-1 py-2.5 px-4 rounded-xl bg-blue-600 hover:bg-blue-500 text-white text-xs font-extrabold flex items-center justify-center gap-2 cursor-pointer shadow-lg active:scale-95 transition"
+                  >
+                    <Camera className="h-4 w-4" />
+                    <span>Snap Photo</span>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={stopCamera}
+                    className="py-2.5 px-3 rounded-xl border border-slate-800 bg-slate-900 text-slate-400 hover:text-white text-xs font-bold cursor-pointer"
+                  >
+                    Cancel
+                  </button>
+                </>
+              )}
+            </div>
           </div>
         </div>
       )}
