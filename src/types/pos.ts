@@ -79,6 +79,11 @@ export type StockMovementType =
   | "SALE_CANCEL_RESTORE"
   | "SALE_REFUND_RESTORE";
 
+export type CostCalculationMode =
+  | "weighted_average"
+  | "latest_cost"
+  | "keep_previous";
+
 export interface InventoryMovement {
   id: string;
   product_id: string;

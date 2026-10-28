@@ -22,6 +22,7 @@ import {
   SaleItem,
   SaleRecord,
   StockMovementType,
+  CostCalculationMode,
   isServiceProduct,
 } from "@/types/pos";
 import {
@@ -505,8 +506,9 @@ export async function recordStockMovement(
     movement_type: StockMovementType;
     quantity: number; // positive integer representing units to add or deduct
     unit_cost?: number;
+    cost_calculation_mode?: CostCalculationMode;
     reference_id?: string;
-    reason: string;
+    reason?: string;
     supplier_name?: string;
     batch_info?: string;
     expiry_date?: string;
@@ -529,10 +531,11 @@ export async function recordStockMovement(
       throw new Error("Stock movement quantity must be a positive whole number.");
     }
 
-    const reason = (input.reason || "").trim();
-    if (!reason) {
-      throw new Error("A reason is required for all stock movements and adjustments.");
-    }
+    const defaultReason =
+      input.movement_type === "PURCHASE"
+        ? "Incoming wholesale stock purchase"
+        : `${input.movement_type} adjustment`;
+    const baseReason = (input.reason || "").trim() || defaultReason;
 
     const additiveTypes: StockMovementType[] = [
       "OPENING",
@@ -574,11 +577,39 @@ export async function recordStockMovement(
         ? round2(Number(input.unit_cost))
         : product.purchase_price;
 
+    let finalRecordedReason = baseReason;
+
     // Update product stock and purchase attributes if incoming purchase
     product.stock_quantity = newStock;
     if (input.movement_type === "PURCHASE" && unitCost > 0) {
-      product.purchase_price = unitCost;
-      product.estimated_unit_profit = round2(product.selling_price - unitCost);
+      const mode = input.cost_calculation_mode || "weighted_average";
+      const oldStock = Math.max(0, previousStock);
+      const oldCost = product.purchase_price > 0 ? product.purchase_price : unitCost;
+      const incomingQty = rawQty;
+
+      let finalCost = unitCost;
+      if (mode === "latest_cost") {
+        finalCost = unitCost;
+      } else if (mode === "keep_previous") {
+        finalCost = oldCost;
+      } else {
+        // "weighted_average":
+        // Formula: (oldStock * oldCost + incomingQty * unitCost) / (oldStock + incomingQty)
+        if (oldStock > 0 && oldStock + incomingQty > 0) {
+          finalCost = round2(
+            (oldStock * oldCost + incomingQty * unitCost) / (oldStock + incomingQty)
+          );
+        } else {
+          finalCost = unitCost;
+        }
+      }
+
+      if (oldCost !== finalCost && mode === "weighted_average") {
+        finalRecordedReason = `${baseReason} (Auto Avg Cost: ₹${oldCost} → ₹${finalCost})`;
+      }
+
+      product.purchase_price = finalCost;
+      product.estimated_unit_profit = round2(product.selling_price - finalCost);
     }
     if (input.supplier_name?.trim()) {
       product.supplier_name = input.supplier_name.trim();
@@ -602,7 +633,7 @@ export async function recordStockMovement(
       new_stock: newStock,
       unit_cost: unitCost,
       reference_id: input.reference_id?.trim() || null,
-      reason,
+      reason: finalRecordedReason,
       supplier_name: input.supplier_name?.trim() || product.supplier_name || null,
       batch_info: input.batch_info?.trim() || product.batch_info || null,
       recorded_by: adminName,
@@ -615,7 +646,7 @@ export async function recordStockMovement(
       entity_type: "INVENTORY",
       entity_id: movement.id,
       action: `STOCK_${input.movement_type}`,
-      summary: `${input.movement_type} on "${product.name}" (${signedDelta > 0 ? `+${signedDelta}` : signedDelta}): ${previousStock} -> ${newStock}. Reason: ${reason}`,
+      summary: `${input.movement_type} on "${product.name}" (${signedDelta > 0 ? `+${signedDelta}` : signedDelta}): ${previousStock} -> ${newStock}. Reason: ${finalRecordedReason}`,
       new_data: movement,
       performed_by: adminName,
     });

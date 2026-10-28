@@ -10,8 +10,15 @@ import {
   CheckCircle2,
   X,
   Layers,
+  Boxes,
+  Calculator,
+  ChevronDown,
+  ChevronUp,
+  Sparkles,
+  Plus,
 } from "lucide-react";
 import {
+  CostCalculationMode,
   InventoryMovement,
   Product,
   ProductStockSummary,
@@ -56,12 +63,14 @@ export function InventoryView({
   const [modalOpen, setModalOpen] = useState(Boolean(initialSelectedProductId));
   const [submitting, setSubmitting] = useState(false);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
+  const [showAdvancedFields, setShowAdvancedFields] = useState(false);
 
   const [form, setForm] = useState<{
     product_id: string;
     movement_type: StockMovementType;
     quantity: string;
     unit_cost: string;
+    cost_calculation_mode: CostCalculationMode;
     reference_id: string;
     reason: string;
     supplier_name: string;
@@ -72,8 +81,9 @@ export function InventoryView({
     movement_type: "PURCHASE",
     quantity: "12",
     unit_cost: "",
+    cost_calculation_mode: "weighted_average",
     reference_id: "",
-    reason: "Wholesale restock purchase",
+    reason: "",
     supplier_name: "",
     batch_info: "",
     expiry_date: "",
@@ -105,25 +115,84 @@ export function InventoryView({
     const targetProd =
       physicalProducts.find((p) => p.id === productId) || physicalProducts[0] || null;
     setErrorMsg(null);
+    setShowAdvancedFields(false);
     setForm({
       product_id: targetProd?.id || "",
       movement_type: defaultType,
       quantity: defaultType === "PURCHASE" ? "12" : "1",
       unit_cost: targetProd ? String(targetProd.purchase_price) : "",
+      cost_calculation_mode: "weighted_average",
       reference_id:
         defaultType === "PURCHASE"
           ? `PO-${new Date().toISOString().slice(0, 10)}`
           : `ADJ-${Date.now().toString().slice(-5)}`,
-      reason:
-        defaultType === "PURCHASE"
-          ? "Incoming wholesale stock purchase"
-          : "",
+      reason: "",
       supplier_name: targetProd?.supplier_name || "",
       batch_info: targetProd?.batch_info || "",
       expiry_date: targetProd?.expiry_date || "",
     });
     setModalOpen(true);
   };
+
+  const selectedProduct = useMemo(
+    () => physicalProducts.find((p) => p.id === form.product_id),
+    [physicalProducts, form.product_id]
+  );
+
+  const purchaseCalculations = useMemo(() => {
+    if (!selectedProduct) return null;
+
+    const currentStock = Math.max(0, selectedProduct.stock_quantity);
+    const currentCost = selectedProduct.purchase_price || 0;
+    const incomingQty = parseInt(form.quantity, 10) || 0;
+    const incomingUnitCost = parseFloat(form.unit_cost) || 0;
+
+    const currentTotalValue = round2(currentStock * currentCost);
+    const incomingTotalValue = round2(incomingQty * incomingUnitCost);
+    const totalUnitsAfter = currentStock + incomingQty;
+
+    let weightedAvgCost = incomingUnitCost;
+    if (totalUnitsAfter > 0 && currentStock > 0 && incomingUnitCost > 0) {
+      weightedAvgCost = round2(
+        (currentTotalValue + incomingTotalValue) / totalUnitsAfter
+      );
+    } else if (incomingUnitCost > 0) {
+      weightedAvgCost = incomingUnitCost;
+    }
+
+    const priceChanged =
+      incomingUnitCost > 0 &&
+      currentCost > 0 &&
+      Math.abs(incomingUnitCost - currentCost) > 0.001;
+
+    const sellingPrice = selectedProduct.selling_price || 0;
+    const effectiveCost =
+      form.cost_calculation_mode === "latest_cost"
+        ? incomingUnitCost
+        : form.cost_calculation_mode === "keep_previous"
+        ? currentCost
+        : weightedAvgCost;
+
+    const estProfitPerUnit = round2(sellingPrice - effectiveCost);
+    const profitMarginPercent =
+      sellingPrice > 0 ? round2((estProfitPerUnit / sellingPrice) * 100) : 0;
+
+    return {
+      currentStock,
+      currentCost,
+      incomingQty,
+      incomingUnitCost,
+      currentTotalValue,
+      incomingTotalValue,
+      totalUnitsAfter,
+      weightedAvgCost,
+      priceChanged,
+      sellingPrice,
+      effectiveCost,
+      estProfitPerUnit,
+      profitMarginPercent,
+    };
+  }, [selectedProduct, form.quantity, form.unit_cost, form.cost_calculation_mode]);
 
   const totalInventoryCostValue = useMemo(
     () => round2(physicalSummaries.reduce((acc, s) => acc + s.inventory_value, 0)),
@@ -191,16 +260,19 @@ export function InventoryView({
       return;
     }
 
-    if (!form.reason.trim()) {
-      setErrorMsg("Please provide a reason for this stock update.");
-      return;
-    }
+    const finalReason =
+      form.reason.trim() ||
+      (form.movement_type === "PURCHASE"
+        ? form.supplier_name.trim()
+          ? `Stock purchase (${form.supplier_name.trim()})`
+          : "Incoming wholesale stock purchase"
+        : `${form.movement_type} adjustment`);
 
     // Confirm important stock deductions / adjustments
     if (form.movement_type !== "PURCHASE") {
       const targetProd = products.find((p) => p.id === form.product_id);
       const confirmed = window.confirm(
-        `Confirm ${form.movement_type} of ${qty} unit(s) for "${targetProd?.name || "Product"}"?\nReason: ${form.reason}`
+        `Confirm ${form.movement_type} of ${qty} unit(s) for "${targetProd?.name || "Product"}"?\nReason: ${finalReason}`
       );
       if (!confirmed) return;
     }
@@ -215,8 +287,9 @@ export function InventoryView({
           movement_type: form.movement_type,
           quantity: qty,
           unit_cost: form.unit_cost ? parseFloat(form.unit_cost) : undefined,
+          cost_calculation_mode: form.cost_calculation_mode,
           reference_id: form.reference_id || undefined,
-          reason: form.reason,
+          reason: finalReason,
           supplier_name: form.supplier_name || undefined,
           batch_info: form.batch_info || undefined,
           expiry_date: form.expiry_date || undefined,
@@ -703,15 +776,22 @@ export function InventoryView({
 
       {/* Update Stock / Record Purchase / Adjustment Modal */}
       {modalOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4 overflow-y-auto">
-          <div className="w-full max-w-lg rounded-xl bg-white border border-gray-200 shadow-xl overflow-hidden my-8">
-            <div className="flex items-center justify-between border-b border-gray-200 bg-[#F3F4F6] px-5 py-3.5">
-              <h3 className="text-base font-bold text-[#111827]">
-                Update Inventory Stock
-              </h3>
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-xs p-4 overflow-y-auto">
+          <div className="w-full max-w-lg rounded-2xl bg-white dark:bg-slate-900 border border-gray-200 dark:border-slate-800 shadow-2xl overflow-hidden my-6">
+            <div className="flex items-center justify-between border-b border-gray-200 dark:border-slate-800 bg-[#F3F4F6] dark:bg-slate-800/80 px-5 py-3.5">
+              <div>
+                <h3 className="text-base font-bold text-[#111827] dark:text-slate-100 flex items-center gap-2">
+                  <Boxes className="h-5 w-5 text-[#2563EB]" />
+                  Update Product Quantity & Price
+                </h3>
+                <p className="text-[11px] text-slate-500 dark:text-slate-400">
+                  Quick restock with automatic weighted average price calculation
+                </p>
+              </div>
               <button
+                type="button"
                 onClick={() => setModalOpen(false)}
-                className="rounded-lg p-1 text-gray-500 hover:bg-gray-200 cursor-pointer"
+                className="rounded-lg p-1.5 text-gray-500 hover:bg-gray-200 dark:hover:bg-slate-700 cursor-pointer"
               >
                 <X className="h-4 w-4" />
               </button>
@@ -722,14 +802,51 @@ export function InventoryView({
               className="p-5 space-y-4 text-xs"
             >
               {errorMsg && (
-                <div className="rounded-lg bg-red-50 border border-red-200 p-3 flex items-center gap-2 text-red-800">
+                <div className="rounded-xl bg-red-50 dark:bg-red-950/40 border border-red-200 dark:border-red-800 p-3 flex items-center gap-2 text-red-800 dark:text-red-200">
                   <AlertTriangle className="h-4 w-4 text-red-600 shrink-0" />
                   <span>{errorMsg}</span>
                 </div>
               )}
 
+              {/* Fast Mode Selector */}
+              <div className="grid grid-cols-2 gap-1.5 p-1 rounded-xl bg-slate-100 dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700/60">
+                <button
+                  type="button"
+                  onClick={() =>
+                    setForm((p) => ({ ...p, movement_type: "PURCHASE" }))
+                  }
+                  className={`flex items-center justify-center gap-1.5 py-2 px-3 rounded-lg text-xs font-bold transition cursor-pointer ${
+                    form.movement_type === "PURCHASE"
+                      ? "bg-[#2563EB] text-white shadow-xs"
+                      : "text-slate-700 dark:text-slate-300 hover:bg-slate-200/60 dark:hover:bg-slate-700"
+                  }`}
+                >
+                  <PackagePlus className="h-4 w-4" />
+                  + Purchase / Restock
+                </button>
+                <button
+                  type="button"
+                  onClick={() =>
+                    setForm((p) => ({
+                      ...p,
+                      movement_type:
+                        p.movement_type === "PURCHASE" ? "DAMAGED" : p.movement_type,
+                    }))
+                  }
+                  className={`flex items-center justify-center gap-1.5 py-2 px-3 rounded-lg text-xs font-bold transition cursor-pointer ${
+                    form.movement_type !== "PURCHASE"
+                      ? "bg-rose-600 text-white shadow-xs"
+                      : "text-slate-700 dark:text-slate-300 hover:bg-slate-200/60 dark:hover:bg-slate-700"
+                  }`}
+                >
+                  <AlertTriangle className="h-4 w-4" />
+                  - Deduct (Damage / Expiry)
+                </button>
+              </div>
+
+              {/* Product Selection */}
               <div>
-                <label className="font-semibold text-[#111827] block mb-1">
+                <label className="font-bold text-[#111827] dark:text-slate-100 block mb-1">
                   Select Product *
                 </label>
                 <select
@@ -746,7 +863,7 @@ export function InventoryView({
                       batch_info: prod?.batch_info || "",
                     }));
                   }}
-                  className="w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-[#111827]"
+                  className="w-full rounded-xl border border-gray-300 dark:border-slate-700 bg-white dark:bg-slate-800 px-3 py-2.5 text-xs font-semibold text-[#111827] dark:text-slate-100"
                 >
                   {physicalProducts.map((p) => (
                     <option key={p.id} value={p.id}>
@@ -756,163 +873,512 @@ export function InventoryView({
                 </select>
               </div>
 
-              <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-                <div>
-                  <label className="font-semibold text-[#111827] block mb-1">
-                    Stock Movement Type *
-                  </label>
-                  <select
-                    value={form.movement_type}
-                    onChange={(e) =>
-                      setForm((p) => ({
-                        ...p,
-                        movement_type: e.target.value as StockMovementType,
-                      }))
-                    }
-                    className="w-full rounded-lg border border-gray-300 bg-white px-3 py-2 font-semibold text-[#111827]"
-                  >
-                    <option value="PURCHASE">
-                      + Incoming Stock Purchase
-                    </option>
-                    <option value="ADJUSTMENT_ADD">
-                      + Manual Stock Addition (Audit)
-                    </option>
-                    <option value="DAMAGED">- Damaged Product Deduction</option>
-                    <option value="EXPIRED">- Expired Product Deduction</option>
-                    <option value="MISSING">- Missing Product Deduction</option>
-                    <option value="WASTED">- Wasted Product Deduction</option>
-                    <option value="ADJUSTMENT_SUB">
-                      - Manual Stock Deduction (Audit)
-                    </option>
-                  </select>
+              {/* Current Product Snapshot Chip */}
+              {selectedProduct && (
+                <div className="flex flex-wrap items-center justify-between gap-2 p-2.5 rounded-xl bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700/80 text-[11px]">
+                  <div className="flex items-center gap-1.5">
+                    <span className="font-bold text-slate-900 dark:text-slate-100">
+                      {selectedProduct.name}
+                    </span>
+                    <span className="font-mono text-blue-600 dark:text-blue-400">
+                      ({selectedProduct.sku})
+                    </span>
+                  </div>
+                  <div className="flex items-center gap-3">
+                    <span className="text-slate-500 dark:text-slate-400">
+                      In Stock:{" "}
+                      <strong className="text-slate-900 dark:text-slate-100 font-extrabold">
+                        {selectedProduct.stock_quantity} units
+                      </strong>
+                    </span>
+                    <span className="text-slate-500 dark:text-slate-400">
+                      Current Cost:{" "}
+                      <strong className="text-slate-900 dark:text-slate-100 font-extrabold">
+                        {formatINR(selectedProduct.purchase_price)}
+                      </strong>
+                    </span>
+                    <span className="text-slate-500 dark:text-slate-400">
+                      Selling Price:{" "}
+                      <strong className="text-emerald-700 dark:text-emerald-400 font-extrabold">
+                        {formatINR(selectedProduct.selling_price)}
+                      </strong>
+                    </span>
+                  </div>
                 </div>
+              )}
 
-                <div>
-                  <label className="font-semibold text-[#111827] block mb-1">
-                    Quantity (Units) *
-                  </label>
-                  <input
-                    type="number"
-                    min="1"
-                    step="1"
-                    required
-                    value={form.quantity}
-                    onChange={(e) =>
-                      setForm((p) => ({ ...p, quantity: e.target.value }))
-                    }
-                    className="w-full rounded-lg border border-gray-300 px-3 py-2 font-bold text-[#111827]"
-                  />
-                </div>
-              </div>
-
+              {/* Purchase Mode Fields */}
               {form.movement_type === "PURCHASE" && (
-                <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 rounded-lg bg-[#EFF6FF] p-3 border border-blue-200">
+                <div className="space-y-3.5">
+                  {/* Quantity to Add & Quick Chips */}
+                  <div className="space-y-1.5">
+                    <div className="flex items-center justify-between">
+                      <label className="font-bold text-[#111827] dark:text-slate-100">
+                        Quantity to Add (Units) *
+                      </label>
+                      <div className="flex items-center gap-1">
+                        <span className="text-[10px] text-slate-400">Quick set:</span>
+                        {[6, 12, 24, 48, 100].map((num) => (
+                          <button
+                            key={num}
+                            type="button"
+                            onClick={() =>
+                              setForm((p) => ({ ...p, quantity: String(num) }))
+                            }
+                            className="px-1.5 py-0.5 rounded bg-blue-50 dark:bg-blue-950/60 hover:bg-blue-100 dark:hover:bg-blue-900/60 border border-blue-200 dark:border-blue-800 text-[10px] font-bold text-blue-700 dark:text-blue-300 cursor-pointer"
+                          >
+                            {num}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                    <input
+                      type="number"
+                      min="1"
+                      step="1"
+                      required
+                      value={form.quantity}
+                      onChange={(e) =>
+                        setForm((p) => ({ ...p, quantity: e.target.value }))
+                      }
+                      className="w-full rounded-xl border border-gray-300 dark:border-slate-700 bg-white dark:bg-slate-800 px-3.5 py-2.5 text-sm font-extrabold text-[#111827] dark:text-slate-100"
+                      placeholder="e.g. 12"
+                    />
+                  </div>
+
+                  {/* Purchase Cost & Total Invoice Batch Sync */}
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    <div>
+                      <label className="font-bold text-[#111827] dark:text-slate-100 block mb-1">
+                        Purchase Cost per Unit (₹) *
+                      </label>
+                      <input
+                        type="number"
+                        min="0"
+                        step="0.01"
+                        required
+                        value={form.unit_cost}
+                        onChange={(e) =>
+                          setForm((p) => ({ ...p, unit_cost: e.target.value }))
+                        }
+                        placeholder="e.g. 36.40"
+                        className="w-full rounded-xl border border-gray-300 dark:border-slate-700 bg-white dark:bg-slate-800 px-3 py-2 text-xs font-bold text-[#111827] dark:text-slate-100"
+                      />
+                      <span className="text-[10px] text-slate-400 block mt-0.5">
+                        Old recorded cost: {formatINR(selectedProduct?.purchase_price || 0)}
+                      </span>
+                    </div>
+
+                    <div>
+                      <label className="font-bold text-[#111827] dark:text-slate-100 block mb-1">
+                        Total Paid for this Batch (₹)
+                      </label>
+                      <input
+                        type="number"
+                        min="0"
+                        step="0.01"
+                        value={
+                          purchaseCalculations?.incomingTotalValue
+                            ? round2(purchaseCalculations.incomingTotalValue)
+                            : ""
+                        }
+                        onChange={(e) => {
+                          const total = parseFloat(e.target.value) || 0;
+                          const qty = parseInt(form.quantity, 10) || 1;
+                          if (qty > 0) {
+                            setForm((p) => ({
+                              ...p,
+                              unit_cost: String(round2(total / qty)),
+                            }));
+                          }
+                        }}
+                        placeholder="e.g. 436.80"
+                        className="w-full rounded-xl border border-gray-300 dark:border-slate-700 bg-white dark:bg-slate-800 px-3 py-2 text-xs text-[#111827] dark:text-slate-100 font-mono"
+                      />
+                      <span className="text-[10px] text-slate-400 block mt-0.5">
+                        Units × Cost per unit
+                      </span>
+                    </div>
+                  </div>
+
+                  {/* AUTOMATIC WEIGHTED AVERAGE COST CALCULATION CARD */}
+                  {purchaseCalculations && (
+                    <div className="rounded-xl border border-blue-200 dark:border-blue-900/60 bg-blue-50/70 dark:bg-blue-950/30 p-3.5 space-y-2.5">
+                      <div className="flex items-center justify-between">
+                        <span className="text-xs font-bold text-blue-900 dark:text-blue-300 flex items-center gap-1.5">
+                          <Calculator className="h-4 w-4 text-[#2563EB]" />
+                          Automatic Average Price Calculation
+                        </span>
+                        {purchaseCalculations.priceChanged ? (
+                          <span className="text-[10px] font-black uppercase tracking-wider bg-amber-100 dark:bg-amber-950/70 border border-amber-300 dark:border-amber-800 text-amber-900 dark:text-amber-300 px-2 py-0.5 rounded-full">
+                            Price Changed: {formatINR(purchaseCalculations.currentCost)} → {formatINR(purchaseCalculations.incomingUnitCost)}
+                          </span>
+                        ) : (
+                          <span className="text-[10px] font-bold bg-emerald-100 dark:bg-emerald-950/70 border border-emerald-300 dark:border-emerald-800 text-emerald-900 dark:text-emerald-300 px-2 py-0.5 rounded-full">
+                            Price Unchanged
+                          </span>
+                        )}
+                      </div>
+
+                      {purchaseCalculations.priceChanged && purchaseCalculations.currentStock > 0 ? (
+                        <>
+                          <div className="grid grid-cols-2 gap-2 text-[11px] bg-white/90 dark:bg-slate-900/90 p-2.5 rounded-lg border border-blue-100 dark:border-slate-800">
+                            <div>
+                              <span className="text-slate-500 dark:text-slate-400 block">Existing In-Stock:</span>
+                              <span className="font-bold text-slate-900 dark:text-slate-100">
+                                {purchaseCalculations.currentStock} units @ {formatINR(purchaseCalculations.currentCost)}
+                              </span>
+                              <span className="text-[10px] text-slate-400 block">
+                                Subtotal: {formatINR(purchaseCalculations.currentTotalValue)}
+                              </span>
+                            </div>
+                            <div>
+                              <span className="text-slate-500 dark:text-slate-400 block">New Purchase Batch:</span>
+                              <span className="font-bold text-blue-600 dark:text-blue-400">
+                                +{purchaseCalculations.incomingQty} units @ {formatINR(purchaseCalculations.incomingUnitCost)}
+                              </span>
+                              <span className="text-[10px] text-slate-400 block">
+                                Subtotal: {formatINR(purchaseCalculations.incomingTotalValue)}
+                              </span>
+                            </div>
+                          </div>
+
+                          <div className="flex items-center justify-between p-2.5 rounded-lg bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-200 dark:border-emerald-800 text-xs">
+                            <div>
+                              <span className="text-[11px] text-emerald-800 dark:text-emerald-300 font-semibold block">
+                                New Total Stock:
+                              </span>
+                              <span className="font-black text-slate-900 dark:text-slate-100 text-sm">
+                                {purchaseCalculations.totalUnitsAfter} units
+                              </span>
+                            </div>
+                            <div className="text-right">
+                              <span className="text-[11px] text-emerald-800 dark:text-emerald-300 font-semibold block">
+                                Auto-Calculated Weighted Average:
+                              </span>
+                              <span className="text-base font-black text-emerald-600 dark:text-emerald-400">
+                                {formatINR(purchaseCalculations.weightedAvgCost)} / unit
+                              </span>
+                            </div>
+                          </div>
+
+                          {/* Rule Selector */}
+                          <div className="space-y-1 pt-0.5">
+                            <label className="text-[10px] font-bold uppercase text-slate-500 tracking-wider block">
+                              Unit Cost to Save on Product:
+                            </label>
+                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-1.5">
+                              <button
+                                type="button"
+                                onClick={() =>
+                                  setForm((p) => ({
+                                    ...p,
+                                    cost_calculation_mode: "weighted_average",
+                                  }))
+                                }
+                                className={`p-2 rounded-lg text-left border transition cursor-pointer text-xs ${
+                                  form.cost_calculation_mode === "weighted_average"
+                                    ? "border-[#2563EB] bg-blue-100/70 dark:bg-blue-900/40 text-blue-950 dark:text-blue-100 font-bold"
+                                    : "border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 text-slate-700 dark:text-slate-300"
+                                }`}
+                              >
+                                <div className="flex items-center justify-between">
+                                  <span>Weighted Average</span>
+                                  <span className="font-black text-emerald-600">
+                                    {formatINR(purchaseCalculations.weightedAvgCost)}
+                                  </span>
+                                </div>
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() =>
+                                  setForm((p) => ({
+                                    ...p,
+                                    cost_calculation_mode: "latest_cost",
+                                  }))
+                                }
+                                className={`p-2 rounded-lg text-left border transition cursor-pointer text-xs ${
+                                  form.cost_calculation_mode === "latest_cost"
+                                    ? "border-[#2563EB] bg-blue-100/70 dark:bg-blue-900/40 text-blue-950 dark:text-blue-100 font-bold"
+                                    : "border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 text-slate-700 dark:text-slate-300"
+                                }`}
+                              >
+                                <div className="flex items-center justify-between">
+                                  <span>Latest Purchase Price</span>
+                                  <span className="font-bold">
+                                    {formatINR(purchaseCalculations.incomingUnitCost)}
+                                  </span>
+                                </div>
+                              </button>
+                            </div>
+                          </div>
+                        </>
+                      ) : (
+                        <div className="text-[11px] text-slate-600 dark:text-slate-300 py-1">
+                          {purchaseCalculations.currentStock === 0 ? (
+                            <span>
+                              Current stock is 0 units. Product unit purchase price will be set to{" "}
+                              <strong className="text-blue-600 dark:text-blue-400 font-bold">
+                                {formatINR(purchaseCalculations.incomingUnitCost)}
+                              </strong>
+                              . Total stock will become <strong>{purchaseCalculations.totalUnitsAfter} units</strong>.
+                            </span>
+                          ) : (
+                            <span>
+                              Purchase cost matches existing stock cost (
+                              <strong>{formatINR(purchaseCalculations.currentCost)}</strong>
+                              ). Total stock will update from {purchaseCalculations.currentStock} to{" "}
+                              <strong>{purchaseCalculations.totalUnitsAfter} units</strong>.
+                            </span>
+                          )}
+                        </div>
+                      )}
+
+                      <div className="text-[11px] text-slate-600 dark:text-slate-300 bg-white/70 dark:bg-slate-900/70 px-2.5 py-1.5 rounded-lg flex items-center justify-between border border-blue-100 dark:border-slate-800">
+                        <span>
+                          Selling Price: <strong>{formatINR(purchaseCalculations.sellingPrice)}</strong>
+                        </span>
+                        <span>
+                          Est. Profit per Unit:{" "}
+                          <strong
+                            className={
+                              purchaseCalculations.estProfitPerUnit >= 0
+                                ? "text-emerald-700 dark:text-emerald-400"
+                                : "text-red-600"
+                            }
+                          >
+                            {purchaseCalculations.estProfitPerUnit >= 0 ? "+" : ""}
+                            {formatINR(purchaseCalculations.estProfitPerUnit)} (
+                            {purchaseCalculations.profitMarginPercent}%)
+                          </strong>
+                        </span>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Simplified Optional Details Collapsible */}
+                  <div className="border border-slate-200 dark:border-slate-800 rounded-xl overflow-hidden">
+                    <button
+                      type="button"
+                      onClick={() => setShowAdvancedFields(!showAdvancedFields)}
+                      className="w-full flex items-center justify-between px-3.5 py-2.5 bg-slate-50 dark:bg-slate-800/80 hover:bg-slate-100 dark:hover:bg-slate-800 text-xs font-semibold text-slate-700 dark:text-slate-300 transition cursor-pointer"
+                    >
+                      <span className="flex items-center gap-1.5">
+                        <Sparkles className="h-3.5 w-3.5 text-blue-500" />
+                        {showAdvancedFields ? "Hide" : "+ Show"} Optional Details (Supplier, Expiry, Batch, Bill Ref)
+                      </span>
+                      {showAdvancedFields ? (
+                        <ChevronUp className="h-4 w-4 text-slate-500" />
+                      ) : (
+                        <ChevronDown className="h-4 w-4 text-slate-500" />
+                      )}
+                    </button>
+
+                    {showAdvancedFields && (
+                      <div className="p-3.5 space-y-3 bg-white dark:bg-slate-900 border-t border-slate-200 dark:border-slate-800 text-xs">
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+                          <div>
+                            <label className="text-[11px] font-semibold text-slate-600 dark:text-slate-400 block mb-1">
+                              Supplier Name
+                            </label>
+                            <input
+                              type="text"
+                              value={form.supplier_name}
+                              onChange={(e) =>
+                                setForm((p) => ({
+                                  ...p,
+                                  supplier_name: e.target.value,
+                                }))
+                              }
+                              placeholder="e.g. Zepto / Wholesale Dist"
+                              className="w-full rounded-lg border border-slate-300 dark:border-slate-700 px-2.5 py-1.5"
+                            />
+                          </div>
+                          <div>
+                            <label className="text-[11px] font-semibold text-slate-600 dark:text-slate-400 block mb-1">
+                              Expiry Date
+                            </label>
+                            <input
+                              type="date"
+                              value={form.expiry_date}
+                              onChange={(e) =>
+                                setForm((p) => ({
+                                  ...p,
+                                  expiry_date: e.target.value,
+                                }))
+                              }
+                              className="w-full rounded-lg border border-slate-300 dark:border-slate-700 px-2.5 py-1.5"
+                            />
+                          </div>
+                          <div>
+                            <label className="text-[11px] font-semibold text-slate-600 dark:text-slate-400 block mb-1">
+                              Batch Info
+                            </label>
+                            <input
+                              type="text"
+                              value={form.batch_info}
+                              onChange={(e) =>
+                                setForm((p) => ({
+                                  ...p,
+                                  batch_info: e.target.value,
+                                }))
+                              }
+                              placeholder="e.g. BATCH-OCT26"
+                              className="w-full rounded-lg border border-slate-300 dark:border-slate-700 px-2.5 py-1.5"
+                            />
+                          </div>
+                          <div>
+                            <label className="text-[11px] font-semibold text-slate-600 dark:text-slate-400 block mb-1">
+                              Bill / PO Reference Note
+                            </label>
+                            <input
+                              type="text"
+                              value={form.reference_id}
+                              onChange={(e) =>
+                                setForm((p) => ({
+                                  ...p,
+                                  reference_id: e.target.value,
+                                }))
+                              }
+                              placeholder="e.g. PO-2026-10-28"
+                              className="w-full rounded-lg border border-slate-300 dark:border-slate-700 px-2.5 py-1.5"
+                            />
+                          </div>
+                        </div>
+
+                        <div>
+                          <label className="text-[11px] font-semibold text-slate-600 dark:text-slate-400 block mb-1">
+                            Custom Reason / Notes (Optional)
+                          </label>
+                          <input
+                            type="text"
+                            value={form.reason}
+                            onChange={(e) =>
+                              setForm((p) => ({ ...p, reason: e.target.value }))
+                            }
+                            placeholder="Defaults to 'Incoming wholesale stock purchase'"
+                            className="w-full rounded-lg border border-slate-300 dark:border-slate-700 px-2.5 py-1.5"
+                          />
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              )}
+
+              {/* Deduction / Adjustment Mode Fields */}
+              {form.movement_type !== "PURCHASE" && (
+                <div className="space-y-3.5">
                   <div>
-                    <label className="font-semibold text-[#111827] block mb-1">
-                      Purchase Cost per Unit (₹)
+                    <label className="font-bold text-[#111827] dark:text-slate-100 block mb-1">
+                      Reason for Stock Deduction *
+                    </label>
+                    <div className="grid grid-cols-2 sm:grid-cols-3 gap-1.5">
+                      {[
+                        { type: "DAMAGED", label: "Damaged Packets" },
+                        { type: "EXPIRED", label: "Expired Stock" },
+                        { type: "WASTED", label: "Wasted / Spoilage" },
+                        { type: "MISSING", label: "Missing / Theft" },
+                        { type: "ADJUSTMENT_SUB", label: "Manual Audit (-)" },
+                        { type: "ADJUSTMENT_ADD", label: "Manual Audit (+)" },
+                      ].map((t) => (
+                        <button
+                          key={t.type}
+                          type="button"
+                          onClick={() =>
+                            setForm((p) => ({
+                              ...p,
+                              movement_type: t.type as StockMovementType,
+                            }))
+                          }
+                          className={`p-2 rounded-lg text-xs font-semibold border text-center transition cursor-pointer ${
+                            form.movement_type === t.type
+                              ? "bg-rose-50 dark:bg-rose-950/60 border-rose-400 text-rose-800 dark:text-rose-200 font-bold"
+                              : "bg-white dark:bg-slate-800 border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-300"
+                          }`}
+                        >
+                          {t.label}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+
+                  <div>
+                    <label className="font-bold text-[#111827] dark:text-slate-100 block mb-1">
+                      Quantity to Deduct (Units) *
                     </label>
                     <input
                       type="number"
-                      min="0"
-                      step="0.01"
-                      value={form.unit_cost}
-                      onChange={(e) =>
-                        setForm((p) => ({ ...p, unit_cost: e.target.value }))
+                      min="1"
+                      max={
+                        form.movement_type.includes("ADD")
+                          ? undefined
+                          : selectedProduct?.stock_quantity || undefined
                       }
-                      className="w-full rounded-lg border border-gray-300 bg-white px-3 py-1.5 text-[#111827]"
+                      step="1"
+                      required
+                      value={form.quantity}
+                      onChange={(e) =>
+                        setForm((p) => ({ ...p, quantity: e.target.value }))
+                      }
+                      className="w-full rounded-xl border border-gray-300 dark:border-slate-700 bg-white dark:bg-slate-800 px-3.5 py-2.5 text-sm font-bold text-[#111827] dark:text-slate-100"
                     />
+                    {selectedProduct && !form.movement_type.includes("ADD") && (
+                      <span className="text-[10px] text-slate-500 dark:text-slate-400 block mt-0.5">
+                        Current stock: {selectedProduct.stock_quantity} units &rarr; Remaining:{" "}
+                        {Math.max(
+                          0,
+                          selectedProduct.stock_quantity -
+                            (parseInt(form.quantity, 10) || 0)
+                        )}{" "}
+                        units
+                      </span>
+                    )}
                   </div>
+
                   <div>
-                    <label className="font-semibold text-[#111827] block mb-1">
-                      Supplier Name
+                    <label className="font-bold text-[#111827] dark:text-slate-100 block mb-1">
+                      Reason / Explanation Note (Optional)
                     </label>
                     <input
                       type="text"
-                      value={form.supplier_name}
+                      value={form.reason}
                       onChange={(e) =>
-                        setForm((p) => ({
-                          ...p,
-                          supplier_name: e.target.value,
-                        }))
+                        setForm((p) => ({ ...p, reason: e.target.value }))
                       }
-                      className="w-full rounded-lg border border-gray-300 bg-white px-3 py-1.5 text-[#111827]"
-                    />
-                  </div>
-                  <div>
-                    <label className="font-semibold text-[#111827] block mb-1">
-                      Batch Info
-                    </label>
-                    <input
-                      type="text"
-                      value={form.batch_info}
-                      onChange={(e) =>
-                        setForm((p) => ({ ...p, batch_info: e.target.value }))
-                      }
-                      className="w-full rounded-lg border border-gray-300 bg-white px-3 py-1.5 text-[#111827]"
-                    />
-                  </div>
-                  <div>
-                    <label className="font-semibold text-[#111827] block mb-1">
-                      Expiry Date
-                    </label>
-                    <input
-                      type="date"
-                      value={form.expiry_date}
-                      onChange={(e) =>
-                        setForm((p) => ({ ...p, expiry_date: e.target.value }))
-                      }
-                      className="w-full rounded-lg border border-gray-300 bg-white px-3 py-1.5 text-[#111827]"
+                      placeholder="e.g. Found damaged during stock audit"
+                      className="w-full rounded-xl border border-gray-300 dark:border-slate-700 bg-white dark:bg-slate-800 px-3 py-2 text-xs text-[#111827] dark:text-slate-100"
                     />
                   </div>
                 </div>
               )}
 
-              <div>
-                <label className="font-semibold text-[#111827] block mb-1">
-                  Reason / Explanation *
-                </label>
-                <input
-                  type="text"
-                  required
-                  value={form.reason}
-                  onChange={(e) =>
-                    setForm((p) => ({ ...p, reason: e.target.value }))
-                  }
-                  placeholder="e.g. Purchased 2 cartons from wholesale market / Packet damaged"
-                  className="w-full rounded-lg border border-gray-300 px-3 py-2 text-[#111827]"
-                />
-              </div>
-
-              <div>
-                <label className="font-semibold text-[#111827] block mb-1">
-                  Reference / Bill / Batch Note (Optional)
-                </label>
-                <input
-                  type="text"
-                  value={form.reference_id}
-                  onChange={(e) =>
-                    setForm((p) => ({ ...p, reference_id: e.target.value }))
-                  }
-                  placeholder="e.g. PO-2026-105"
-                  className="w-full rounded-lg border border-gray-300 px-3 py-2 text-[#111827]"
-                />
-              </div>
-
-              <div className="flex items-center justify-end gap-2 pt-3 border-t border-gray-200">
+              {/* Modal Action Buttons */}
+              <div className="flex items-center justify-end gap-2.5 pt-3 border-t border-gray-200 dark:border-slate-800">
                 <button
                   type="button"
                   onClick={() => setModalOpen(false)}
-                  className="rounded-lg border border-gray-300 bg-white px-4 py-2 text-xs font-semibold text-[#111827] hover:bg-gray-50 cursor-pointer"
+                  className="rounded-xl border border-gray-300 dark:border-slate-700 bg-white dark:bg-slate-800 px-4 py-2.5 text-xs font-semibold text-[#111827] dark:text-slate-300 hover:bg-gray-50 dark:hover:bg-slate-700 cursor-pointer"
                 >
                   Cancel
                 </button>
                 <button
                   type="submit"
                   disabled={submitting}
-                  className="inline-flex items-center gap-1.5 rounded-lg bg-[#2563EB] px-4 py-2 text-xs font-semibold text-white hover:bg-[#1D4ED8] disabled:opacity-50 cursor-pointer"
+                  className={`inline-flex items-center justify-center gap-1.5 rounded-xl px-5 py-2.5 text-xs font-extrabold text-white transition cursor-pointer ${
+                    form.movement_type === "PURCHASE"
+                      ? "btn-3d-primary"
+                      : "bg-rose-600 hover:bg-rose-700 border border-rose-700"
+                  } disabled:opacity-50`}
                 >
                   <CheckCircle2 className="h-4 w-4" />
-                  {submitting ? "Updating Stock..." : "Update Stock"}
+                  {submitting
+                    ? "Updating Stock..."
+                    : form.movement_type === "PURCHASE"
+                    ? `Update Stock (+${form.quantity || 0} Units → Total: ${
+                        purchaseCalculations?.totalUnitsAfter || 0
+                      })`
+                    : `Deduct ${form.quantity || 0} Units`}
                 </button>
               </div>
             </form>
