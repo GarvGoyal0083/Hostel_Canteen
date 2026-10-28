@@ -480,15 +480,15 @@ export default function HostelCanteenPosApp() {
         </div>
 
         {/* Quick Action Buttons */}
-        <div className="p-3 border-b border-slate-100 space-y-2 bg-slate-50/40">
+        <div className="p-3 border-b border-slate-100 dark:border-slate-800 space-y-2 bg-slate-50/40 dark:bg-slate-900/60">
           {/* Shop Operating Status Widget */}
           <button
             type="button"
             onClick={() => setStatusModalOpen(true)}
             className={`w-full rounded-xl p-2.5 text-xs font-semibold flex items-center justify-between transition cursor-pointer border ${
               canteenStatus.is_open
-                ? "bg-emerald-50/80 border-emerald-200 text-emerald-800 hover:bg-emerald-100/80"
-                : "bg-red-50/80 border-red-200 text-red-800 hover:bg-red-100/80"
+                ? "bg-emerald-50/80 border-emerald-200 text-emerald-800 hover:bg-emerald-100/80 dark:bg-emerald-950/40 dark:border-emerald-800/70 dark:text-emerald-300 dark:hover:bg-emerald-900/40"
+                : "bg-red-50/80 border-red-200 text-red-800 hover:bg-red-100/80 dark:bg-red-950/40 dark:border-red-800/70 dark:text-red-300 dark:hover:bg-red-900/40"
             }`}
           >
             <div className="flex items-center gap-2 text-left min-w-0">
@@ -503,14 +503,14 @@ export default function HostelCanteenPosApp() {
                 <div className="text-[11px] font-bold uppercase tracking-wider leading-none">
                   {canteenStatus.is_open ? "Shop Open" : "Shop Closed"}
                 </div>
-                <div className="text-[10px] text-slate-500 font-normal mt-0.5 truncate max-w-[130px]">
+                <div className="text-[10px] text-slate-500 dark:text-slate-400 font-normal mt-0.5 truncate max-w-[130px]">
                   {canteenStatus.is_open
                     ? "Taking orders"
                     : canteenStatus.reopen_at || "Closed"}
                 </div>
               </div>
             </div>
-            <span className="rounded-md bg-white px-2 py-0.5 text-[10px] font-bold text-slate-700 border border-slate-200">
+            <span className="rounded-md bg-white dark:bg-slate-800 px-2 py-0.5 text-[10px] font-bold text-slate-700 dark:text-slate-300 border border-slate-200 dark:border-slate-700">
               Change
             </span>
           </button>
@@ -521,7 +521,7 @@ export default function HostelCanteenPosApp() {
               handleOpenScan();
               setMobileMenuOpen(false);
             }}
-            className="w-full inline-flex items-center justify-center gap-2 rounded-xl bg-blue-50 border border-blue-200 px-3.5 py-2 text-xs font-bold text-blue-700 hover:bg-blue-100 transition cursor-pointer"
+            className="w-full inline-flex items-center justify-center gap-2 rounded-xl bg-blue-50 border border-blue-200 px-3.5 py-2 text-xs font-bold text-blue-700 hover:bg-blue-100 dark:bg-blue-950/50 dark:border-blue-800/70 dark:text-blue-300 dark:hover:bg-blue-900/50 transition cursor-pointer"
           >
             <ScanLine className="h-4 w-4 text-blue-600" />
             <span>Scan Snack Photo</span>
@@ -543,7 +543,7 @@ export default function HostelCanteenPosApp() {
               setActiveTab("customer_portal");
               setMobileMenuOpen(false);
             }}
-            className="btn-3d-secondary w-full inline-flex items-center justify-center gap-2 rounded-xl px-3.5 py-2 text-xs font-bold text-slate-700 cursor-pointer"
+            className="btn-3d-secondary w-full inline-flex items-center justify-center gap-2 rounded-xl px-3.5 py-2 text-xs font-bold text-slate-700 dark:text-slate-200 cursor-pointer"
           >
             <GraduationCap className="h-4 w-4 text-[#2563EB]" />
             <span>Student Portal View</span>
@@ -568,13 +568,13 @@ export default function HostelCanteenPosApp() {
                 className={`w-full flex items-center justify-between rounded-xl px-3.5 py-2.5 text-xs font-bold cursor-pointer ${
                   isActive
                     ? "nav-item-3d-active"
-                    : "nav-item-3d text-[#111827]"
+                    : "nav-item-3d text-[#111827] dark:text-slate-300"
                 }`}
               >
                 <span className="flex items-center gap-2.5">
                   <Icon
                     className={`h-4 w-4 ${
-                      isActive ? "text-[#2563EB]" : "text-slate-500"
+                      isActive ? "text-[#2563EB]" : "text-slate-500 dark:text-slate-400"
                     }`}
                   />
                   <span>{item.label}</span>
@@ -584,7 +584,7 @@ export default function HostelCanteenPosApp() {
                   appData.kpis.out_of_stock_count +
                     appData.kpis.low_stock_count >
                     0 && (
-                    <span className="rounded-full bg-amber-100 border border-amber-300 px-2 py-0.5 text-[10px] font-black text-amber-900 shadow-2xs">
+                    <span className="rounded-full bg-amber-100 border border-amber-300 dark:bg-amber-950/70 dark:border-amber-800 dark:text-amber-300 px-2 py-0.5 text-[10px] font-black text-amber-900 shadow-2xs">
                       {appData.kpis.out_of_stock_count +
                         appData.kpis.low_stock_count}
                     </span>
@@ -592,7 +592,7 @@ export default function HostelCanteenPosApp() {
                 {item.id === "customers" &&
                   appData &&
                   appData.kpis.pending_bills_count > 0 && (
-                    <span className="rounded-full bg-blue-100 border border-blue-300 px-2 py-0.5 text-[10px] font-black text-[#1D4ED8] shadow-2xs">
+                    <span className="rounded-full bg-blue-100 border border-blue-300 dark:bg-blue-950/70 dark:border-blue-800 dark:text-blue-300 px-2 py-0.5 text-[10px] font-black text-[#1D4ED8] shadow-2xs">
                       {appData.kpis.pending_bills_count}
                     </span>
                   )}
@@ -602,25 +602,25 @@ export default function HostelCanteenPosApp() {
         </nav>
 
         {/* Admin Footer */}
-        <div className="border-t border-slate-100 p-3.5 bg-slate-50/50 space-y-2 text-xs">
+        <div className="border-t border-slate-100 dark:border-slate-800 p-3.5 bg-slate-50/50 dark:bg-slate-900/60 space-y-2 text-xs">
           <div className="flex items-center justify-between">
             <div className="truncate pr-2">
-              <div className="font-bold text-slate-900 truncate text-xs">
+              <div className="font-bold text-slate-900 dark:text-slate-100 truncate text-xs">
                 {admin.full_name}
               </div>
-              <div className="text-[10px] text-slate-500 truncate">
+              <div className="text-[10px] text-slate-500 dark:text-slate-400 truncate">
                 {admin.email}
               </div>
             </div>
             <button
               onClick={handleLogout}
-              className="btn-3d-secondary rounded-lg p-2 text-slate-600 hover:text-red-600 cursor-pointer"
+              className="btn-3d-secondary rounded-lg p-2 text-slate-600 dark:text-slate-300 hover:text-red-600 cursor-pointer"
               title="Sign Out"
             >
               <LogOut className="h-3.5 w-3.5" />
             </button>
           </div>
-          <div className="flex items-center gap-1.5 text-[10px] font-medium text-slate-500 bg-white rounded-lg px-2.5 py-1.5 border border-slate-200">
+          <div className="flex items-center gap-1.5 text-[10px] font-medium text-slate-500 dark:text-slate-400 bg-white dark:bg-slate-800/90 rounded-lg px-2.5 py-1.5 border border-slate-200 dark:border-slate-700">
             <Clock className="h-3 w-3 text-[#2563EB] shrink-0" />
             <LiveISTClock />
           </div>

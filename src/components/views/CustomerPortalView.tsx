@@ -397,31 +397,31 @@ export function CustomerPortalView({
   );
 
   return (
-    <div className="min-h-screen bg-[#F8FAFC] text-[#0F172A] pb-16">
+    <div className="min-h-screen bg-[#F8FAFC] dark:bg-[#090D16] text-[#0F172A] dark:text-[#F8FAFC] pb-16">
       {/* Top Clean Modern Navigation Bar */}
-      <header className="sticky top-0 z-30 bg-white/95 backdrop-blur-md border-b border-slate-200 shadow-xs">
+      <header className="sticky top-0 z-30 bg-white/95 dark:bg-[#0F172A]/95 backdrop-blur-md border-b border-slate-200 dark:border-slate-800 shadow-xs">
         <div className="max-w-6xl mx-auto px-4 sm:px-6 py-3 flex flex-wrap items-center justify-between gap-3">
           {/* Brand Logo */}
           <div className="flex items-center gap-3">
             <CanteenLogo className="h-10 w-10 shadow-sm" size={40} />
             <div>
               <div className="flex items-center gap-2">
-                <span className="text-base font-bold tracking-tight text-slate-900">
+                <span className="text-base font-bold tracking-tight text-slate-900 dark:text-slate-100">
                   Hostel Canteen
                 </span>
                 {canteenStatus.is_open ? (
-                  <span className="inline-flex items-center gap-1 rounded-full bg-emerald-50 border border-emerald-200 px-2 py-0.5 text-[10px] font-semibold text-emerald-700">
+                  <span className="inline-flex items-center gap-1 rounded-full bg-emerald-50 dark:bg-emerald-950/60 border border-emerald-200 dark:border-emerald-800 px-2 py-0.5 text-[10px] font-semibold text-emerald-700 dark:text-emerald-300">
                     <span className="h-1.5 w-1.5 rounded-full bg-emerald-500 animate-pulse" />
                     Open for Orders
                   </span>
                 ) : (
-                  <span className="inline-flex items-center gap-1 rounded-full bg-red-50 border border-red-200 px-2 py-0.5 text-[10px] font-semibold text-red-700">
+                  <span className="inline-flex items-center gap-1 rounded-full bg-red-50 dark:bg-red-950/60 border border-red-200 dark:border-red-800 px-2 py-0.5 text-[10px] font-semibold text-red-700 dark:text-red-300">
                     <span className="h-1.5 w-1.5 rounded-full bg-red-500" />
                     Closed • {canteenStatus.reopen_at || "Reopening Soon"}
                   </span>
                 )}
               </div>
-              <p className="text-[11px] text-slate-500">
+              <p className="text-[11px] text-slate-500 dark:text-slate-400">
                 Live Snack Stock, Bills &amp; Room Udhaar Passbook
               </p>
             </div>
