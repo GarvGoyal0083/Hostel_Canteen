@@ -212,6 +212,11 @@ ON public.canteen_store FOR ALL USING (true) WITH CHECK (true);`;
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ action: "restore_from_photos" }),
       });
+      if (res.status === 401) {
+        alert("Your admin login session has expired. Redirecting to login page...");
+        window.location.href = "/login";
+        return;
+      }
       const data = await res.json();
       if (res.ok) {
         alert(
@@ -238,6 +243,11 @@ ON public.canteen_store FOR ALL USING (true) WITH CHECK (true);`;
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ action: "clear_demo_products" }),
       });
+      if (res.status === 401) {
+        alert("Your admin login session has expired. Redirecting to login page...");
+        window.location.href = "/login";
+        return;
+      }
       const data = await res.json();
       if (res.ok) {
         alert(`Cleared ${data.result?.removed || 0} sample demo products!`);
@@ -258,6 +268,11 @@ ON public.canteen_store FOR ALL USING (true) WITH CHECK (true);`;
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ action: "restore_from_audit" }),
       });
+      if (res.status === 401) {
+        alert("Your admin login session has expired. Redirecting to login page...");
+        window.location.href = "/login";
+        return;
+      }
       const data = await res.json();
       if (res.ok) {
         alert(`Restored ${data.result?.restored || 0} products from audit history! Total products: ${data.result?.total_products || 0}`);
