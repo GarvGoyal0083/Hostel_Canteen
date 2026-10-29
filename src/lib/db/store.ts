@@ -93,6 +93,8 @@ export async function withTransactionLock<T>(fn: () => Promise<T> | T): Promise<
   return next;
 }
 
+let migrationInProgress = false;
+
 /**
  * Ensures the database has pulled the latest centralized state from Supabase Cloud.
  * Call this in API GET routes before listing or calculating data.
@@ -112,25 +114,28 @@ export async function ensureDatabaseSync(): Promise<DatabaseSchema> {
     db = readDatabase();
   }
 
-  // Auto-migrate any inline Base64 product images to dedicated image storage
-  if (db && Array.isArray(db.products)) {
+  // Non-blocking auto-migration: if database has large inline Base64 product images,
+  // migrate them to dedicated image storage without stalling the client's HTTP request!
+  if (db && Array.isArray(db.products) && !migrationInProgress) {
     const hasInlineImages = db.products.some(
       (p) => p.image_url && p.image_url.startsWith("data:image/")
     );
     if (hasInlineImages) {
-      try {
-        const migrated = await extractAndMigrateInlineImages(db.products);
-        if (migrated) {
-          writeDatabaseLocal(db);
-          try {
-            await pushRemoteDatabase(db);
-          } catch {
-            // ignore
+      migrationInProgress = true;
+      const dbRef = db;
+      void (async () => {
+        try {
+          const migrated = await extractAndMigrateInlineImages(dbRef.products);
+          if (migrated) {
+            writeDatabaseLocal(dbRef);
+            await pushRemoteDatabase(dbRef);
           }
+        } catch (err) {
+          console.warn("[store] Error during background image migration:", err);
+        } finally {
+          migrationInProgress = false;
         }
-      } catch (err) {
-        console.warn("[store] Error during image migration:", err);
-      }
+      })();
     }
   }
 
@@ -281,7 +286,14 @@ export function listProducts(filters?: {
     );
   }
 
-  return list.sort((a, b) => a.name.localeCompare(b.name));
+  return list
+    .map((p) => {
+      if (p.image_url && p.image_url.startsWith("data:image/")) {
+        return { ...p, image_url: `/api/images/${p.id}` };
+      }
+      return p;
+    })
+    .sort((a, b) => a.name.localeCompare(b.name));
 }
 
 export async function createProduct(
@@ -2607,10 +2619,16 @@ export function computeFinancialMetrics(filters?: {
       0
     )
   );
-  const outOfStockProducts = activeProducts.filter((p) => p.stock_quantity === 0);
-  const lowStockProducts = activeProducts.filter(
-    (p) => p.stock_quantity > 0 && p.stock_quantity <= p.min_stock_level
-  );
+  const sanitizeProductAlert = (p: Product) => ({
+    ...p,
+    image_url: p.image_url?.startsWith("data:image/") ? `/api/images/${p.id}` : p.image_url,
+  });
+  const outOfStockProducts = activeProducts
+    .filter((p) => p.stock_quantity === 0)
+    .map(sanitizeProductAlert);
+  const lowStockProducts = activeProducts
+    .filter((p) => p.stock_quantity > 0 && p.stock_quantity <= p.min_stock_level)
+    .map(sanitizeProductAlert);
 
   // Best-selling products (in period)
   const productPerfMap = new Map<

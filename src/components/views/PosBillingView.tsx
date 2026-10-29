@@ -620,13 +620,23 @@ export function PosBillingView({
                     {/* Product Image Thumbnail */}
                     <div className="relative h-24 w-full rounded-xl bg-white border border-slate-200/80 shadow-inner flex items-center justify-center overflow-hidden p-1.5 mb-2">
                       {product.image_url ? (
-                        <img
-                          src={product.image_url}
-                          alt={product.name}
-                          className="h-full w-full object-contain group-hover:scale-105 transition-transform select-none"
-                          loading="lazy"
-                          decoding="async"
-                        />
+                        <>
+                          <img
+                            src={product.image_url}
+                            alt={product.name}
+                            className="h-full w-full object-contain group-hover:scale-105 transition-transform select-none"
+                            loading="lazy"
+                            decoding="async"
+                            onError={(e) => {
+                              e.currentTarget.style.display = "none";
+                              const fallback = e.currentTarget.nextElementSibling as HTMLElement | null;
+                              if (fallback) fallback.style.display = "flex";
+                            }}
+                          />
+                          <div className="hidden flex-col items-center justify-center text-slate-300">
+                            <Package className="h-8 w-8 text-slate-300 stroke-[1.5]" />
+                          </div>
+                        </>
                       ) : (
                         <Package className="h-8 w-8 text-slate-300 stroke-[1.5]" />
                       )}

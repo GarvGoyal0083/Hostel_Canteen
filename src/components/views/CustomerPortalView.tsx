@@ -862,13 +862,26 @@ export function CustomerPortalView({
                         {/* Product Image Display */}
                         <div className="relative h-44 w-full rounded-xl bg-slate-50/70 border border-slate-100 flex items-center justify-center overflow-hidden p-3 group">
                           {product.image_url ? (
-                            <img
-                              src={product.image_url}
-                              alt={product.name}
-                              className="h-full w-full object-contain transition-transform duration-300 group-hover:scale-105 select-none"
-                              loading="lazy"
-                              decoding="async"
-                            />
+                            <>
+                              <img
+                                src={product.image_url}
+                                alt={product.name}
+                                className="h-full w-full object-contain transition-transform duration-300 group-hover:scale-105 select-none"
+                                loading="lazy"
+                                decoding="async"
+                                onError={(e) => {
+                                  e.currentTarget.style.display = "none";
+                                  const fallback = e.currentTarget.nextElementSibling as HTMLElement | null;
+                                  if (fallback) fallback.style.display = "flex";
+                                }}
+                              />
+                              <div className="hidden flex-col items-center justify-center text-slate-300 py-6">
+                                <Package className="h-10 w-10 text-slate-300 stroke-[1.5]" />
+                                <span className="text-[11px] font-medium text-slate-400 mt-1">
+                                  Hostel Snack
+                                </span>
+                              </div>
+                            </>
                           ) : (
                             <div className="flex flex-col items-center justify-center text-slate-300 py-6">
                               <Package className="h-10 w-10 text-slate-300 stroke-[1.5]" />

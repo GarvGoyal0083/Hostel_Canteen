@@ -2,6 +2,7 @@ import fs from "fs";
 import path from "path";
 import os from "os";
 import { createSupabaseAdminClient, isSupabaseConfigured } from "@/lib/supabase/server";
+import { readDatabase } from "@/lib/db/store";
 
 const isServerless = Boolean(
   process.env.VERCEL ||
@@ -63,7 +64,7 @@ export function detectMimeType(buffer: Buffer): string {
 }
 
 /**
- * Persists an image binary for a product.
+ * Persists an image binary for a single product.
  * Caches in memory, saves to disk, and pushes to Supabase Cloud (if configured).
  * Returns the public image URL.
  */
@@ -88,7 +89,6 @@ export async function saveProductImage(
     throw new Error("Empty image data.");
   }
 
-  // Refine mime type from magic bytes if possible
   const detectedMime = detectMimeType(buffer);
   if (detectedMime) mime = detectedMime;
 
@@ -130,7 +130,7 @@ export async function saveProductImage(
 
 /**
  * Retrieves a stored product image.
- * Tries: Memory Cache -> Disk Cache -> Supabase Cloud.
+ * Tries: Memory Cache (0ms) -> Disk Cache (<1ms) -> In-Memory Store Fallback (<1ms) -> Supabase Cloud.
  */
 export async function getProductImage(
   productId: string
@@ -138,11 +138,11 @@ export async function getProductImage(
   const safeId = productId.replace(/[^a-zA-Z0-9_-]/g, "");
   if (!safeId) return null;
 
-  // 1. Memory Cache
+  // 1. In-Memory Cache (Instant 0ms)
   const mem = memoryCache.get(safeId);
   if (mem) return mem;
 
-  // 2. Disk Cache
+  // 2. Local Disk Cache (<1ms)
   const filePath = path.join(IMAGES_DIR, `${safeId}.bin`);
   try {
     if (fs.existsSync(filePath)) {
@@ -155,7 +155,33 @@ export async function getProductImage(
     console.warn(`[canteen-images] Error reading disk cache for ${safeId}:`, err);
   }
 
-  // 3. Supabase Cloud
+  // 3. In-Memory Database Fallback (Instant: decodes from already-loaded db without network call)
+  try {
+    const db = readDatabase();
+    const prod = db.products?.find((p) => p.id === safeId);
+    if (prod && prod.image_url && prod.image_url.startsWith("data:image/")) {
+      const match = prod.image_url.match(/^data:([^;]+);base64,(.+)$/);
+      if (match) {
+        let mime = match[1];
+        const buffer = Buffer.from(match[2], "base64");
+        const detected = detectMimeType(buffer);
+        if (detected) mime = detected;
+
+        ensureImagesDir();
+        try {
+          fs.writeFileSync(filePath, buffer);
+        } catch {
+          // ignore
+        }
+        memoryCache.set(safeId, { buffer, mime });
+        return { buffer, mime };
+      }
+    }
+  } catch {
+    // ignore
+  }
+
+  // 4. Supabase Cloud Fallback (if image was persisted remotely)
   if (isSupabaseConfigured()) {
     try {
       const supabase = createSupabaseAdminClient();
@@ -171,7 +197,6 @@ export async function getProductImage(
           const mime = data.data.mime || "image/jpeg";
           const buffer = Buffer.from(base64, "base64");
 
-          // Save to local disk cache for instant subsequent hits
           ensureImagesDir();
           try {
             fs.writeFileSync(filePath, buffer);
@@ -222,24 +247,85 @@ export async function deleteProductImage(productId: string): Promise<void> {
 }
 
 /**
- * Automatically extracts large inline Base64 data URLs from products
- * and relocates them to dedicated image storage.
+ * Bulk extracts large inline Base64 data URLs from products
+ * and relocates them to dedicated image storage in a single fast batch.
  * This shrinks the primary database JSON by 95-99%, making site load instant!
  */
 export async function extractAndMigrateInlineImages(
   products: Array<{ id: string; image_url?: string | null }>
 ): Promise<boolean> {
   let migrated = false;
+  const rowsToUpsert: Array<{
+    id: string;
+    data: { mime: string; base64: string; size: number; updated_at: string };
+    updated_at: string;
+  }> = [];
+
+  ensureImagesDir();
+
   for (const product of products) {
     if (product.image_url && product.image_url.startsWith("data:image/")) {
-      try {
-        const imageUrl = await saveProductImage(product.id, product.image_url);
-        product.image_url = imageUrl;
-        migrated = true;
-      } catch (err) {
-        console.warn(`[canteen-images] Failed to migrate image for product ${product.id}:`, err);
+      const safeId = product.id.replace(/[^a-zA-Z0-9_-]/g, "");
+      if (!safeId) continue;
+
+      let mime = "image/jpeg";
+      let base64 = product.image_url;
+      const match = product.image_url.match(/^data:([^;]+);base64,(.+)$/);
+      if (match) {
+        mime = match[1];
+        base64 = match[2];
       }
+
+      const buffer = Buffer.from(base64, "base64");
+      if (buffer.length === 0) continue;
+
+      const detected = detectMimeType(buffer);
+      if (detected) mime = detected;
+
+      // 1. Immediately cache in memory
+      memoryCache.set(safeId, { buffer, mime });
+
+      // 2. Immediately write to disk
+      const filePath = path.join(IMAGES_DIR, `${safeId}.bin`);
+      try {
+        fs.writeFileSync(filePath, buffer);
+      } catch {
+        // ignore
+      }
+
+      // 3. Update product URL
+      product.image_url = `/api/images/${safeId}`;
+      migrated = true;
+
+      // 4. Queue for Supabase batch upsert
+      rowsToUpsert.push({
+        id: `img_${safeId}`,
+        data: {
+          mime,
+          base64,
+          size: buffer.length,
+          updated_at: new Date().toISOString(),
+        },
+        updated_at: new Date().toISOString(),
+      });
     }
   }
+
+  // Bulk upsert all images to Supabase in batches of 20 (single network requests)
+  if (rowsToUpsert.length > 0 && isSupabaseConfigured()) {
+    try {
+      const supabase = createSupabaseAdminClient();
+      if (supabase) {
+        const BATCH_SIZE = 20;
+        for (let i = 0; i < rowsToUpsert.length; i += BATCH_SIZE) {
+          const chunk = rowsToUpsert.slice(i, i + BATCH_SIZE);
+          await supabase.from("canteen_store").upsert(chunk);
+        }
+      }
+    } catch (err) {
+      console.warn("[canteen-images] Failed to bulk upsert images to Supabase:", err);
+    }
+  }
+
   return migrated;
 }

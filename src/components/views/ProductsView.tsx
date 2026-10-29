@@ -576,12 +576,23 @@ export function ProductsView({
                       <div className="flex items-center gap-3">
                         <div className="h-10 w-10 shrink-0 rounded-xl bg-slate-100 border border-slate-200 flex items-center justify-center overflow-hidden p-1 shadow-2xs">
                           {p.image_url ? (
-                            <img
-                              src={p.image_url}
-                              alt={p.name}
-                              className="h-full w-full object-contain"
-                              loading="lazy"
-                            />
+                            <>
+                              <img
+                                src={p.image_url}
+                                alt={p.name}
+                                className="h-full w-full object-contain"
+                                loading="lazy"
+                                decoding="async"
+                                onError={(e) => {
+                                  e.currentTarget.style.display = "none";
+                                  const fallback = e.currentTarget.nextElementSibling as HTMLElement | null;
+                                  if (fallback) fallback.style.display = "flex";
+                                }}
+                              />
+                              <div className="hidden items-center justify-center">
+                                <Package className="h-5 w-5 text-slate-400 stroke-[1.5]" />
+                              </div>
+                            </>
                           ) : (
                             <Package className="h-5 w-5 text-slate-400 stroke-[1.5]" />
                           )}
