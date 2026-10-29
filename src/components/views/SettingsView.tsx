@@ -154,6 +154,51 @@ ON public.canteen_store FOR ALL USING (true) WITH CHECK (true);`;
     }
   };
 
+  const [recovering, setRecovering] = useState(false);
+
+  const handleClearDemoProducts = async () => {
+    if (!window.confirm("Remove all 12 pre-loaded sample products (Kurkure, Lay's, Oreo, etc.) from the catalog? Your real products, students, and settings will remain safe.")) {
+      return;
+    }
+    setRecovering(true);
+    try {
+      const res = await fetch("/api/recovery", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ action: "clear_demo_products" }),
+      });
+      const data = await res.json();
+      if (res.ok) {
+        alert(`Cleared ${data.result?.removed || 0} sample demo products!`);
+        onRefresh();
+      } else {
+        alert(data.error || "Failed to clear sample products.");
+      }
+    } finally {
+      setRecovering(false);
+    }
+  };
+
+  const handleRestoreAuditProducts = async () => {
+    setRecovering(true);
+    try {
+      const res = await fetch("/api/recovery", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ action: "restore_from_audit" }),
+      });
+      const data = await res.json();
+      if (res.ok) {
+        alert(`Restored ${data.result?.restored || 0} products from audit history! Total products: ${data.result?.total_products || 0}`);
+        onRefresh();
+      } else {
+        alert(data.error || "Failed to restore products.");
+      }
+    } finally {
+      setRecovering(false);
+    }
+  };
+
   const handleExportAuditCSV = () => {
     const timestamp = formatIST(new Date().toISOString());
     const headers = [
@@ -483,14 +528,30 @@ ON public.canteen_store FOR ALL USING (true) WITH CHECK (true);`;
 
             <div className="flex flex-wrap gap-2 pt-1">
               <button
-                disabled={switching}
+                disabled={switching || recovering}
                 onClick={() => handleSwitchMode("production_clean")}
                 className="flex-1 rounded-lg bg-[#2563EB] px-3 py-2 text-xs font-semibold text-white hover:bg-[#1D4ED8] transition cursor-pointer"
               >
                 Switch to Clean Production (0 Records)
               </button>
               <button
-                disabled={switching}
+                disabled={switching || recovering}
+                onClick={handleClearDemoProducts}
+                className="rounded-lg border border-red-300 bg-red-50 px-3 py-2 text-xs font-semibold text-red-700 hover:bg-red-100 transition cursor-pointer"
+                title="Clears only sample products while keeping students & real data"
+              >
+                Clear Demo Products
+              </button>
+              <button
+                disabled={switching || recovering}
+                onClick={handleRestoreAuditProducts}
+                className="rounded-lg border border-blue-300 bg-blue-50 px-3 py-2 text-xs font-semibold text-blue-700 hover:bg-blue-100 transition cursor-pointer"
+                title="Restores previously created products from audit history"
+              >
+                Restore Products from Audit
+              </button>
+              <button
+                disabled={switching || recovering}
                 onClick={() => handleSwitchMode("development_sample")}
                 className="rounded-lg border border-gray-300 bg-white px-3 py-2 text-xs font-semibold text-[#111827] hover:bg-gray-100 transition cursor-pointer"
               >

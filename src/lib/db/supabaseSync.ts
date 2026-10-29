@@ -22,14 +22,14 @@ export function getLastSyncError(): string | null {
  * If the remote store is newer than local memory/tmp, returns the remote DatabaseSchema.
  * Otherwise returns null.
  */
-export async function fetchRemoteDatabase(): Promise<DatabaseSchema | null> {
+export async function fetchRemoteDatabase(force = false): Promise<DatabaseSchema | null> {
   if (!isSupabaseConfigured()) {
     isCloudPersistenceActive = false;
     return null;
   }
 
   const now = Date.now();
-  if (now - lastSyncCheckTime < SYNC_COOLDOWN_MS && isCloudPersistenceActive) {
+  if (!force && now - lastSyncCheckTime < SYNC_COOLDOWN_MS && isCloudPersistenceActive) {
     return null; // Local copy is already fresh within cooldown window
   }
   lastSyncCheckTime = now;
@@ -67,7 +67,7 @@ export async function fetchRemoteDatabase(): Promise<DatabaseSchema | null> {
     const remoteDb = data.data as DatabaseSchema;
     const remoteTime = new Date(remoteDb.meta?.updated_at || data.updated_at || 0).getTime();
 
-    if (remoteTime > lastRemoteUpdateTime) {
+    if (force || remoteTime >= lastRemoteUpdateTime) {
       lastRemoteUpdateTime = remoteTime;
       return remoteDb;
     }

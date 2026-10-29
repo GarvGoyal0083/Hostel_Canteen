@@ -102,7 +102,9 @@ export async function withTransactionLock<T>(fn: () => Promise<T> | T): Promise<
  */
 export async function ensureDatabaseSync(): Promise<DatabaseSchema> {
   try {
-    const remote = await fetchRemoteDatabase();
+    const dbPath = getDbFilePath();
+    const needsForce = !fs.existsSync(dbPath);
+    const remote = await fetchRemoteDatabase(needsForce);
     if (remote) {
       writeDatabaseLocal(remote);
       return remote;
@@ -162,7 +164,7 @@ export function readDatabase(): DatabaseSchema {
         try {
           const raw = fs.readFileSync(candidate, "utf8");
           const parsed = sanitizeLoadedDatabase(JSON.parse(raw) as DatabaseSchema);
-          writeDatabase(parsed);
+          writeDatabaseLocal(parsed);
           return parsed;
         } catch {
           // continue fallback
@@ -179,7 +181,7 @@ export function readDatabase(): DatabaseSchema {
       ? createDevelopmentSampleDatabase()
       : createCleanProductionDatabase();
     sanitizeLoadedDatabase(initial);
-    writeDatabase(initial);
+    writeDatabaseLocal(initial);
     return initial;
   }
 
@@ -191,7 +193,7 @@ export function readDatabase(): DatabaseSchema {
     console.warn(`[store] Failed to parse ${dbPath}, falling back to default seed:`, err);
     const initial = sanitizeLoadedDatabase(createDevelopmentSampleDatabase());
     try {
-      writeDatabase(initial);
+      writeDatabaseLocal(initial);
     } catch {
       // ignore
     }
