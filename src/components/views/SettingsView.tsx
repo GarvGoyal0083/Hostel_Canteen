@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import {
   ShieldCheck,
   Database,
@@ -14,6 +14,11 @@ import {
   Clock,
   SunMedium,
   CheckCircle2,
+  Camera,
+  Sparkles,
+  PackageCheck,
+  Eye,
+  Trash2,
 } from "lucide-react";
 import { AdminUser, AuditLogRecord, CanteenStatus } from "@/types/pos";
 import {
@@ -155,6 +160,72 @@ ON public.canteen_store FOR ALL USING (true) WITH CHECK (true);`;
   };
 
   const [recovering, setRecovering] = useState(false);
+  const [photoCandidates, setPhotoCandidates] = useState<
+    Array<{
+      product_id: string;
+      image_row_id: string;
+      image_url: string;
+      size?: number;
+      updated_at?: string;
+      already_in_catalog: boolean;
+      existing_name: string | null;
+      default_name: string;
+      default_sku: string;
+      default_category: string;
+      default_selling_price: number;
+      default_purchase_price: number;
+      default_stock: number;
+    }>
+  >([]);
+  const [showPhotoPreview, setShowPhotoPreview] = useState(false);
+
+  const fetchPhotoRecoveryData = async () => {
+    try {
+      const res = await fetch("/api/recovery");
+      if (res.ok) {
+        const data = await res.json();
+        if (Array.isArray(data.photo_candidates)) {
+          setPhotoCandidates(data.photo_candidates);
+        }
+      }
+    } catch {
+      // ignore
+    }
+  };
+
+  useEffect(() => {
+    fetchPhotoRecoveryData();
+  }, []);
+
+  const handleRestoreFromPhotos = async () => {
+    if (
+      !window.confirm(
+        `Auto-create/restore ${photoCandidates.length} products using your photos stored in Supabase Cloud? Your snack pictures will be directly linked to your catalog.`
+      )
+    ) {
+      return;
+    }
+    setRecovering(true);
+    try {
+      const res = await fetch("/api/recovery", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ action: "restore_from_photos" }),
+      });
+      const data = await res.json();
+      if (res.ok) {
+        alert(
+          `🎉 Successfully restored ${data.result?.restored_photos || 0} products from your uploaded photos!\nTotal products now: ${data.result?.total_products || 0}`
+        );
+        await fetchPhotoRecoveryData();
+        onRefresh();
+      } else {
+        alert(data.error || "Failed to restore products from photos.");
+      }
+    } finally {
+      setRecovering(false);
+    }
+  };
 
   const handleClearDemoProducts = async () => {
     if (!window.confirm("Remove all 12 pre-loaded sample products (Kurkure, Lay's, Oreo, etc.) from the catalog? Your real products, students, and settings will remain safe.")) {
@@ -255,6 +326,86 @@ ON public.canteen_store FOR ALL USING (true) WITH CHECK (true);`;
 
       {/* Theme Appearance Mode Setting Card */}
       <AdminThemeSettingsCard />
+
+      {/* Cloud Photo Recovery Center Card */}
+      {photoCandidates.length > 0 && (
+        <div className="rounded-xl bg-gradient-to-r from-blue-50 to-indigo-50 dark:from-slate-800/90 dark:to-indigo-950/50 p-5 border border-blue-200 dark:border-indigo-800 shadow-xs space-y-4">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+            <div className="flex items-center gap-3">
+              <div className="h-10 w-10 rounded-xl bg-[#2563EB] text-white flex items-center justify-center shrink-0 shadow-xs">
+                <Camera className="h-5 w-5" />
+              </div>
+              <div>
+                <h2 className="text-sm font-bold text-[#111827] dark:text-white flex items-center gap-2">
+                  <span>Cloud Photo Recovery</span>
+                  <span className="rounded-full bg-[#2563EB] text-white text-[10px] px-2 py-0.5 font-bold">
+                    {photoCandidates.length} Photos Found
+                  </span>
+                </h2>
+                <p className="text-xs text-gray-600 dark:text-slate-300 mt-0.5">
+                  All {photoCandidates.length} product photos you uploaded are safely stored in Supabase. You can auto-generate products with 1 click without re-uploading anything.
+                </p>
+              </div>
+            </div>
+
+            <div className="flex flex-wrap gap-2">
+              <button
+                type="button"
+                onClick={() => setShowPhotoPreview(!showPhotoPreview)}
+                className="rounded-lg border border-gray-300 dark:border-slate-700 bg-white dark:bg-slate-800 px-3 py-2 text-xs font-bold text-gray-700 dark:text-slate-200 hover:bg-gray-50 transition cursor-pointer flex items-center gap-1.5"
+              >
+                <Eye className="h-3.5 w-3.5" />
+                <span>{showPhotoPreview ? "Hide Photos" : "Preview Saved Photos"}</span>
+              </button>
+              <button
+                type="button"
+                disabled={recovering}
+                onClick={handleRestoreFromPhotos}
+                className="rounded-lg bg-[#2563EB] hover:bg-[#1D4ED8] text-white px-4 py-2 text-xs font-bold transition shadow-xs cursor-pointer flex items-center gap-1.5"
+              >
+                <Sparkles className="h-3.5 w-3.5" />
+                <span>
+                  {recovering
+                    ? "Restoring..."
+                    : `Restore All ${photoCandidates.length} Products`}
+                </span>
+              </button>
+            </div>
+          </div>
+
+          {/* Photo Gallery Preview */}
+          {showPhotoPreview && (
+            <div className="pt-3 border-t border-blue-100 dark:border-slate-700">
+              <div className="grid grid-cols-2 sm:grid-cols-4 md:grid-cols-6 lg:grid-cols-8 gap-3 max-h-96 overflow-y-auto p-1">
+                {photoCandidates.map((photo, i) => (
+                  <div
+                    key={photo.product_id}
+                    className="relative group rounded-lg overflow-hidden border border-gray-200 dark:border-slate-700 bg-white dark:bg-slate-900 shadow-xs"
+                  >
+                    <div className="aspect-square bg-gray-100 dark:bg-slate-800 flex items-center justify-center overflow-hidden">
+                      {/* eslint-disable-next-line @next/next/no-img-element */}
+                      <img
+                        src={photo.image_url}
+                        alt={`Item ${i + 1}`}
+                        className="w-full h-full object-cover group-hover:scale-105 transition duration-200"
+                        loading="lazy"
+                      />
+                    </div>
+                    <div className="p-1.5 text-[10px]">
+                      <div className="font-bold truncate text-[#111827] dark:text-slate-200">
+                        {photo.existing_name || `Item ${i + 1}`}
+                      </div>
+                      <div className="text-gray-400 font-mono text-[9px] truncate">
+                        {photo.product_id.slice(0, 12)}
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+        </div>
+      )}
 
       {/* Cards Row */}
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
