@@ -47,7 +47,6 @@ import {
 import {
   saveProductImage,
   deleteProductImage,
-  extractAndMigrateInlineImages,
 } from "@/lib/images/store";
 
 export { getCloudPersistenceStatus, getLastSyncError };
@@ -58,9 +57,13 @@ const isServerless = Boolean(
     process.env.LAMBDA_TASK_ROOT
 );
 
-const DATA_DIR = isServerless ? os.tmpdir() : path.join(process.cwd(), "data");
-const DB_FILE_PATH =
-  process.env.POS_DB_FILE_PATH || path.join(DATA_DIR, "canteen_store.json");
+export function getDbFilePath(): string {
+  if (process.env.POS_DB_FILE_PATH) {
+    return process.env.POS_DB_FILE_PATH;
+  }
+  const dir = isServerless ? os.tmpdir() : path.join(process.cwd(), "data");
+  return path.join(dir, "canteen_store.json");
+}
 
 // Server-wide async mutex queue to guarantee atomic transactions and prevent race conditions
 let lockChain: Promise<unknown> = Promise.resolve();
@@ -93,63 +96,32 @@ export async function withTransactionLock<T>(fn: () => Promise<T> | T): Promise<
   return next;
 }
 
-let migrationInProgress = false;
-
 /**
  * Ensures the database has pulled the latest centralized state from Supabase Cloud.
  * Call this in API GET routes before listing or calculating data.
  */
 export async function ensureDatabaseSync(): Promise<DatabaseSchema> {
-  let db: DatabaseSchema | null = null;
   try {
     const remote = await fetchRemoteDatabase();
     if (remote) {
       writeDatabaseLocal(remote);
-      db = remote;
+      return remote;
     }
   } catch {
     // ignore
   }
-  if (!db) {
-    db = readDatabase();
-  }
-
-  // Non-blocking auto-migration: if database has large inline Base64 product images,
-  // migrate them to dedicated image storage without stalling the client's HTTP request!
-  if (db && Array.isArray(db.products) && !migrationInProgress) {
-    const hasInlineImages = db.products.some(
-      (p) => p.image_url && p.image_url.startsWith("data:image/")
-    );
-    if (hasInlineImages) {
-      migrationInProgress = true;
-      const dbRef = db;
-      void (async () => {
-        try {
-          const migrated = await extractAndMigrateInlineImages(dbRef.products);
-          if (migrated) {
-            writeDatabaseLocal(dbRef);
-            await pushRemoteDatabase(dbRef);
-          }
-        } catch (err) {
-          console.warn("[store] Error during background image migration:", err);
-        } finally {
-          migrationInProgress = false;
-        }
-      })();
-    }
-  }
-
-  return db;
+  return readDatabase();
 }
 
 function ensureDataDir(): void {
   try {
-    const dir = path.dirname(DB_FILE_PATH);
+    const dbPath = getDbFilePath();
+    const dir = path.dirname(dbPath);
     if (!fs.existsSync(dir)) {
       fs.mkdirSync(dir, { recursive: true });
     }
   } catch (err) {
-    console.warn(`[store] Could not ensure directory ${path.dirname(DB_FILE_PATH)}:`, err);
+    console.warn(`[store] Could not ensure directory ${path.dirname(getDbFilePath())}:`, err);
   }
 }
 
@@ -178,7 +150,8 @@ function sanitizeLoadedDatabase(parsed: DatabaseSchema): DatabaseSchema {
 
 export function readDatabase(): DatabaseSchema {
   ensureDataDir();
-  if (!fs.existsSync(DB_FILE_PATH)) {
+  const dbPath = getDbFilePath();
+  if (!fs.existsSync(dbPath)) {
     // 1. Check if a pre-bundled store exists in the deployed app bundle
     const bundledCandidates = [
       path.join(process.cwd(), "src", "lib", "db", "default_seed.json"),
@@ -211,11 +184,11 @@ export function readDatabase(): DatabaseSchema {
   }
 
   try {
-    const raw = fs.readFileSync(DB_FILE_PATH, "utf8");
+    const raw = fs.readFileSync(dbPath, "utf8");
     const parsed = sanitizeLoadedDatabase(JSON.parse(raw) as DatabaseSchema);
     return parsed;
   } catch (err) {
-    console.warn(`[store] Failed to parse ${DB_FILE_PATH}, falling back to default seed:`, err);
+    console.warn(`[store] Failed to parse ${dbPath}, falling back to default seed:`, err);
     const initial = sanitizeLoadedDatabase(createDevelopmentSampleDatabase());
     try {
       writeDatabase(initial);
@@ -229,12 +202,13 @@ export function readDatabase(): DatabaseSchema {
 function writeDatabaseLocal(db: DatabaseSchema): void {
   ensureDataDir();
   db.meta.updated_at = new Date().toISOString();
-  const tempPath = `${DB_FILE_PATH}.tmp`;
+  const dbPath = getDbFilePath();
+  const tempPath = `${dbPath}.tmp`;
   try {
     fs.writeFileSync(tempPath, JSON.stringify(db, null, 2), "utf8");
-    fs.renameSync(tempPath, DB_FILE_PATH);
+    fs.renameSync(tempPath, dbPath);
   } catch (err) {
-    console.error(`[store] Failed to write database to ${DB_FILE_PATH}:`, err);
+    console.error(`[store] Failed to write database to ${dbPath}:`, err);
     if (!isServerless) throw err;
   }
 }
