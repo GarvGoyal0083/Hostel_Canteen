@@ -86,7 +86,24 @@ export async function POST(req: NextRequest) {
       // Clears preloaded demo sample products so the canteen starts 100% fresh
       const result = await withTransactionLock(() => {
         const db = readDatabase();
+        const demoProductIds = new Set([
+          "prod-kurkure-masala",
+          "prod-lays-magic",
+          "prod-lays-cream",
+          "prod-haldiram-bhujia",
+          "prod-oreo-choco",
+          "prod-parle-g",
+          "prod-good-day",
+          "prod-coke-250",
+          "prod-thums-up",
+          "prod-sting-energy",
+          "prod-maggi-single",
+          "prod-kitkat-4f",
+        ]);
         const demoSkus = new Set([
+          "SNK-KRK-001", "SNK-LAY-002", "SNK-LAY-003", "SNK-HLD-004",
+          "BSC-ORE-001", "BSC-PRL-002", "BSC-BRI-003", "DRK-COK-001",
+          "DRK-THM-002", "DRK-STG-003", "NDL-MGI-001", "CHC-KTK-001",
           "SNK-001", "SNK-002", "SNK-003", "SNK-004", "SNK-005",
           "SNK-006", "SNK-007", "SNK-008", "SNK-009", "SNK-010",
           "SNK-011", "SNK-012"
@@ -108,7 +125,7 @@ export async function POST(req: NextRequest) {
 
         const before = db.products.length;
         db.products = db.products.filter(
-          (p) => !demoSkus.has(p.sku) && !demoNames.has(p.name)
+          (p) => !demoProductIds.has(p.id) && !demoSkus.has(p.sku) && !demoNames.has(p.name)
         );
         db.meta.environment_mode = "production_clean";
         writeDatabase(db);
