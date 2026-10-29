@@ -233,7 +233,11 @@ ON public.canteen_store FOR ALL USING (true) WITH CHECK (true);`;
   };
 
   const handleClearDemoProducts = async () => {
-    if (!window.confirm("Remove all 12 pre-loaded sample products (Kurkure, Lay's, Oreo, etc.) from the catalog? Your real products, students, and settings will remain safe.")) {
+    if (
+      !window.confirm(
+        "Remove all 12 sample demo products (Kurkure, Lay's, Oreo, etc.), link your uploaded snack photos, and ensure all existing student details (Aarav, Rohit, Kabir, Devansh) are active in your canteen?"
+      )
+    ) {
       return;
     }
     setRecovering(true);
@@ -241,7 +245,7 @@ ON public.canteen_store FOR ALL USING (true) WITH CHECK (true);`;
       const res = await fetch("/api/recovery", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ action: "clear_demo_products" }),
+        body: JSON.stringify({ action: "remove_demo_and_add_students" }),
       });
       if (res.status === 401) {
         alert("Your admin login session has expired. Redirecting to login page...");
@@ -250,10 +254,13 @@ ON public.canteen_store FOR ALL USING (true) WITH CHECK (true);`;
       }
       const data = await res.json();
       if (res.ok) {
-        alert(`Cleared ${data.result?.removed || 0} sample demo products!`);
+        alert(
+          `✅ Store Updated Successfully!\n• Removed ${data.result?.removed_demo_products || 0} sample demo products\n• Linked ${data.result?.restored_photos || 0} products from your uploaded photos\n• Total catalog items: ${data.result?.total_products || 0}\n• Total active students: ${data.result?.total_students || 0}`
+        );
+        await fetchPhotoRecoveryData();
         onRefresh();
       } else {
-        alert(data.error || "Failed to clear sample products.");
+        alert(data.error || "Failed to update store.");
       }
     } finally {
       setRecovering(false);
@@ -371,6 +378,16 @@ ON public.canteen_store FOR ALL USING (true) WITH CHECK (true);`;
               >
                 <Eye className="h-3.5 w-3.5" />
                 <span>{showPhotoPreview ? "Hide Photos" : "Preview Saved Photos"}</span>
+              </button>
+              <button
+                type="button"
+                disabled={recovering}
+                onClick={handleClearDemoProducts}
+                className="rounded-lg border border-red-300 dark:border-red-800 bg-red-50 hover:bg-red-100 dark:bg-red-950/40 text-red-700 dark:text-red-300 px-3 py-2 text-xs font-bold transition cursor-pointer flex items-center gap-1.5"
+                title="Clears 12 demo items, activates your uploaded photos, and keeps students"
+              >
+                <Trash2 className="h-3.5 w-3.5" />
+                <span>Remove Demo &amp; Keep Students</span>
               </button>
               <button
                 type="button"
