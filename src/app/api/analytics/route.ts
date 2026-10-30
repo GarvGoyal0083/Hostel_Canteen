@@ -3,8 +3,9 @@ import { requireAdminAuth } from "@/lib/auth";
 import {
   computeFinancialMetrics,
   ensureDatabaseSync,
-  getCloudPersistenceStatus,
-  getLastSyncError,
+  getActiveCloudPersistenceStatus,
+  getActiveCloudProvider,
+  getActiveSyncError,
   getProductStockSummaries,
   listCustomers,
   listExpenses,
@@ -16,6 +17,7 @@ import {
   switchDatabaseEnvironmentMode,
 } from "@/lib/db/store";
 import { isSupabaseConfigured } from "@/lib/supabase/server";
+import { isMysqlConfigured } from "@/lib/mysql/client";
 
 export async function GET(req: NextRequest) {
   const auth = await requireAdminAuth();
@@ -52,11 +54,14 @@ export async function GET(req: NextRequest) {
   const products = listProducts({ includeInactive: true });
   const db = readDatabase();
 
+  const isConnected = isMysqlConfigured() || isSupabaseConfigured();
+
   return NextResponse.json({
     ...metrics,
-    supabase_configured: isSupabaseConfigured(),
-    supabase_cloud_synced: getCloudPersistenceStatus(),
-    supabase_sync_error: getLastSyncError(),
+    supabase_configured: isConnected,
+    supabase_cloud_synced: isConnected ? getActiveCloudPersistenceStatus() : false,
+    supabase_sync_error: getActiveSyncError(),
+    cloud_provider: getActiveCloudProvider(),
     stock_summaries: stockSummaries,
     customers,
     sales,
