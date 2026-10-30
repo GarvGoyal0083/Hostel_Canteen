@@ -35,6 +35,7 @@ interface SettingsViewProps {
   supabaseConfigured: boolean;
   supabaseCloudSynced?: boolean;
   supabaseSyncError?: string | null;
+  cloudProvider?: string;
   environmentMode: "development_sample" | "production_clean";
   auditLogs: AuditLogRecord[];
   canteenStatus?: CanteenStatus;
@@ -47,6 +48,7 @@ export function SettingsView({
   supabaseConfigured,
   supabaseCloudSynced,
   supabaseSyncError,
+  cloudProvider,
   environmentMode,
   auditLogs,
   canteenStatus,
@@ -88,7 +90,9 @@ ON public.canteen_store FOR ALL USING (true) WITH CHECK (true);`;
       if (data.persisting) {
         setTestResult({
           status: "success",
-          message: "🎉 Success! Supabase Cloud Persistence is active and saving permanently across all browsers and devices.",
+          message:
+            data.message ||
+            "🎉 Success! Cloud Persistence is active and saving permanently across all devices.",
         });
         onRefresh();
       } else {
@@ -583,9 +587,11 @@ ON public.canteen_store FOR ALL USING (true) WITH CHECK (true);`;
             </div>
 
             <div className="flex items-center justify-between">
-              <span className="text-gray-500">Supabase Cloud Env:</span>
+              <span className="text-gray-500">Database Engine:</span>
               <span className="font-semibold text-[#111827]">
-                {supabaseConfigured
+                {cloudProvider === "hostinger_mysql"
+                  ? "Hostinger MySQL Cloud"
+                  : supabaseConfigured
                   ? "Connected to Supabase"
                   : "Local Persistent ACID Store"}
               </span>
@@ -595,15 +601,17 @@ ON public.canteen_store FOR ALL USING (true) WITH CHECK (true);`;
               <span className="text-gray-500">Multi-Device Sync:</span>
               <span
                 className={`rounded-full px-2 py-0.5 text-[10px] font-black ${
-                  supabaseCloudSynced
+                  supabaseCloudSynced || cloudProvider === "hostinger_mysql"
                     ? "bg-emerald-100 text-emerald-800 border border-emerald-300"
                     : supabaseConfigured
                     ? "bg-amber-100 text-amber-900 border border-amber-300"
                     : "bg-slate-100 text-slate-700 border border-slate-300"
                 }`}
               >
-                {supabaseCloudSynced
-                  ? "ACTIVE (ALL BROWSERS SYNCED)"
+                {supabaseCloudSynced || cloudProvider === "hostinger_mysql"
+                  ? cloudProvider === "hostinger_mysql"
+                    ? "ACTIVE (HOSTINGER MYSQL SYNCED)"
+                    : "ACTIVE (ALL BROWSERS SYNCED)"
                   : supabaseConfigured
                   ? "RUN SQL TABLE MIGRATION"
                   : "LOCAL ONLY"}
@@ -688,7 +696,7 @@ ON public.canteen_store FOR ALL USING (true) WITH CHECK (true);`;
                   <span>Cloud Persistence Verified Active ✅</span>
                 </div>
                 <p className="text-[11px] text-emerald-700 leading-relaxed">
-                  All products, counter sales, and registered students are permanently stored in your Supabase PostgreSQL cloud database and stay synchronized across all devices in real time.
+                  All products, counter sales, and registered students are permanently stored in your Hostinger MySQL cloud database and stay synchronized across all devices in real time.
                 </p>
                 <button
                   type="button"

@@ -175,6 +175,7 @@ export default function HostelCanteenPosApp() {
     supabase_configured: boolean;
     supabase_cloud_synced?: boolean;
     supabase_sync_error?: string | null;
+    cloud_provider?: "hostinger_mysql" | "supabase" | "local";
     kpis: {
       today_sales: number;
       weekly_sales: number;
@@ -860,6 +861,7 @@ export default function HostelCanteenPosApp() {
                   supabaseConfigured={appData.supabase_configured}
                   supabaseCloudSynced={appData.supabase_cloud_synced}
                   supabaseSyncError={appData.supabase_sync_error}
+                  cloudProvider={appData.cloud_provider}
                   environmentMode={appData.environment_mode}
                   auditLogs={appData.audit_logs}
                   canteenStatus={canteenStatus}
