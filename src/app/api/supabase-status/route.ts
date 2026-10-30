@@ -1,26 +1,59 @@
 import { NextResponse } from "next/server";
 import { requireAdminAuth } from "@/lib/auth";
 import { createSupabaseAdminClient, isSupabaseConfigured } from "@/lib/supabase/server";
+import { getMysqlPool, isMysqlConfigured } from "@/lib/mysql/client";
+import type { RowDataPacket } from "mysql2";
 
 export async function GET() {
   const auth = await requireAdminAuth();
   if (!auth.authorized) return auth.response;
 
-  const configured = isSupabaseConfigured();
-  const url = process.env.NEXT_PUBLIC_SUPABASE_URL || null;
-  const hasAnonKey = Boolean(process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY);
-  const hasServiceRoleKey = Boolean(
-    process.env.SUPABASE_SERVICE_ROLE_KEY &&
-      !process.env.SUPABASE_SERVICE_ROLE_KEY.includes("your-supabase-service-role")
-  );
+  // 1. If Hostinger MySQL is configured, test Hostinger MySQL first
+  if (isMysqlConfigured()) {
+    try {
+      const pool = getMysqlPool();
+      if (!pool) {
+        return NextResponse.json({
+          configured: true,
+          provider: "hostinger_mysql",
+          persisting: false,
+          error: "Failed to initialize Hostinger MySQL connection pool.",
+        });
+      }
 
+      // Test connection and table existence
+      const [rows] = await pool.query<RowDataPacket[]>(
+        "SELECT id, updated_at FROM canteen_store WHERE id = 'main' LIMIT 1"
+      );
+
+      return NextResponse.json({
+        configured: true,
+        provider: "hostinger_mysql",
+        persisting: true,
+        table_exists: true,
+        host: process.env.MYSQL_HOST || process.env.HOSTINGER_MYSQL_HOST,
+        database: process.env.MYSQL_DATABASE || process.env.HOSTINGER_MYSQL_DATABASE,
+        main_record_exists: rows && rows.length > 0,
+        message: "🎉 Success! Connected to Hostinger MySQL. Your products, sales, and udhaar are permanently stored on Hostinger and will NEVER be deleted or reset.",
+      });
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : String(err);
+      return NextResponse.json({
+        configured: true,
+        provider: "hostinger_mysql",
+        persisting: false,
+        error: `Hostinger MySQL Connection Error: ${message}. Make sure 'Remote MySQL' is enabled in Hostinger with Any Host (%) and the password is correct in Vercel.`,
+      });
+    }
+  }
+
+  // 2. Supabase Fallback (if still configured)
+  const configured = isSupabaseConfigured();
   if (!configured) {
     return NextResponse.json({
       configured: false,
-      table_exists: false,
       persisting: false,
-      error: "Supabase environment variables (NEXT_PUBLIC_SUPABASE_URL & NEXT_PUBLIC_SUPABASE_ANON_KEY) are not set in Vercel.",
-      sql_needed: true,
+      error: "No cloud database configured (neither Hostinger MySQL nor Supabase). Add Hostinger MYSQL_* variables in Vercel.",
     });
   }
 
@@ -29,14 +62,12 @@ export async function GET() {
     if (!supabase) {
       return NextResponse.json({
         configured: true,
-        table_exists: false,
+        provider: "supabase",
         persisting: false,
         error: "Failed to initialize Supabase client.",
-        sql_needed: true,
       });
     }
 
-    // Test 1: Check if canteen_store table exists by querying 1 row
     const { data: readData, error: readError } = await supabase
       .from("canteen_store")
       .select("id, updated_at")
@@ -44,64 +75,28 @@ export async function GET() {
       .maybeSingle();
 
     if (readError) {
-      const isMissingTable =
-        readError.code === "42P01" ||
-        readError.message.toLowerCase().includes("does not exist") ||
-        readError.message.toLowerCase().includes("relation");
-
       return NextResponse.json({
         configured: true,
-        table_exists: false,
+        provider: "supabase",
         persisting: false,
-        error_code: readError.code,
-        error: isMissingTable
-          ? "Table 'canteen_store' does not exist in your Supabase database. You must run the SQL snippet in Supabase SQL Editor to enable permanent storage."
-          : `Supabase read error: ${readError.message}`,
-        sql_needed: true,
-        has_service_role_key: hasServiceRoleKey,
-      });
-    }
-
-    // Test 2: Verify write permission by performing a test ping
-    const testPingTime = new Date().toISOString();
-    const { error: writeError } = await supabase
-      .from("canteen_store")
-      .upsert(
-        {
-          id: "main",
-          data: readData ? undefined : {}, // don't wipe data if already present
-          updated_at: testPingTime,
-        },
-        { onConflict: "id" }
-      );
-
-    if (writeError && !readData) {
-      return NextResponse.json({
-        configured: true,
-        table_exists: true,
-        persisting: false,
-        error: `Write permission error (RLS policy missing): ${writeError.message}. Run the SQL snippet to grant access.`,
-        sql_needed: true,
-        has_service_role_key: hasServiceRoleKey,
+        error: `Supabase query error: ${readError.message}`,
       });
     }
 
     return NextResponse.json({
       configured: true,
-      table_exists: true,
+      provider: "supabase",
       persisting: true,
-      message: "Supabase cloud persistence is ACTIVE and storing data permanently across all browsers and devices.",
-      has_service_role_key: hasServiceRoleKey,
-      sql_needed: false,
-      last_updated_at: readData?.updated_at || testPingTime,
+      table_exists: true,
+      message: "Connected to Supabase Cloud.",
     });
-  } catch (err) {
+  } catch (err: unknown) {
+    const message = err instanceof Error ? err.message : String(err);
     return NextResponse.json({
       configured: true,
-      table_exists: false,
+      provider: "supabase",
       persisting: false,
-      error: err instanceof Error ? err.message : "Unexpected connection error to Supabase.",
-      sql_needed: true,
+      error: `Supabase connection exception: ${message}`,
     });
   }
 }

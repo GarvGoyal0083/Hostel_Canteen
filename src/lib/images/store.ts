@@ -2,6 +2,8 @@ import fs from "fs";
 import path from "path";
 import os from "os";
 import { createSupabaseAdminClient, isSupabaseConfigured } from "@/lib/supabase/server";
+import { getMysqlPool, isMysqlConfigured } from "@/lib/mysql/client";
+import type { RowDataPacket } from "mysql2";
 
 const isServerless = Boolean(
   process.env.VERCEL ||
@@ -125,8 +127,28 @@ export async function saveProductImage(
     console.warn(`[canteen-images] Failed to write image to disk ${filePath}:`, err);
   }
 
-  // 3. Persist to Supabase Cloud if configured
-  if (isSupabaseConfigured()) {
+  // 3. Persist to Hostinger MySQL or Supabase Cloud if configured
+  if (isMysqlConfigured()) {
+    try {
+      const pool = getMysqlPool();
+      if (pool) {
+        const payload = JSON.stringify({
+          mime,
+          base64,
+          size: buffer.length,
+          updated_at: new Date().toISOString(),
+        });
+        await pool.query(
+          `INSERT INTO canteen_store (id, data, updated_at)
+           VALUES (?, ?, NOW())
+           ON DUPLICATE KEY UPDATE data = VALUES(data), updated_at = NOW()`,
+          [`img_${safeId}`, payload]
+        );
+      }
+    } catch (err) {
+      console.warn(`[canteen-images] Failed to persist image to Hostinger MySQL:`, err);
+    }
+  } else if (isSupabaseConfigured()) {
     try {
       const supabase = createSupabaseAdminClient();
       if (supabase) {
@@ -197,8 +219,39 @@ export async function getProductImage(
     }
   }
 
-  // 4. Supabase Cloud Fallback (if image was persisted remotely)
-  if (isSupabaseConfigured()) {
+  // 4. Hostinger MySQL or Supabase Cloud Fallback (if image was persisted remotely)
+  if (isMysqlConfigured()) {
+    try {
+      const pool = getMysqlPool();
+      if (pool) {
+        const [rows] = await pool.query<RowDataPacket[]>(
+          "SELECT data FROM canteen_store WHERE id = ? LIMIT 1",
+          [`img_${safeId}`]
+        );
+        if (rows && rows.length > 0 && rows[0].data) {
+          const raw = rows[0].data;
+          const parsed = typeof raw === "string" ? JSON.parse(raw) : raw;
+          if (parsed && parsed.base64) {
+            const base64 = parsed.base64;
+            const mime = parsed.mime || "image/jpeg";
+            const buffer = Buffer.from(base64, "base64");
+
+            ensureImagesDir();
+            try {
+              fs.writeFileSync(filePath, buffer);
+            } catch {
+              // ignore
+            }
+
+            memoryCache.set(safeId, { buffer, mime });
+            return { buffer, mime };
+          }
+        }
+      }
+    } catch (err) {
+      console.warn(`[canteen-images] Error fetching from Hostinger MySQL for ${safeId}:`, err);
+    }
+  } else if (isSupabaseConfigured()) {
     try {
       const supabase = createSupabaseAdminClient();
       if (supabase) {
@@ -250,7 +303,16 @@ export async function deleteProductImage(productId: string): Promise<void> {
     // ignore
   }
 
-  if (isSupabaseConfigured()) {
+  if (isMysqlConfigured()) {
+    try {
+      const pool = getMysqlPool();
+      if (pool) {
+        await pool.query("DELETE FROM canteen_store WHERE id = ?", [`img_${safeId}`]);
+      }
+    } catch {
+      // ignore
+    }
+  } else if (isSupabaseConfigured()) {
     try {
       const supabase = createSupabaseAdminClient();
       if (supabase) {

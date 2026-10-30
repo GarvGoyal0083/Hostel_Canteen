@@ -44,10 +44,32 @@ import {
   getLastSyncError,
   pushRemoteDatabase,
 } from "@/lib/db/supabaseSync";
+import { isMysqlConfigured } from "@/lib/mysql/client";
+import {
+  fetchMysqlDatabase,
+  getMysqlPersistenceStatus,
+  getLastMysqlSyncError,
+  pushMysqlDatabase,
+} from "@/lib/db/mysqlSync";
 import {
   saveProductImage,
   deleteProductImage,
 } from "@/lib/images/store";
+
+export function getActiveCloudPersistenceStatus(): boolean {
+  if (isMysqlConfigured()) return getMysqlPersistenceStatus();
+  return getCloudPersistenceStatus();
+}
+
+export function getActiveCloudProvider(): "hostinger_mysql" | "supabase" | "local" {
+  if (isMysqlConfigured()) return "hostinger_mysql";
+  return getCloudPersistenceStatus() ? "supabase" : "local";
+}
+
+export function getActiveSyncError(): string | null {
+  if (isMysqlConfigured()) return getLastMysqlSyncError();
+  return getLastSyncError();
+}
 
 export { getCloudPersistenceStatus, getLastSyncError };
 
@@ -104,10 +126,19 @@ export async function ensureDatabaseSync(): Promise<DatabaseSchema> {
   try {
     const dbPath = getDbFilePath();
     const needsForce = !fs.existsSync(dbPath);
-    const remote = await fetchRemoteDatabase(needsForce);
-    if (remote) {
-      writeDatabaseLocal(remote);
-      return remote;
+
+    if (isMysqlConfigured()) {
+      const remote = await fetchMysqlDatabase(needsForce);
+      if (remote) {
+        writeDatabaseLocal(remote);
+        return remote;
+      }
+    } else {
+      const remote = await fetchRemoteDatabase(needsForce);
+      if (remote) {
+        writeDatabaseLocal(remote);
+        return remote;
+      }
     }
   } catch {
     // ignore
@@ -217,7 +248,11 @@ function writeDatabaseLocal(db: DatabaseSchema): void {
 
 export function writeDatabase(db: DatabaseSchema): void {
   writeDatabaseLocal(db);
-  pushRemoteDatabase(db).catch(() => undefined);
+  if (isMysqlConfigured()) {
+    pushMysqlDatabase(db).catch(() => undefined);
+  } else {
+    pushRemoteDatabase(db).catch(() => undefined);
+  }
 }
 
 function appendAudit(
