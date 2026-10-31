@@ -190,7 +190,53 @@ export function DashboardView({
         </div>
 
         <div className="flex flex-col sm:flex-row sm:flex-wrap items-stretch sm:items-center gap-2.5">
-          {/* 3D Date Selector */}
+          <div className="flex items-center gap-2 w-full sm:w-auto">
+            {/* 1. Highlighted UPI QR Code Option */}
+            <button
+              type="button"
+              onClick={() => setQrModalOpen(true)}
+              className="btn-3d-primary flex-1 sm:flex-initial inline-flex items-center justify-center gap-2 px-4 py-2 text-xs font-black cursor-pointer shadow-md shadow-blue-500/25 hover:scale-[1.03] active:scale-95 transition-all ring-2 ring-blue-500/20"
+              title="Show UPI Payment QR Code for customers to scan"
+            >
+              <QrCode className="h-4 w-4 text-white" />
+              <span>UPI QR Code</span>
+            </button>
+
+            {/* 2. Shop Open / Closed Toggle */}
+            {onOpenStatusModal && (
+              <button
+                type="button"
+                onClick={onOpenStatusModal}
+                className={`hidden sm:inline-flex items-center gap-1.5 px-3 py-2 text-xs font-bold rounded-xl border transition cursor-pointer shadow-xs ${
+                  canteen_status?.is_open === false
+                    ? "bg-red-50 dark:bg-red-950/40 border-red-300 dark:border-red-800 text-red-800 dark:text-red-300 hover:bg-red-100"
+                    : "bg-emerald-50 dark:bg-emerald-950/40 border-emerald-300 dark:border-emerald-800 text-emerald-800 dark:text-emerald-300 hover:bg-emerald-100"
+                }`}
+              >
+                <span
+                  className={`h-2 w-2 rounded-full ${
+                    canteen_status?.is_open === false
+                      ? "bg-red-500"
+                      : "bg-emerald-500 animate-pulse"
+                  }`}
+                />
+                <span>
+                  {canteen_status?.is_open === false ? "Shop Closed" : "Shop Open"}
+                </span>
+              </button>
+            )}
+
+            {/* 3. Refresh */}
+            <button
+              onClick={onRefresh}
+              className="btn-3d-secondary flex-1 sm:flex-initial inline-flex items-center justify-center gap-1.5 px-3.5 py-2 text-xs font-bold text-[#111827] dark:text-slate-200 cursor-pointer"
+            >
+              <RefreshCw className="h-3.5 w-3.5 text-gray-600 dark:text-slate-400" />
+              Refresh
+            </button>
+          </div>
+
+          {/* 4. 3D Date Selector */}
           <div className="flex items-center justify-between sm:justify-start gap-1.5 sm:gap-2 rounded-xl border border-slate-200 dark:border-slate-700 bg-white/90 dark:bg-slate-800/90 px-3 py-2 text-xs shadow-xs w-full sm:w-auto overflow-x-auto">
             <Calendar className="h-3.5 w-3.5 text-[#2563EB] dark:text-blue-400 shrink-0" />
             <input
@@ -220,50 +266,6 @@ export function DashboardView({
                 Clear
               </button>
             )}
-          </div>
-
-          <div className="flex items-center gap-2 w-full sm:w-auto">
-            {onOpenStatusModal && (
-              <button
-                type="button"
-                onClick={onOpenStatusModal}
-                className={`hidden sm:inline-flex items-center gap-1.5 px-3 py-2 text-xs font-bold rounded-xl border transition cursor-pointer shadow-xs ${
-                  canteen_status?.is_open === false
-                    ? "bg-red-50 dark:bg-red-950/40 border-red-300 dark:border-red-800 text-red-800 dark:text-red-300 hover:bg-red-100"
-                    : "bg-emerald-50 dark:bg-emerald-950/40 border-emerald-300 dark:border-emerald-800 text-emerald-800 dark:text-emerald-300 hover:bg-emerald-100"
-                }`}
-              >
-                <span
-                  className={`h-2 w-2 rounded-full ${
-                    canteen_status?.is_open === false
-                      ? "bg-red-500"
-                      : "bg-emerald-500 animate-pulse"
-                  }`}
-                />
-                <span>
-                  {canteen_status?.is_open === false ? "Shop Closed" : "Shop Open"}
-                </span>
-              </button>
-            )}
-
-            <button
-              onClick={onRefresh}
-              className="btn-3d-secondary flex-1 sm:flex-initial inline-flex items-center justify-center gap-1.5 px-3.5 py-2 text-xs font-bold text-[#111827] dark:text-slate-200 cursor-pointer"
-            >
-              <RefreshCw className="h-3.5 w-3.5 text-gray-600 dark:text-slate-400" />
-              Refresh
-            </button>
-
-            {/* Highlighted UPI QR Code Option */}
-            <button
-              type="button"
-              onClick={() => setQrModalOpen(true)}
-              className="btn-3d-primary flex-1 sm:flex-initial inline-flex items-center justify-center gap-2 px-4 py-2 text-xs font-black cursor-pointer shadow-md shadow-blue-500/25 hover:scale-[1.03] active:scale-95 transition-all ring-2 ring-blue-500/20"
-              title="Show UPI Payment QR Code for customers to scan"
-            >
-              <QrCode className="h-4 w-4 text-white" />
-              <span>UPI QR Code</span>
-            </button>
           </div>
         </div>
       </div>
