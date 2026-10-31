@@ -18,6 +18,7 @@ import {
   Product,
   ProductStockSummary,
   PushSubscriptionRecord,
+  PushNotificationHistoryItem,
   RefundCancellationRecord,
   SaleItem,
   SaleRecord,
@@ -92,9 +93,11 @@ let lockChain: Promise<unknown> = Promise.resolve();
 
 export async function withTransactionLock<T>(fn: () => Promise<T> | T): Promise<T> {
   const next = lockChain.then(async () => {
-    // 1. Sync latest changes from Supabase Cloud before executing mutation
+    // 1. Sync latest changes from Cloud before executing mutation
     try {
-      const remote = await fetchRemoteDatabase();
+      const remote = isMysqlConfigured()
+        ? await fetchMysqlDatabase()
+        : await fetchRemoteDatabase();
       if (remote) {
         writeDatabaseLocal(remote);
       }
@@ -104,10 +107,14 @@ export async function withTransactionLock<T>(fn: () => Promise<T> | T): Promise<
 
     const result = await fn();
 
-    // 2. Broadcast updated database state to Supabase Cloud
+    // 2. Broadcast updated database state to Cloud
     try {
       const current = readDatabase();
-      await pushRemoteDatabase(current);
+      if (isMysqlConfigured()) {
+        await pushMysqlDatabase(current);
+      } else {
+        await pushRemoteDatabase(current);
+      }
     } catch {
       // ignore
     }
@@ -161,6 +168,9 @@ function ensureDataDir(): void {
 function sanitizeLoadedDatabase(parsed: DatabaseSchema): DatabaseSchema {
   if (!Array.isArray(parsed.push_subscriptions)) {
     parsed.push_subscriptions = [];
+  }
+  if (!Array.isArray(parsed.push_notification_history)) {
+    parsed.push_notification_history = [];
   }
   // Sanitize service products (e.g. Room Delivery Charge): services do not hold physical stock
   if (Array.isArray(parsed.products)) {
@@ -3766,4 +3776,56 @@ export async function cleanupExpiredPushSubscriptions(endpointsToRemove: string[
     writeDatabase(db);
   });
 }
+
+// =============================================================================
+// WEB PUSH NOTIFICATION HISTORY (LAST 5 PUSHED NOTIFICATIONS)
+// =============================================================================
+
+export function listPushNotificationHistory(limit = 5): PushNotificationHistoryItem[] {
+  const db = readDatabase();
+  const list = db.push_notification_history || [];
+  return list.slice(0, limit);
+}
+
+export async function recordPushNotificationHistory(input: {
+  title: string;
+  body: string;
+  url?: string;
+  tag?: string;
+  sent_count?: number;
+}): Promise<PushNotificationHistoryItem> {
+  return withTransactionLock(async () => {
+    const db = readDatabase();
+    const current = db.push_notification_history || [];
+    const nowIso = new Date().toISOString();
+
+    const item: PushNotificationHistoryItem = {
+      id: crypto.randomUUID(),
+      title: input.title,
+      body: input.body,
+      url: input.url || "/",
+      tag: input.tag || `push-${Date.now()}`,
+      sent_count: input.sent_count,
+      created_at: nowIso,
+    };
+
+    // Keep only the latest 5 notifications (deduplicate by tag if identical tag was just pushed)
+    const filtered = input.tag
+      ? current.filter((existing) => existing.tag !== input.tag)
+      : current;
+
+    db.push_notification_history = [item, ...filtered].slice(0, 5);
+    writeDatabase(db);
+    return item;
+  });
+}
+
+export async function clearPushNotificationHistory(): Promise<void> {
+  return withTransactionLock(async () => {
+    const db = readDatabase();
+    db.push_notification_history = [];
+    writeDatabase(db);
+  });
+}
+
 

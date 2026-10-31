@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
+import { PushNotificationHistoryItem } from "@/types/pos";
 
 export function urlBase64ToUint8Array(base64String: string): Uint8Array {
   const padding = "=".repeat((4 - (base64String.length % 4)) % 4);
@@ -24,6 +25,8 @@ export interface UsePushNotificationsOptions {
   userName?: string | null;
 }
 
+const MAX_NOTIFICATIONS = 5;
+
 export function usePushNotifications(options: UsePushNotificationsOptions = {}) {
   const { role = "customer", customerId, userName } = options;
 
@@ -33,6 +36,21 @@ export function usePushNotifications(options: UsePushNotificationsOptions = {}) 
   const [loading, setLoading] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
   const [isIosWithoutPwa, setIsIosWithoutPwa] = useState<boolean>(false);
+  const [notifications, setNotifications] = useState<PushNotificationHistoryItem[]>([]);
+
+  const refreshNotifications = useCallback(async () => {
+    try {
+      const res = await fetch("/api/push/history", { cache: "no-store" });
+      if (res.ok) {
+        const data = await res.json();
+        if (Array.isArray(data.notifications)) {
+          setNotifications(data.notifications.slice(0, MAX_NOTIFICATIONS));
+        }
+      }
+    } catch {
+      // ignore fetch errors
+    }
+  }, []);
 
   // Check support & detect iOS Safari standalone requirement
   useEffect(() => {
@@ -59,6 +77,28 @@ export function usePushNotifications(options: UsePushNotificationsOptions = {}) 
 
     if (isIos && !isStandalone) {
       setIsIosWithoutPwa(true);
+    }
+
+    // Load initial notification history from server
+    refreshNotifications();
+
+    // Listen for live push messages forwarded by Service Worker
+    const handleServiceWorkerMessage = (event: MessageEvent) => {
+      if (event.data && event.data.type === "PUSH_NOTIFICATION_RECEIVED" && event.data.notification) {
+        const incoming = event.data.notification as PushNotificationHistoryItem;
+        setNotifications((prev) => {
+          const filtered = prev.filter(
+            (item) =>
+              item.id !== incoming.id &&
+              (!incoming.tag || item.tag !== incoming.tag)
+          );
+          return [incoming, ...filtered].slice(0, MAX_NOTIFICATIONS);
+        });
+      }
+    };
+
+    if (hasServiceWorker) {
+      navigator.serviceWorker.addEventListener("message", handleServiceWorkerMessage);
     }
 
     // Auto-register service worker and sync subscription whenever supported
@@ -106,7 +146,13 @@ export function usePushNotifications(options: UsePushNotificationsOptions = {}) 
         })
         .catch((err) => console.warn("[push] SW registration error:", err));
     }
-  }, [role, customerId, userName]);
+
+    return () => {
+      if (hasServiceWorker) {
+        navigator.serviceWorker.removeEventListener("message", handleServiceWorkerMessage);
+      }
+    };
+  }, [role, customerId, userName, refreshNotifications]);
 
   const subscribe = useCallback(async () => {
     if (!isSupported) {
@@ -239,6 +285,20 @@ export function usePushNotifications(options: UsePushNotificationsOptions = {}) 
         throw new Error(data.error || "Failed to trigger test notification.");
       }
 
+      if (data.notification) {
+        const incoming = data.notification as PushNotificationHistoryItem;
+        setNotifications((prev) => {
+          const filtered = prev.filter(
+            (item) =>
+              item.id !== incoming.id &&
+              (!incoming.tag || item.tag !== incoming.tag)
+          );
+          return [incoming, ...filtered].slice(0, MAX_NOTIFICATIONS);
+        });
+      } else {
+        await refreshNotifications();
+      }
+
       return true;
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : "Test notification failed";
@@ -248,7 +308,23 @@ export function usePushNotifications(options: UsePushNotificationsOptions = {}) 
     } finally {
       setLoading(false);
     }
-  }, [isSupported, isSubscribed]);
+  }, [isSupported, isSubscribed, refreshNotifications]);
+
+  const clearNotifications = useCallback(async () => {
+    setNotifications([]);
+    try {
+      await fetch("/api/push/history", { method: "DELETE" });
+      if ("serviceWorker" in navigator) {
+        const reg = await navigator.serviceWorker.getRegistration();
+        if (reg && "getNotifications" in reg) {
+          const activeList = await reg.getNotifications();
+          activeList.forEach((n) => n.close());
+        }
+      }
+    } catch (err) {
+      console.warn("[usePushNotifications] Failed to clear notifications:", err);
+    }
+  }, []);
 
   return {
     isSupported,
@@ -257,8 +333,11 @@ export function usePushNotifications(options: UsePushNotificationsOptions = {}) 
     loading,
     error,
     isIosWithoutPwa,
+    notifications,
     subscribe,
     unsubscribe,
     sendTestNotification,
+    refreshNotifications,
+    clearNotifications,
   };
 }

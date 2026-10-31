@@ -82,18 +82,43 @@ self.addEventListener("push", (event) => {
     }
 
     const title = payload.title || "Hostel Canteen";
+    const bodyText = payload.body || "You have a new update from Hostel Canteen.";
+    const tag = payload.tag || `hc-push-${Date.now()}`;
+    const targetUrl = (payload.data && payload.data.url) || payload.url || "/";
     const options = {
-      body: payload.body || "You have a new update from Hostel Canteen.",
+      body: bodyText,
       icon: payload.icon || "/logo.svg",
       badge: payload.badge || "/logo.svg",
       vibrate: [200, 100, 200, 100, 200],
-      data: payload.data || { url: payload.url || "/" },
-      tag: payload.tag || `hc-push-${Date.now()}`,
+      data: payload.data || { url: targetUrl },
+      tag,
       renotify: true,
       requireInteraction: true,
     };
 
-    event.waitUntil(self.registration.showNotification(title, options));
+    const notifyClientsPromise = self.clients
+      .matchAll({ type: "window", includeUncontrolled: true })
+      .then((clients) => {
+        const notificationItem = {
+          id: tag,
+          title,
+          body: bodyText,
+          url: targetUrl,
+          tag,
+          created_at: new Date().toISOString(),
+        };
+        for (const client of clients) {
+          client.postMessage({
+            type: "PUSH_NOTIFICATION_RECEIVED",
+            notification: notificationItem,
+          });
+        }
+      })
+      .catch(() => undefined);
+
+    event.waitUntil(
+      Promise.all([self.registration.showNotification(title, options), notifyClientsPromise])
+    );
   } catch (err) {
     console.warn("[sw] Push display error:", err);
   }

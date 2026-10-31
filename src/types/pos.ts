@@ -374,3 +374,13 @@ export interface PushNotificationPayload {
   tag?: string;
   data?: Record<string, unknown>;
 }
+
+export interface PushNotificationHistoryItem {
+  id: string;
+  title: string;
+  body: string;
+  url?: string;
+  tag?: string;
+  sent_count?: number;
+  created_at: string;
+}

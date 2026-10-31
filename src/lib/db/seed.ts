@@ -10,6 +10,7 @@ import {
   RefundCancellationRecord,
   SaleRecord,
   PushSubscriptionRecord,
+  PushNotificationHistoryItem,
 } from "@/types/pos";
 import { getISTCompactDateKey, getISTDateString } from "@/lib/format";
 
@@ -33,6 +34,7 @@ export interface DatabaseSchema {
   refunds_cancellations: RefundCancellationRecord[];
   audit_logs: AuditLogRecord[];
   push_subscriptions?: PushSubscriptionRecord[];
+  push_notification_history?: PushNotificationHistoryItem[];
 }
 
 export function createDefaultAdminUsers(): AdminUser[] {

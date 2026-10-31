@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { sendPushToSubscription } from "@/lib/push/webPush";
-import { ensureDatabaseSync } from "@/lib/db/store";
+import { ensureDatabaseSync, recordPushNotificationHistory } from "@/lib/db/store";
 
 export async function POST(req: NextRequest) {
   try {
@@ -15,6 +15,11 @@ export async function POST(req: NextRequest) {
       );
     }
 
+    const title = "🔔 Hostel Canteen Alert Test";
+    const notifBody =
+      "Web Push Notifications are working perfectly! You will receive live alerts for orders.";
+    const tag = `test-${Date.now()}`;
+
     const result = await sendPushToSubscription(
       {
         id: "test",
@@ -25,19 +30,28 @@ export async function POST(req: NextRequest) {
         updated_at: new Date().toISOString(),
       },
       {
-        title: "🔔 Hostel Canteen Alert Test",
-        body: "Web Push Notifications are working perfectly! You will receive live alerts for orders.",
+        title,
+        body: notifBody,
         icon: "/logo.svg",
         badge: "/logo.svg",
         url: "/",
-        tag: `test-${Date.now()}`,
+        tag,
       }
     );
 
     if (result.success) {
+      const historyItem = await recordPushNotificationHistory({
+        title,
+        body: notifBody,
+        url: "/",
+        tag,
+        sent_count: 1,
+      }).catch(() => null);
+
       return NextResponse.json({
         success: true,
         message: "Test push notification delivered successfully!",
+        notification: historyItem,
       });
     } else {
       return NextResponse.json(

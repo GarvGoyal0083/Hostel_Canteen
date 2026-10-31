@@ -2,6 +2,7 @@ import webpush from "web-push";
 import {
   listPushSubscriptions,
   cleanupExpiredPushSubscriptions,
+  recordPushNotificationHistory,
 } from "@/lib/db/store";
 import {
   CanteenStatus,
@@ -140,9 +141,6 @@ export async function notifyStaffOfNewOrder(
   if (staffSubscriptions.length === 0) {
     staffSubscriptions = listPushSubscriptions();
   }
-  if (staffSubscriptions.length === 0) {
-    return { sent: 0, failed: 0 };
-  }
 
   const isRoomDelivery = Boolean(sale.room_number_snapshot);
   const locationText = isRoomDelivery
@@ -155,7 +153,7 @@ export async function notifyStaffOfNewOrder(
       .map((i) => `${i.quantity}x ${i.product_name_snapshot}`)
       .join(", ") + (sale.items.length > 3 ? ` +${sale.items.length - 3} more` : "");
 
-  return sendPushToSubscribers(staffSubscriptions, {
+  const payload: PushNotificationPayload = {
     title: `🔔 New Order: ${locationText}!`,
     body: `Bill #${sale.bill_number} • ₹${sale.payable_amount} • ${sale.customer_name_snapshot} (${itemsSummary})`,
     url: "/?tab=transactions",
@@ -165,7 +163,22 @@ export async function notifyStaffOfNewOrder(
       billNumber: sale.bill_number,
       url: "/?tab=transactions",
     },
-  });
+  };
+
+  const result =
+    staffSubscriptions.length > 0
+      ? await sendPushToSubscribers(staffSubscriptions, payload)
+      : { sent: 0, failed: 0 };
+
+  await recordPushNotificationHistory({
+    title: payload.title,
+    body: payload.body,
+    url: payload.url,
+    tag: payload.tag,
+    sent_count: result.sent,
+  }).catch(() => undefined);
+
+  return result;
 }
 
 /**
@@ -244,20 +257,30 @@ export async function notifyShopStatusChange(
   }
 
   const allSubscriptions = listPushSubscriptions();
-  if (allSubscriptions.length === 0) {
-    return { sent: 0, failed: 0 };
-  }
+  const tag = `canteen-status-${Date.now()}`;
+  const result =
+    allSubscriptions.length > 0
+      ? await sendPushToSubscribers(allSubscriptions, {
+          title,
+          body,
+          url: "/customer",
+          tag,
+          data: {
+            url: "/customer",
+            isOpen: status.is_open,
+          },
+        })
+      : { sent: 0, failed: 0 };
 
-  return sendPushToSubscribers(allSubscriptions, {
+  await recordPushNotificationHistory({
     title,
     body,
     url: "/customer",
-    tag: `canteen-status-${Date.now()}`,
-    data: {
-      url: "/customer",
-      isOpen: status.is_open,
-    },
-  });
+    tag,
+    sent_count: result.sent,
+  }).catch(() => undefined);
+
+  return result;
 }
 
 /**
@@ -275,20 +298,30 @@ export async function notifyCustomerOfOrderStatus(
     customer_id: customerId,
   });
 
-  if (studentSubscriptions.length === 0) {
-    return { sent: 0, failed: 0 };
-  }
+  const tag = `customer-order-${Date.now()}`;
+  const result =
+    studentSubscriptions.length > 0
+      ? await sendPushToSubscribers(studentSubscriptions, {
+          title,
+          body,
+          url,
+          tag,
+          data: {
+            customerId,
+            url,
+          },
+        })
+      : { sent: 0, failed: 0 };
 
-  return sendPushToSubscribers(studentSubscriptions, {
+  await recordPushNotificationHistory({
     title,
     body,
     url,
-    tag: `customer-order-${Date.now()}`,
-    data: {
-      customerId,
-      url,
-    },
-  });
+    tag,
+    sent_count: result.sent,
+  }).catch(() => undefined);
+
+  return result;
 }
 
 /**
@@ -298,5 +331,13 @@ export async function broadcastPushToAll(
   payload: PushNotificationPayload
 ): Promise<{ sent: number; failed: number }> {
   const allSubscriptions = listPushSubscriptions();
-  return sendPushToSubscribers(allSubscriptions, payload);
+  const result = await sendPushToSubscribers(allSubscriptions, payload);
+  await recordPushNotificationHistory({
+    title: payload.title,
+    body: payload.body,
+    url: payload.url,
+    tag: payload.tag || `broadcast-${Date.now()}`,
+    sent_count: result.sent,
+  }).catch(() => undefined);
+  return result;
 }
