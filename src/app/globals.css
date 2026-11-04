@@ -460,6 +460,12 @@ a.pos-link:hover {
   color: #F8FAFC !important;
 }
 
+/* Full-page slate backgrounds */
+.dark .bg-\[\#F1F5F9\] {
+  background-color: #0B0F19 !important;
+  color: #F8FAFC !important;
+}
+
 /* Light gray accent panels, summary cards, headers and filter pill bars */
 .dark .bg-\[\#F8FAFC\],
 .dark .bg-\[\#F8FAFC\]\/80,
@@ -471,7 +477,9 @@ a.pos-link:hover {
 .dark .bg-gray-100,
 .dark .bg-gray-200,
 .dark .bg-slate-100,
-.dark .bg-slate-200 {
+.dark .bg-slate-200,
+.dark .bg-slate-200\/70,
+.dark .bg-slate-200\/80 {
   background-color: #1E293B !important;
   border-color: #334155 !important;
   color: #F8FAFC !important;

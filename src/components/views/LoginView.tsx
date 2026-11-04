@@ -4,7 +4,6 @@ import React, { useState } from "react";
 import {
   Lock,
   Mail,
-  Store,
   AlertTriangle,
   CheckCircle2,
   ArrowRight,
@@ -22,8 +21,8 @@ import {
   DoorOpen,
 } from "lucide-react";
 import { AdminUser, Customer } from "@/types/pos";
-import { formatINR } from "@/lib/format";
 import { CanteenLogo } from "@/components/CanteenLogo";
+import { ThemeToggle } from "@/components/ThemeToggle";
 
 interface LoginViewProps {
   availableAdmins: Array<{ email: string; full_name: string; role: string }>;
@@ -38,8 +37,6 @@ interface LoginViewProps {
 }
 
 export function LoginView({
-  availableAdmins,
-  availableCustomers = [],
   onLoginSuccess,
   onCustomerLoginSuccess,
 }: LoginViewProps) {
@@ -132,9 +129,9 @@ export function LoginView({
   };
 
   return (
-    <div className="min-h-screen w-full flex flex-col lg:flex-row bg-[#F1F5F9] text-[#111827]">
+    <div className="min-h-screen w-full flex flex-col lg:flex-row bg-[#F1F5F9] dark:bg-[#0B0F19] text-[#111827] dark:text-slate-100">
       {/* Left Pane: Full-height 3D Hero & Features Showcase */}
-      <div className="relative w-full lg:w-[52%] bg-[#090D16] text-white p-8 lg:p-14 flex flex-col justify-between overflow-hidden">
+      <div className="relative w-full lg:w-[52%] bg-[#090D16] text-white p-8 lg:p-14 flex flex-col justify-between overflow-hidden border-b lg:border-b-0 lg:border-r border-white/10">
         {/* Ambient 3D depth spheres */}
         <div className="absolute top-0 right-0 -mr-20 -mt-20 w-96 h-96 bg-[#2563EB]/25 rounded-full blur-3xl pointer-events-none" />
         <div className="absolute bottom-0 left-0 -ml-20 -mb-20 w-80 h-80 bg-emerald-500/15 rounded-full blur-3xl pointer-events-none" />
@@ -272,23 +269,28 @@ export function LoginView({
       </div>
 
       {/* Right Pane: Full-height 3D Login & Portal Switcher */}
-      <div className="w-full lg:w-[48%] flex flex-col justify-between p-6 sm:p-10 lg:p-14">
+      <div className="w-full lg:w-[48%] flex flex-col justify-between p-6 sm:p-10 lg:p-14 bg-[#F1F5F9] dark:bg-[#0B0F19]">
+        {/* Top Right Theme Switcher */}
+        <div className="max-w-md w-full mx-auto flex justify-end mb-2">
+          <ThemeToggle />
+        </div>
+
         <div className="max-w-md w-full mx-auto my-auto space-y-6">
           {/* Clean Segmented Control: Admin vs Student */}
-          <div className="bg-slate-200/70 p-1 rounded-xl grid grid-cols-2 gap-1 border border-slate-200/80">
+          <div className="bg-slate-200/80 dark:bg-slate-900 p-1.5 rounded-xl grid grid-cols-2 gap-1.5 border border-slate-300/80 dark:border-slate-800 shadow-inner">
             <button
               type="button"
               onClick={() => {
                 setPortalMode("customer");
                 setErrorMsg(null);
               }}
-              className={`rounded-lg py-2.5 px-3 text-xs font-semibold flex items-center justify-center gap-2 transition cursor-pointer ${
+              className={`rounded-lg py-2.5 px-3 text-xs font-bold flex items-center justify-center gap-2 transition cursor-pointer focus:outline-none ${
                 portalMode === "customer"
-                  ? "bg-white text-slate-900 shadow-xs"
-                  : "text-slate-600 hover:text-slate-900"
+                  ? "bg-white dark:bg-slate-800 text-slate-900 dark:text-white shadow-xs border border-slate-200/80 dark:border-slate-700"
+                  : "text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200"
               }`}
             >
-              <GraduationCap className="h-4 w-4 text-emerald-600" />
+              <GraduationCap className="h-4 w-4 text-emerald-600 dark:text-emerald-400" />
               <span>Student Portal</span>
             </button>
             <button
@@ -297,13 +299,13 @@ export function LoginView({
                 setPortalMode("admin");
                 setErrorMsg(null);
               }}
-              className={`rounded-lg py-2.5 px-3 text-xs font-semibold flex items-center justify-center gap-2 transition cursor-pointer ${
+              className={`rounded-lg py-2.5 px-3 text-xs font-bold flex items-center justify-center gap-2 transition cursor-pointer focus:outline-none ${
                 portalMode === "admin"
-                  ? "bg-white text-slate-900 shadow-xs"
-                  : "text-slate-600 hover:text-slate-900"
+                  ? "bg-white dark:bg-slate-800 text-slate-900 dark:text-white shadow-xs border border-slate-200/80 dark:border-slate-700"
+                  : "text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200"
               }`}
             >
-              <ShieldCheck className="h-4 w-4 text-blue-600" />
+              <ShieldCheck className="h-4 w-4 text-blue-600 dark:text-blue-400" />
               <span>Admin Terminal</span>
             </button>
           </div>
@@ -371,7 +373,7 @@ export function LoginView({
                     <button
                       type="button"
                       onClick={() => setShowPassword(!showPassword)}
-                      className="absolute right-3 top-2.5 p-0.5 text-slate-400 hover:text-[#111827] cursor-pointer"
+                      className="absolute right-3 top-2.5 p-0.5 text-slate-400 hover:text-[#111827] cursor-pointer focus:outline-none"
                     >
                       {showPassword ? (
                         <EyeOff className="h-4 w-4" />
@@ -385,7 +387,7 @@ export function LoginView({
                 <button
                   type="submit"
                   disabled={loading}
-                  className="btn-3d-primary w-full rounded-xl py-3.5 px-4 text-sm font-extrabold flex items-center justify-center gap-2 cursor-pointer"
+                  className="btn-3d-primary w-full rounded-xl py-3.5 px-4 text-sm font-extrabold flex items-center justify-center gap-2 cursor-pointer focus:outline-none"
                 >
                   <span>
                     {loading ? "Opening 3D Terminal..." : "Sign In to Admin POS"}
@@ -417,17 +419,17 @@ export function LoginView({
               </div>
 
               {/* Mode Toggle: Sign In vs Register */}
-              <div className="grid grid-cols-2 p-1 bg-slate-100 rounded-xl border border-slate-200 text-xs">
+              <div className="grid grid-cols-2 p-1 bg-slate-100 dark:bg-slate-950/70 rounded-xl border border-slate-200 dark:border-slate-800 text-xs">
                 <button
                   type="button"
                   onClick={() => {
                     setStudentAuthMode("signin");
                     setErrorMsg(null);
                   }}
-                  className={`py-2 text-xs font-black rounded-lg transition cursor-pointer ${
+                  className={`py-2 text-xs font-black rounded-lg transition cursor-pointer focus:outline-none ${
                     studentAuthMode === "signin"
-                      ? "bg-white text-blue-700 shadow-xs border border-blue-200"
-                      : "text-slate-600 hover:text-slate-900"
+                      ? "bg-white dark:bg-slate-800 text-blue-700 dark:text-blue-400 shadow-xs border border-blue-200 dark:border-blue-500/40"
+                      : "text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200"
                   }`}
                 >
                   Sign In
@@ -438,10 +440,10 @@ export function LoginView({
                     setStudentAuthMode("register");
                     setErrorMsg(null);
                   }}
-                  className={`py-2 text-xs font-black rounded-lg transition cursor-pointer ${
+                  className={`py-2 text-xs font-black rounded-lg transition cursor-pointer focus:outline-none ${
                     studentAuthMode === "register"
-                      ? "bg-white text-emerald-700 shadow-xs border border-emerald-200"
-                      : "text-slate-600 hover:text-slate-900"
+                      ? "bg-white dark:bg-slate-800 text-emerald-700 dark:text-emerald-400 shadow-xs border border-emerald-200 dark:border-emerald-500/40"
+                      : "text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200"
                   }`}
                 >
                   + New Student Register
@@ -472,7 +474,7 @@ export function LoginView({
                         <label className="font-bold text-[#111827]">
                           Password *
                         </label>
-                        <span className="text-[10px] text-blue-600 font-semibold">
+                        <span className="text-[10px] text-blue-600 dark:text-blue-400 font-semibold">
                           🔒 Portal password
                         </span>
                       </div>
@@ -490,7 +492,7 @@ export function LoginView({
                         <button
                           type="button"
                           onClick={() => setShowStudentPassword(!showStudentPassword)}
-                          className="absolute right-3 top-2.5 p-0.5 text-slate-400 hover:text-[#111827] cursor-pointer"
+                          className="absolute right-3 top-2.5 p-0.5 text-slate-400 hover:text-[#111827] cursor-pointer focus:outline-none"
                         >
                           {showStudentPassword ? (
                             <EyeOff className="h-4 w-4" />
@@ -560,7 +562,7 @@ export function LoginView({
                         <button
                           type="button"
                           onClick={() => setShowRegPassword(!showRegPassword)}
-                          className="text-[10px] text-blue-600 font-bold hover:underline cursor-pointer"
+                          className="text-[10px] text-blue-600 dark:text-blue-400 font-bold hover:underline cursor-pointer focus:outline-none"
                         >
                           {showRegPassword ? "Hide Password" : "Show Password"}
                         </button>
@@ -589,7 +591,7 @@ export function LoginView({
                 <button
                   type="submit"
                   disabled={loading}
-                  className="btn-3d-primary w-full rounded-xl py-3.5 px-4 text-sm font-extrabold flex items-center justify-center gap-2 cursor-pointer"
+                  className="btn-3d-primary w-full rounded-xl py-3.5 px-4 text-sm font-extrabold flex items-center justify-center gap-2 cursor-pointer focus:outline-none"
                 >
                   <ShoppingBag className="h-4 w-4" />
                   <span>
@@ -611,7 +613,7 @@ export function LoginView({
                         setStudentAuthMode("register");
                         setErrorMsg(null);
                       }}
-                      className="text-[11px] font-bold text-[#2563EB] hover:underline cursor-pointer"
+                      className="text-[11px] font-bold text-[#2563EB] dark:text-blue-400 hover:underline cursor-pointer focus:outline-none"
                     >
                       New hostel student? Register your account here &rarr;
                     </button>
@@ -622,7 +624,7 @@ export function LoginView({
                         setStudentAuthMode("signin");
                         setErrorMsg(null);
                       }}
-                      className="text-[11px] font-bold text-[#2563EB] hover:underline cursor-pointer"
+                      className="text-[11px] font-bold text-[#2563EB] dark:text-blue-400 hover:underline cursor-pointer focus:outline-none"
                     >
                       Already have an account? Sign In &rarr;
                     </button>
@@ -633,7 +635,7 @@ export function LoginView({
                   <button
                     type="button"
                     onClick={() => onCustomerLoginSuccess(null)}
-                    className="btn-3d-secondary w-full rounded-xl py-2.5 px-4 text-xs font-bold text-slate-700 cursor-pointer"
+                    className="btn-3d-secondary w-full rounded-xl py-2.5 px-4 text-xs font-bold text-slate-700 cursor-pointer focus:outline-none"
                   >
                     Browse Live Snack Stock as Guest
                   </button>
@@ -644,8 +646,8 @@ export function LoginView({
 
           {/* Bottom Info Box */}
           <div className="card-3d-static rounded-2xl p-4 text-[11px] text-[#111827] space-y-1.5">
-            <div className="font-extrabold text-[#1D4ED8] flex items-center gap-1.5">
-              <CheckCircle2 className="h-4 w-4 text-[#2563EB]" />
+            <div className="font-extrabold text-[#1D4ED8] dark:text-blue-400 flex items-center gap-1.5">
+              <CheckCircle2 className="h-4 w-4 text-[#2563EB] dark:text-blue-400" />
               {portalMode === "admin"
                 ? "Enterprise Financial & Inventory Protection"
                 : "Instant Live Sync with Canteen Counter"}
@@ -659,9 +661,9 @@ export function LoginView({
         </div>
 
         {/* Footer */}
-        <div className="pt-6 border-t border-slate-200 flex flex-col sm:flex-row items-center justify-between text-[11px] text-slate-500 gap-2 max-w-md w-full mx-auto">
+        <div className="pt-6 border-t border-slate-200 dark:border-slate-800 flex flex-col sm:flex-row items-center justify-between text-[11px] text-slate-500 gap-2 max-w-md w-full mx-auto">
           <span>&copy; 2026 Hostel Canteen POS.</span>
-          <span className="text-[#2563EB] font-bold">
+          <span className="text-[#2563EB] dark:text-blue-400 font-bold">
             3D Admin &amp; Student Edition
           </span>
         </div>
