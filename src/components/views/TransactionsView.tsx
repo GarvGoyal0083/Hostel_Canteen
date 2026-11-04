@@ -586,14 +586,14 @@ export function TransactionsView({
           </div>
         </div>
 
-        <div className="card-3d rounded-xl p-3.5 bg-gradient-to-br from-emerald-50 to-teal-50 border border-emerald-200 shadow-xs">
-          <div className="text-[11px] font-extrabold text-emerald-800 uppercase tracking-wider flex items-center justify-between">
+        <div className="card-3d rounded-xl p-3.5 bg-gradient-to-br from-emerald-50 to-teal-50 dark:from-emerald-950/30 dark:to-teal-950/20 border border-emerald-200 dark:border-emerald-800/70 shadow-xs">
+          <div className="text-[11px] font-extrabold text-emerald-800 dark:text-emerald-400 uppercase tracking-wider flex items-center justify-between">
             <span>Net Profit</span>
-            <span className="text-[10px] bg-emerald-200/80 text-emerald-950 px-1.5 py-0.5 rounded font-black">
+            <span className="text-[10px] bg-emerald-200/80 dark:bg-emerald-900/60 text-emerald-950 dark:text-emerald-300 border border-emerald-300/60 dark:border-emerald-700/60 px-1.5 py-0.5 rounded font-black">
               {summaryStats.marginPercent}% margin
             </span>
           </div>
-          <div className="text-lg font-black text-emerald-900 mt-1">
+          <div className="text-lg font-black text-emerald-900 dark:text-emerald-300 mt-1">
             +{formatINR(summaryStats.totalProfit)}
           </div>
         </div>
@@ -917,10 +917,10 @@ export function TransactionsView({
 
                 {!profitStats.isRefunded && (
                   <div className="text-right">
-                    <div className="text-[10px] text-emerald-800 font-semibold">
+                    <div className="text-[10px] text-emerald-800 dark:text-emerald-400 font-semibold">
                       Cost: {formatINR(profitStats.cogs)}
                     </div>
-                    <div className="inline-block text-[10px] font-black px-1.5 py-0.5 rounded-md bg-emerald-200/80 text-emerald-950 mt-0.5">
+                    <div className="inline-block text-[10px] font-black px-1.5 py-0.5 rounded-md bg-emerald-200/80 dark:bg-emerald-900/60 text-emerald-950 dark:text-emerald-300 border border-emerald-300/60 dark:border-emerald-700/60 mt-0.5">
                       {profitStats.marginPercent}% margin
                     </div>
                   </div>
