@@ -14,8 +14,7 @@ import {
   EyeOff,
   KeyRound,
   Edit,
-  ShieldCheck,
-  TrendingUp,
+  Trash2,
 } from "lucide-react";
 import {
   Customer,
@@ -25,7 +24,6 @@ import {
   SaleRecord,
 } from "@/types/pos";
 import {
-  downloadCSV,
   downloadRawCSV,
   escapeCSVCell,
   formatINR,
@@ -227,6 +225,7 @@ export function CustomersView({
   const [dupUpiWarning, setDupUpiWarning] = useState<string[] | null>(null);
 
   const [submitting, setSubmitting] = useState(false);
+  const [deletingCustomerId, setDeletingCustomerId] = useState<string | null>(null);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
 
   const filteredCustomers = useMemo(() => {
@@ -336,6 +335,43 @@ export function CustomersView({
       );
     } finally {
       setSubmitting(false);
+    }
+  };
+
+  const handleDeleteCustomer = async (customer: Customer) => {
+    const dueNotice =
+      customer.outstanding_dues > 0
+        ? `\n\nNote: This student currently has ${formatINR(customer.outstanding_dues)} in pending udhaar.`
+        : "";
+    const confirmed = window.confirm(
+      `Are you sure you want to delete student "${customer.name}"${customer.room_number ? ` (Room ${customer.room_number})` : ""}?${dueNotice}`
+    );
+    if (!confirmed) return;
+
+    setErrorMsg(null);
+    setDeletingCustomerId(customer.id);
+    try {
+      const res = await fetch(`/api/customers/${customer.id}`, {
+        method: "DELETE",
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        throw new Error(data.error || "Failed to delete student.");
+      }
+
+      if (editCustomer?.id === customer.id) {
+        setEditCustomer(null);
+      }
+      if (ledgerData?.customer.id === customer.id) {
+        setLedgerData(null);
+      }
+      onRefresh();
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : "Failed to delete student.";
+      setErrorMsg(msg);
+      window.alert(msg);
+    } finally {
+      setDeletingCustomerId(null);
     }
   };
 
@@ -532,16 +568,16 @@ export function CustomersView({
             {formatINR(overallStats.totalPurchases)}
           </span>
         </div>
-        <div className="card-3d rounded-2xl p-5 bg-gradient-to-br from-emerald-50 to-teal-50 border border-emerald-200">
+        <div className="card-3d rounded-2xl p-5 bg-gradient-to-br from-emerald-50 to-teal-50 dark:from-emerald-950/30 dark:to-teal-950/20 border border-emerald-200 dark:border-emerald-800/70">
           <div className="flex items-center justify-between">
-            <span className="text-xs text-emerald-800 font-bold uppercase tracking-wider block">
+            <span className="text-xs text-emerald-800 dark:text-emerald-400 font-bold uppercase tracking-wider block">
               Total Profit Till Date
             </span>
-            <span className="text-[10px] font-black bg-emerald-200/80 text-emerald-950 px-1.5 py-0.5 rounded">
+            <span className="text-[10px] font-black bg-emerald-200/80 dark:bg-emerald-900/60 text-emerald-950 dark:text-emerald-300 border border-emerald-300/60 dark:border-emerald-700/60 px-1.5 py-0.5 rounded">
               {overallStats.marginPercent}% avg
             </span>
           </div>
-          <span className="text-2xl font-black text-emerald-900 mt-1 block">
+          <span className="text-2xl font-black text-emerald-900 dark:text-emerald-300 mt-1 block">
             +{formatINR(overallStats.totalProfit)}
           </span>
         </div>
@@ -688,15 +724,26 @@ export function CustomersView({
                       })()}
                     </td>
                     <td className="px-4 py-3 text-right">
-                      <div className="inline-flex items-center gap-2">
-                        <button
-                          type="button"
-                          onClick={() => openEditModal(c)}
-                          className="inline-flex items-center gap-1 rounded-md border border-gray-300 dark:border-slate-700 bg-white dark:bg-slate-800 px-2.5 py-1 text-xs font-semibold text-[#111827] dark:text-slate-200 hover:bg-[#F3F4F6] dark:hover:bg-slate-700 transition cursor-pointer"
-                        >
-                          <Edit className="h-3.5 w-3.5 text-slate-600" />
-                          Edit Profile
-                        </button>
+                      <div className="inline-flex items-start gap-2">
+                        <div className="flex flex-col items-stretch gap-1.5">
+                          <button
+                            type="button"
+                            onClick={() => openEditModal(c)}
+                            className="inline-flex items-center justify-center gap-1 rounded-md border border-gray-300 dark:border-slate-700 bg-white dark:bg-slate-800 px-2.5 py-1 text-xs font-semibold text-[#111827] dark:text-slate-200 hover:bg-[#F3F4F6] dark:hover:bg-slate-700 transition cursor-pointer"
+                          >
+                            <Edit className="h-3.5 w-3.5 text-slate-600 dark:text-slate-400" />
+                            Edit Profile
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => handleDeleteCustomer(c)}
+                            disabled={deletingCustomerId === c.id}
+                            className="inline-flex items-center justify-center gap-1 rounded-md border border-red-200 dark:border-red-900/60 bg-red-50 dark:bg-red-950/40 px-2.5 py-1 text-xs font-semibold text-red-700 dark:text-red-300 hover:bg-red-100 dark:hover:bg-red-900/50 transition cursor-pointer disabled:opacity-50"
+                          >
+                            <Trash2 className="h-3.5 w-3.5" />
+                            {deletingCustomerId === c.id ? "Deleting..." : "Delete Student"}
+                          </button>
+                        </div>
                         {c.outstanding_dues > 0 && (
                           <button
                             onClick={() => openRepayModal(c)}
@@ -1047,22 +1094,38 @@ export function CustomersView({
                 </label>
               </div>
 
-              <div className="flex justify-end gap-2.5 pt-3 border-t border-gray-100">
+              <div className="flex items-center justify-between gap-2.5 pt-3 border-t border-gray-100">
                 <button
                   type="button"
-                  onClick={() => setEditCustomer(null)}
-                  className="rounded-xl border border-gray-300 bg-white px-4 py-2 font-bold text-gray-700 hover:bg-gray-50 cursor-pointer"
+                  onClick={() => handleDeleteCustomer(editCustomer)}
+                  disabled={submitting || deletingCustomerId === editCustomer.id}
+                  className="inline-flex items-center gap-1.5 rounded-xl border border-red-200 dark:border-red-900/60 bg-red-50 dark:bg-red-950/40 px-3.5 py-2 font-bold text-red-700 dark:text-red-300 hover:bg-red-100 dark:hover:bg-red-900/50 transition cursor-pointer disabled:opacity-50"
                 >
-                  Cancel
+                  <Trash2 className="h-3.5 w-3.5" />
+                  <span>
+                    {deletingCustomerId === editCustomer.id
+                      ? "Deleting..."
+                      : "Delete Student"}
+                  </span>
                 </button>
-                <button
-                  type="submit"
-                  disabled={submitting}
-                  className="btn-3d-primary inline-flex items-center gap-1.5 rounded-xl px-4 py-2 font-bold text-white cursor-pointer"
-                >
-                  <CheckCircle2 className="h-4 w-4" />
-                  {submitting ? "Saving Changes..." : "Save Changes"}
-                </button>
+
+                <div className="flex items-center gap-2">
+                  <button
+                    type="button"
+                    onClick={() => setEditCustomer(null)}
+                    className="rounded-xl border border-gray-300 bg-white px-4 py-2 font-bold text-gray-700 hover:bg-gray-50 cursor-pointer"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    type="submit"
+                    disabled={submitting}
+                    className="btn-3d-primary inline-flex items-center gap-1.5 rounded-xl px-4 py-2 font-bold text-white cursor-pointer"
+                  >
+                    <CheckCircle2 className="h-4 w-4" />
+                    {submitting ? "Saving Changes..." : "Save Changes"}
+                  </button>
+                </div>
               </div>
             </form>
           </div>
@@ -1308,16 +1371,16 @@ export function CustomersView({
                         {formatINR(ledgerData.customer.total_payments)}
                       </span>
                     </div>
-                    <div className="rounded-lg bg-gradient-to-br from-emerald-50 to-teal-50 p-3 border border-emerald-200 shadow-2xs">
+                    <div className="rounded-lg bg-gradient-to-br from-emerald-50 to-teal-50 dark:from-emerald-950/30 dark:to-teal-950/20 p-3 border border-emerald-200 dark:border-emerald-800/70 shadow-2xs">
                       <div className="flex items-center justify-between">
-                        <span className="text-emerald-800 font-bold block">
+                        <span className="text-emerald-800 dark:text-emerald-400 font-bold block">
                           Profit Till Date
                         </span>
-                        <span className="text-[10px] bg-emerald-200/80 text-emerald-950 font-black px-1.5 py-0.5 rounded">
+                        <span className="text-[10px] bg-emerald-200/80 dark:bg-emerald-900/60 text-emerald-950 dark:text-emerald-300 border border-emerald-300/60 dark:border-emerald-700/60 font-black px-1.5 py-0.5 rounded">
                           {ledgerMargin}%
                         </span>
                       </div>
-                      <span className="text-lg font-bold text-emerald-900 mt-0.5 block">
+                      <span className="text-lg font-bold text-emerald-900 dark:text-emerald-300 mt-0.5 block">
                         +{formatINR(Math.round(ledgerProfit * 100) / 100)}
                       </span>
                     </div>

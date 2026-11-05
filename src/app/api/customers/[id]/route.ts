@@ -1,6 +1,10 @@
 import { NextRequest, NextResponse } from "next/server";
 import { requireAdminAuth } from "@/lib/auth";
-import { getCustomerDetailsWithLedger, updateCustomer } from "@/lib/db/store";
+import {
+  deleteCustomer,
+  getCustomerDetailsWithLedger,
+  updateCustomer,
+} from "@/lib/db/store";
 
 export async function GET(
   _req: NextRequest,
@@ -41,13 +45,21 @@ export async function PATCH(
   }
 }
 
-// Customers are never hard-deleted. The admin guard runs first so a sales executive
-// gets a 403 here, and an admin gets an explicit 405 instead of a silent no-op.
-export async function DELETE() {
+export async function DELETE(
+  _req: NextRequest,
+  context: { params: Promise<{ id: string }> }
+) {
   const auth = await requireAdminAuth();
   if (!auth.authorized) return auth.response;
-  return NextResponse.json(
-    { error: "Customers cannot be deleted. Deactivate the student instead." },
-    { status: 405 }
-  );
+
+  try {
+    const { id } = await context.params;
+    await deleteCustomer(id, auth.admin.full_name);
+    return NextResponse.json({ success: true });
+  } catch (err) {
+    return NextResponse.json(
+      { error: err instanceof Error ? err.message : "Failed to delete student." },
+      { status: 400 }
+    );
+  }
 }

@@ -1169,6 +1169,31 @@ export async function updateCustomer(
   });
 }
 
+export async function deleteCustomer(
+  customerId: string,
+  adminName: string
+): Promise<void> {
+  return withTransactionLock(() => {
+    const db = readDatabase();
+    const idx = db.customers.findIndex((c) => c.id === customerId);
+    if (idx === -1) throw new Error("Student not found.");
+
+    const existing = db.customers[idx];
+    db.customers.splice(idx, 1);
+
+    appendAudit(db, {
+      entity_type: "CUSTOMER",
+      entity_id: existing.id,
+      action: "DELETE_CUSTOMER",
+      summary: `Deleted student "${existing.name}" (Room: ${existing.room_number || "N/A"})`,
+      previous_data: existing,
+      performed_by: adminName,
+    });
+
+    writeDatabase(db);
+  });
+}
+
 // ==============================================================================
 // 4. BILLING / POS, DISCOUNTS, & MANUAL PAYMENT ENGINE
 // ==============================================================================
