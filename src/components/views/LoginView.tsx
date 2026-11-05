@@ -36,11 +36,15 @@ interface LoginViewProps {
   onCustomerLoginSuccess?: (customer: Customer | null) => void;
 }
 
+const SHOW_STUDENT_PORTAL = false; // Temporarily hidden
+
 export function LoginView({
   onLoginSuccess,
   onCustomerLoginSuccess,
 }: LoginViewProps) {
-  const [portalMode, setPortalMode] = useState<"admin" | "customer">("customer");
+  const [portalMode, setPortalMode] = useState<"admin" | "customer">(
+    SHOW_STUDENT_PORTAL ? "customer" : "admin"
+  );
 
   // Admin state
   const [email, setEmail] = useState("");
@@ -277,22 +281,28 @@ export function LoginView({
 
         <div className="max-w-md w-full mx-auto my-auto space-y-6">
           {/* Clean Segmented Control: Admin vs Student */}
-          <div className="bg-slate-200/80 dark:bg-slate-900 p-1.5 rounded-xl grid grid-cols-2 gap-1.5 border border-slate-300/80 dark:border-slate-800 shadow-inner">
-            <button
-              type="button"
-              onClick={() => {
-                setPortalMode("customer");
-                setErrorMsg(null);
-              }}
-              className={`rounded-lg py-2.5 px-3 text-xs font-bold flex items-center justify-center gap-2 transition cursor-pointer focus:outline-none ${
-                portalMode === "customer"
-                  ? "bg-white dark:bg-slate-800 text-slate-900 dark:text-white shadow-xs border border-slate-200/80 dark:border-slate-700"
-                  : "text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200"
-              }`}
-            >
-              <GraduationCap className="h-4 w-4 text-emerald-600 dark:text-emerald-400" />
-              <span>Student Portal</span>
-            </button>
+          <div
+            className={`bg-slate-200/80 dark:bg-slate-900 p-1.5 rounded-xl grid ${
+              SHOW_STUDENT_PORTAL ? "grid-cols-2" : "grid-cols-1"
+            } gap-1.5 border border-slate-300/80 dark:border-slate-800 shadow-inner`}
+          >
+            {SHOW_STUDENT_PORTAL && (
+              <button
+                type="button"
+                onClick={() => {
+                  setPortalMode("customer");
+                  setErrorMsg(null);
+                }}
+                className={`rounded-lg py-2.5 px-3 text-xs font-bold flex items-center justify-center gap-2 transition cursor-pointer focus:outline-none ${
+                  portalMode === "customer"
+                    ? "bg-white dark:bg-slate-800 text-slate-900 dark:text-white shadow-xs border border-slate-200/80 dark:border-slate-700"
+                    : "text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200"
+                }`}
+              >
+                <GraduationCap className="h-4 w-4 text-emerald-600 dark:text-emerald-400" />
+                <span>Student Portal</span>
+              </button>
+            )}
             <button
               type="button"
               onClick={() => {
