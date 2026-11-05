@@ -372,21 +372,21 @@ export function DashboardView({
 
       {/* Customer Privacy Mode Alert Banner */}
       {privacyMode && (
-        <div className="card-3d p-4 rounded-2xl bg-gradient-to-r from-amber-50 to-orange-50 border border-amber-300 text-amber-900 flex flex-col sm:flex-row sm:items-center justify-between gap-3 shadow-xs">
+        <div className="card-3d p-4 rounded-2xl bg-gradient-to-r from-amber-50 to-orange-50 dark:from-amber-950/35 dark:to-orange-950/25 border border-amber-300 dark:border-amber-800/70 text-amber-900 dark:text-amber-200 flex flex-col sm:flex-row sm:items-center justify-between gap-3 shadow-xs">
           <div className="flex items-center gap-3">
-            <div className="h-10 w-10 rounded-xl bg-amber-200/80 flex items-center justify-center text-amber-900 shrink-0">
+            <div className="h-10 w-10 rounded-xl bg-amber-200/80 dark:bg-amber-900/60 border border-amber-300/60 dark:border-amber-700/60 flex items-center justify-center text-amber-900 dark:text-amber-300 shrink-0">
               <EyeOff className="h-5 w-5" />
             </div>
             <div>
-              <div className="flex items-center gap-2">
-                <span className="font-black text-sm text-amber-950">
+              <div className="flex items-center gap-2 flex-wrap">
+                <span className="font-black text-sm text-amber-950 dark:text-amber-300">
                   Customer Counter Privacy Mode Active
                 </span>
-                <span className="rounded-full bg-amber-200 px-2 py-0.5 text-[10px] font-black text-amber-900 uppercase">
+                <span className="rounded-full bg-amber-200 dark:bg-amber-900/60 border border-amber-300/70 dark:border-amber-700/60 px-2.5 py-0.5 text-[10px] font-black text-amber-900 dark:text-amber-300 uppercase">
                   Analytics Hidden
                 </span>
               </div>
-              <p className="text-xs text-amber-800 mt-0.5">
+              <p className="text-xs text-amber-800 dark:text-amber-200/90 mt-0.5">
                 All financial figures, sales totals, profit margins, and collections are masked while customers are at the counter.
               </p>
             </div>
@@ -394,7 +394,7 @@ export function DashboardView({
           <button
             type="button"
             onClick={handleTogglePrivacy}
-            className="self-start sm:self-auto inline-flex items-center gap-1.5 px-4 py-2 rounded-xl bg-amber-900 text-white hover:bg-amber-950 text-xs font-bold transition cursor-pointer shadow-sm"
+            className="self-start sm:self-auto inline-flex items-center gap-1.5 px-4 py-2 rounded-xl bg-amber-900 dark:bg-amber-600 text-white hover:bg-amber-950 dark:hover:bg-amber-500 text-xs font-bold transition cursor-pointer shadow-sm"
           >
             <Eye className="h-4 w-4" />
             <span>Show All Analytics</span>
