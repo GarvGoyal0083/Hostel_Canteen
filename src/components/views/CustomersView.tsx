@@ -724,26 +724,15 @@ export function CustomersView({
                       })()}
                     </td>
                     <td className="px-4 py-3 text-right">
-                      <div className="inline-flex items-start gap-2">
-                        <div className="flex flex-col items-stretch gap-1.5">
-                          <button
-                            type="button"
-                            onClick={() => openEditModal(c)}
-                            className="inline-flex items-center justify-center gap-1 rounded-md border border-gray-300 dark:border-slate-700 bg-white dark:bg-slate-800 px-2.5 py-1 text-xs font-semibold text-[#111827] dark:text-slate-200 hover:bg-[#F3F4F6] dark:hover:bg-slate-700 transition cursor-pointer"
-                          >
-                            <Edit className="h-3.5 w-3.5 text-slate-600 dark:text-slate-400" />
-                            Edit Profile
-                          </button>
-                          <button
-                            type="button"
-                            onClick={() => handleDeleteCustomer(c)}
-                            disabled={deletingCustomerId === c.id}
-                            className="inline-flex items-center justify-center gap-1 rounded-md border border-red-200 dark:border-red-900/60 bg-red-50 dark:bg-red-950/40 px-2.5 py-1 text-xs font-semibold text-red-700 dark:text-red-300 hover:bg-red-100 dark:hover:bg-red-900/50 transition cursor-pointer disabled:opacity-50"
-                          >
-                            <Trash2 className="h-3.5 w-3.5" />
-                            {deletingCustomerId === c.id ? "Deleting..." : "Delete Student"}
-                          </button>
-                        </div>
+                      <div className="inline-flex items-center gap-2">
+                        <button
+                          type="button"
+                          onClick={() => openEditModal(c)}
+                          className="inline-flex items-center gap-1 rounded-md border border-gray-300 dark:border-slate-700 bg-white dark:bg-slate-800 px-2.5 py-1 text-xs font-semibold text-[#111827] dark:text-slate-200 hover:bg-[#F3F4F6] dark:hover:bg-slate-700 transition cursor-pointer"
+                        >
+                          <Edit className="h-3.5 w-3.5 text-slate-600 dark:text-slate-400" />
+                          Edit Profile
+                        </button>
                         {c.outstanding_dues > 0 && (
                           <button
                             onClick={() => openRepayModal(c)}
